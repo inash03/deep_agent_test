@@ -30,9 +30,18 @@ This file is updated by Claude at the end of every development step.
 
 ---
 
+### Use Case Definition (2026-04-03)
+
+**What was done:**
+- ユースケースを FX Trade Confirmation Matching Agent に確定
+- `docs/requirements.md` を更新: agent flow, MT300フィールド定義, 機能要件(FR-01〜FR-08)
+- `docs/tasks.md` を更新: Phase 1〜6 の具体的タスクリストを追加
+
+---
+
 ## Next Steps
 
-1. **Project scaffolding** — Set up `pyproject.toml`, `src/` directory structure, `.env.example`
-2. **Dependency setup** — Add LangGraph, FastAPI, Pydantic, and dev dependencies with pinned versions
-3. **Requirements clarification** — Define the specific LangGraph deep agent use case to implement
-4. **First agent implementation** — MVP agent with minimal tools following Clean Architecture
+1. **Phase 1: Project Scaffolding** — `pyproject.toml`, `src/` ディレクトリ構成, `.env.example`
+2. **Phase 2: Domain Layer** — `FxTrade` / `MatchResult` エンティティ, `IMatchingUseCase` インターフェース
+3. **Phase 3: Infrastructure Layer** — LangGraph StateGraph + tools (compare_fx_fields, generate_mt300_draft)
+4. **Phase 4: Presentation Layer** — FastAPI `POST /api/v1/match` エンドポイント
