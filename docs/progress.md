@@ -141,7 +141,32 @@ This file is updated by Claude at the end of every development step.
 
 ---
 
+### Step 7 — Phase 4: Presentation Layer (2026-04-05)
+
+**What was done:**
+- `src/presentation/schemas.py` 作成:
+  - `TriageRequest`（trade_id, error_message）
+  - `ResumeRequest`（approved: bool）
+  - `StepOut`（steps要素: step_type, name, input, output）
+  - `TriageResponse`（全出力フィールド + `from_domain()` でドメインエンティティから変換）
+- `src/presentation/router.py` 作成:
+  - `POST /api/v1/triage` — triage開始、COMPLETED or PENDING_APPROVAL を返す
+  - `POST /api/v1/triage/{run_id}/resume` — HITL承認/拒否、COMPLETED を返す
+  - シングルトン `TriageSTPFailureUseCase` を `Depends(get_use_case)` で注入（MemorySaverをリクエスト間で共有するため）
+- `src/main.py` 作成:
+  - `load_dotenv()` で `.env` を読み込み
+  - FastAPI アプリにルーターを登録
+
+## Current Status
+
+**Phase:** Phase 4 完了（コア実装完了）
+**Branch:** `claude/setup-langgraph-project-oXB7j`
+**Last updated:** 2026-04-05
+
+---
+
 ## Next Steps
 
-1. **Phase 4: Presentation Layer** — Pydantic schemas + FastAPI エンドポイント（POST /api/v1/triage + POST /api/v1/triage/{run_id}/resume）
-2. **動作確認**: `uv pip install -e .` 後、FastAPI `/docs` からTRD-001を試す
+1. **動作確認**: `uv pip install -e ".[dev]"` 後、`uvicorn src.main:app --reload` で起動、`/docs` からTRD-001を試す
+2. **Phase 5: Testing** — Domain層ユニットテスト + `/api/v1/triage` 統合テスト
+3. **Phase 6: Observability** — 構造化ログ

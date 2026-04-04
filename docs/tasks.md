@@ -65,12 +65,12 @@ Status: `[ ]` Backlog · `[~]` In Progress · `[x]` Done
 
 ### Phase 4 — Presentation Layer
 
-- [ ] Define `TriageRequest` Pydantic schema (trade_id, error_message)
-- [ ] Define `TriageResponse` Pydantic schema (trade_id, diagnosis, root_cause, recommended_action, action_taken, steps, run_id)
-- [ ] Define `ResumeRequest` Pydantic schema (approved: bool)
-- [ ] Implement `POST /api/v1/triage` router (starts agent run)
-- [ ] Implement `POST /api/v1/triage/{run_id}/resume` router (HITL approval/rejection)
-- [ ] Create FastAPI app entrypoint (`src/main.py`)
+- [x] Define `TriageRequest` Pydantic schema (trade_id, error_message)
+- [x] Define `TriageResponse` Pydantic schema (trade_id, status, diagnosis, root_cause, recommended_action, action_taken, steps, run_id)
+- [x] Define `ResumeRequest` Pydantic schema (approved: bool)
+- [x] Implement `POST /api/v1/triage` router (starts agent run)
+- [x] Implement `POST /api/v1/triage/{run_id}/resume` router (HITL approval/rejection)
+- [x] Create FastAPI app entrypoint (`src/main.py`)
 - [ ] Manual smoke test via FastAPI `/docs`
 
 ### Phase 5 — Testing
