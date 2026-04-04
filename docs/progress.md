@@ -103,9 +103,24 @@ This file is updated by Claude at the end of every development step.
 
 ---
 
+### Step 5 — Phase 3b: LangGraph Agent (2026-04-04)
+
+**What was done:**
+- `src/infrastructure/agent.py` 作成:
+  - `AgentState` TypedDict（messages: add_messages reducer, trade_id, error_message, action_taken）
+  - `SYSTEM_PROMPT`: 調査手順・最終出力JSONフォーマットをLLMに指示
+  - `_route_after_agent`: 条件分岐ルーター（register_ssi呼び出し → HITL / 他ツール → read_tools / ツールなし → END）
+  - `agent_node`: システムプロンプトを先頭挿入してLLMを呼び出すノード
+  - `read_tools_node`: `ToolNode`（read-onlyツール5個）
+  - `register_ssi_node`: register_ssiを実行し `action_taken=True` を設定するカスタムノード
+  - `build_graph()`: `MemorySaver` + `interrupt_before=["register_ssi_node"]` でコンパイル
+- HITLフロー設計:
+  - 承認時: `graph.invoke(None, config)` でそのまま継続
+  - 拒否時: `graph.update_state()` でrejection ToolMessageを注入後 `graph.invoke(None, config)` で継続（`TriageSTPFailureUseCase` が担当）
+
 ## Current Status
 
-**Phase:** Phase 3a 完了 → Phase 3b (LangGraph Agent) 開始待ち
+**Phase:** Phase 3b 完了 → Phase 3c (TriageSTPFailureUseCase) 開始待ち
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-04
 
@@ -113,6 +128,5 @@ This file is updated by Claude at the end of every development step.
 
 ## Next Steps
 
-1. **Phase 3b: LangGraph Agent** — AgentState + StateGraph（ReAct nodes + HITL interrupt）
-2. **Phase 3c: TriageSTPFailureUseCase** — `ITriageUseCase` 実装クラス
-3. **Phase 4: Presentation Layer** — FastAPI エンドポイント
+1. **Phase 3c: TriageSTPFailureUseCase** — `ITriageUseCase` 実装クラス（start/resume + 結果パース + Step抽出）
+2. **Phase 4: Presentation Layer** — FastAPI エンドポイント

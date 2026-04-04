@@ -54,13 +54,13 @@ Status: `[ ]` Backlog · `[~]` In Progress · `[x]` Done
   - [x] `get_counterparty(lei: str) -> str`
   - [x] `lookup_external_ssi(lei: str, currency: str) -> str`
 - [x] Implement write tool: `register_ssi(lei, currency, bic, account, iban) -> str`
-- [ ] Define `AgentState` TypedDict for LangGraph state
-- [ ] Implement LangGraph ReAct agent:
-  - [ ] `reason` node (LLM decides next tool or finalizes diagnosis)
-  - [ ] `act` node (executes tool selected by LLM)
-  - [ ] `check_hitl` node (detects if register_ssi is pending → interrupt_before)
-  - [ ] conditional edge: continue ReAct loop / finalize / interrupt for HITL
-- [ ] Wire up StateGraph with HITL support (`interrupt_before=["check_hitl"]`)
+- [x] Define `AgentState` TypedDict for LangGraph state (messages, trade_id, error_message, action_taken)
+- [x] Implement LangGraph ReAct agent (`src/infrastructure/agent.py`):
+  - [x] `agent_node` (LLM with all tools bound; system prompt injected)
+  - [x] `read_tools_node` (ToolNode for read-only tools)
+  - [x] `register_ssi_node` (custom node; executes register_ssi after HITL approval)
+  - [x] `_route_after_agent` conditional edge (register_ssi → HITL / other tools → read_tools / no calls → END)
+- [x] Wire up StateGraph with HITL support (`interrupt_before=["register_ssi_node"]`, MemorySaver)
 - [ ] Implement `TriageSTPFailureUseCase` (implements `ITriageUseCase`)
 
 ### Phase 4 — Presentation Layer
