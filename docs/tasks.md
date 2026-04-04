@@ -31,13 +31,16 @@ Status: `[ ]` Backlog · `[~]` In Progress · `[x]` Done
 
 ### Phase 2 — Domain Layer
 
-- [ ] Define `STPFailure` entity (trade_id, error_message)
-- [ ] Define `TradeDetail` entity (trade_id, counterparty_lei, instrument_id, currency, amount, value_date)
-- [ ] Define `SettlementInstruction` entity (lei, currency, bic, account, iban)
-- [ ] Define `TriageResult` entity (trade_id, diagnosis, root_cause: enum, recommended_action, action_taken, steps)
-- [ ] Define `RootCause` enum (MISSING_SSI, BIC_FORMAT_ERROR, INVALID_VALUE_DATE, INSTRUMENT_NOT_FOUND, COUNTERPARTY_NOT_FOUND, UNKNOWN)
-- [ ] Define `ITriageUseCase` interface (abstract base class)
-- [ ] Implement `TriageSTPFailureUseCase` (orchestrates domain logic, calls agent via interface)
+- [x] Define `STPFailure` entity (trade_id, error_message)
+- [x] Define `TradeDetail` entity (trade_id, counterparty_lei, instrument_id, currency, amount, value_date)
+- [x] Define `SettlementInstruction` entity (lei, currency, bic, account, iban)
+- [x] Define `ReferenceData` entity (instrument_id, description, asset_class, is_active)
+- [x] Define `Counterparty` entity (lei, name, bic, is_active)
+- [x] Define `Step` entity (step_type, name, input, output, approved) for observability
+- [x] Define `TriageResult` entity (trade_id, status, run_id, diagnosis, root_cause, recommended_action, action_taken, steps)
+- [x] Define `RootCause` enum (MISSING_SSI, BIC_FORMAT_ERROR, INVALID_VALUE_DATE, INSTRUMENT_NOT_FOUND, COUNTERPARTY_NOT_FOUND, UNKNOWN)
+- [x] Define `TriageStatus` enum (COMPLETED, PENDING_APPROVAL)
+- [x] Define `ITriageUseCase` interface (start / resume abstract methods)
 
 ### Phase 3 — Infrastructure Layer (LangGraph Agent)
 

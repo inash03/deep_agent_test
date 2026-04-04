@@ -69,9 +69,28 @@ This file is updated by Claude at the end of every development step.
 
 ---
 
+### Step 3 — Phase 2: Domain Layer (2026-04-04)
+
+**What was done:**
+- `src/domain/entities.py` 作成:
+  - `RootCause` enum（MISSING_SSI, BIC_FORMAT_ERROR, INVALID_VALUE_DATE, INSTRUMENT_NOT_FOUND, COUNTERPARTY_NOT_FOUND, UNKNOWN）
+  - `TriageStatus` enum（COMPLETED, PENDING_APPROVAL）
+  - `STPFailure`（入力エンティティ: trade_id, error_message）
+  - `TradeDetail`（トレード詳細: counterparty_lei, instrument_id, currency, amount, value_date, settlement_currency）
+  - `SettlementInstruction`（SSI: lei, currency, bic, account, iban）
+  - `ReferenceData`（銘柄リファレンス: instrument_id, description, asset_class, is_active）
+  - `Counterparty`（カウンターパーティマスタ: lei, name, bic, is_active）
+  - `Step`（observability用: step_type, name, input, output, approved）
+  - `TriageResult`（出力: trade_id, status, run_id, diagnosis, root_cause, recommended_action, action_taken, steps）
+- `src/domain/interfaces.py` 作成:
+  - `ITriageUseCase` 抽象クラス（`start(failure)` / `resume(run_id, approved)` の2フェーズ設計）
+  - HITLフローの設計方針をdocstringで明文化
+
+---
+
 ## Current Status
 
-**Phase:** Phase 1 完了 → Phase 2 (Domain Layer) 開始待ち
+**Phase:** Phase 2 完了 → Phase 3 (Infrastructure Layer) 開始待ち
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-04
 
@@ -79,6 +98,5 @@ This file is updated by Claude at the end of every development step.
 
 ## Next Steps
 
-1. **Phase 2: Domain Layer** — エンティティ定義（STPFailure, TradeDetail, SettlementInstruction, TriageResult, RootCause enum） + ITriageUseCase インターフェース
-2. **Phase 3: Infrastructure Layer** — LangGraph ReActエージェント + ツール群 + モックデータ + HITL
-3. **Phase 4: Presentation Layer** — FastAPI エンドポイント（triage + resume）
+1. **Phase 3: Infrastructure Layer** — モックデータストア + LangGraph ReActエージェント + ツール群 + HITL (interrupt_before)
+2. **Phase 4: Presentation Layer** — FastAPI エンドポイント（POST /api/v1/triage + POST /api/v1/triage/{run_id}/resume）
