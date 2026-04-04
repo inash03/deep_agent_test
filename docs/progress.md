@@ -88,9 +88,24 @@ This file is updated by Claude at the end of every development step.
 
 ---
 
+### Step 4 — Phase 3a: Mock Data Store + Tools (2026-04-04)
+
+**What was done:**
+- `src/infrastructure/mock_store.py` 作成:
+  - 5つのテストシナリオに対応したin-memoryデータ（TRD-001〜TRD-005）
+  - `_TRADES`, `_SSIS`, `_COUNTERPARTIES`, `_REFERENCE_DATA`, `_EXTERNAL_SSIS`
+  - 公開クエリ関数: `get_trade`, `get_ssi`, `get_reference`, `get_counterparty`, `get_external_ssi`, `register_ssi`
+- `src/infrastructure/tools.py` 作成:
+  - read-only tools × 5: `get_trade_detail`, `get_settlement_instructions`, `get_reference_data`, `get_counterparty`, `lookup_external_ssi`
+  - write tool × 1: `register_ssi`（HITL承認後のみ呼び出し想定）
+  - `ALL_TOOLS`, `READ_ONLY_TOOLS`, `WRITE_TOOLS` エクスポート
+  - 各ツールはJSON文字列を返す（LLMが解釈しやすい形式）
+
+---
+
 ## Current Status
 
-**Phase:** Phase 2 完了 → Phase 3 (Infrastructure Layer) 開始待ち
+**Phase:** Phase 3a 完了 → Phase 3b (LangGraph Agent) 開始待ち
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-04
 
@@ -98,5 +113,6 @@ This file is updated by Claude at the end of every development step.
 
 ## Next Steps
 
-1. **Phase 3: Infrastructure Layer** — モックデータストア + LangGraph ReActエージェント + ツール群 + HITL (interrupt_before)
-2. **Phase 4: Presentation Layer** — FastAPI エンドポイント（POST /api/v1/triage + POST /api/v1/triage/{run_id}/resume）
+1. **Phase 3b: LangGraph Agent** — AgentState + StateGraph（ReAct nodes + HITL interrupt）
+2. **Phase 3c: TriageSTPFailureUseCase** — `ITriageUseCase` 実装クラス
+3. **Phase 4: Presentation Layer** — FastAPI エンドポイント

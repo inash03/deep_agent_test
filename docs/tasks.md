@@ -44,21 +44,24 @@ Status: `[ ]` Backlog · `[~]` In Progress · `[x]` Done
 
 ### Phase 3 — Infrastructure Layer (LangGraph Agent)
 
-- [ ] Implement mock data store (in-memory dict for trades, SSIs, reference data, counterparties)
-- [ ] Define `AgentState` TypedDict for LangGraph state (messages, trade_id, error_message, diagnosis, root_cause, steps, pending_action)
-- [ ] Implement read-only tools:
-  - [ ] `get_trade_detail(trade_id: str) -> dict`
-  - [ ] `get_settlement_instructions(lei: str, currency: str) -> dict`
-  - [ ] `get_reference_data(instrument_id: str) -> dict`
-  - [ ] `get_counterparty(lei: str) -> dict`
-  - [ ] `lookup_external_ssi(lei: str, currency: str) -> dict`
-- [ ] Implement write tool: `register_ssi(lei: str, currency: str, ssi_data: dict) -> dict`
+- [x] Implement mock data store (`src/infrastructure/mock_store.py`)
+  - 5 scenarios: MISSING_SSI, BIC_FORMAT_ERROR, COUNTERPARTY_NOT_FOUND, INVALID_VALUE_DATE, INSTRUMENT_NOT_FOUND
+  - External SSI lookup data (TRD-001 → triggers HITL flow)
+- [x] Implement read-only tools (`src/infrastructure/tools.py`):
+  - [x] `get_trade_detail(trade_id: str) -> str`
+  - [x] `get_settlement_instructions(lei: str, currency: str) -> str`
+  - [x] `get_reference_data(instrument_id: str) -> str`
+  - [x] `get_counterparty(lei: str) -> str`
+  - [x] `lookup_external_ssi(lei: str, currency: str) -> str`
+- [x] Implement write tool: `register_ssi(lei, currency, bic, account, iban) -> str`
+- [ ] Define `AgentState` TypedDict for LangGraph state
 - [ ] Implement LangGraph ReAct agent:
   - [ ] `reason` node (LLM decides next tool or finalizes diagnosis)
   - [ ] `act` node (executes tool selected by LLM)
   - [ ] `check_hitl` node (detects if register_ssi is pending → interrupt_before)
   - [ ] conditional edge: continue ReAct loop / finalize / interrupt for HITL
 - [ ] Wire up StateGraph with HITL support (`interrupt_before=["check_hitl"]`)
+- [ ] Implement `TriageSTPFailureUseCase` (implements `ITriageUseCase`)
 
 ### Phase 4 — Presentation Layer
 
