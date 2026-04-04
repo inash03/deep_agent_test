@@ -61,7 +61,7 @@ Status: `[ ]` Backlog · `[~]` In Progress · `[x]` Done
   - [x] `register_ssi_node` (custom node; executes register_ssi after HITL approval)
   - [x] `_route_after_agent` conditional edge (register_ssi → HITL / other tools → read_tools / no calls → END)
 - [x] Wire up StateGraph with HITL support (`interrupt_before=["register_ssi_node"]`, MemorySaver)
-- [ ] Implement `TriageSTPFailureUseCase` (implements `ITriageUseCase`)
+- [x] Implement `TriageSTPFailureUseCase` (implements `ITriageUseCase`)
 
 ### Phase 4 — Presentation Layer
 

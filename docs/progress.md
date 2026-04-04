@@ -118,15 +118,30 @@ This file is updated by Claude at the end of every development step.
   - 承認時: `graph.invoke(None, config)` でそのまま継続
   - 拒否時: `graph.update_state()` でrejection ToolMessageを注入後 `graph.invoke(None, config)` で継続（`TriageSTPFailureUseCase` が担当）
 
+### Step 6 — Phase 3c: TriageSTPFailureUseCase + pyproject.toml fix (2026-04-05)
+
+**What was done:**
+- `pyproject.toml` 修正: `hatchling` → `setuptools>=68`（Windows + uv/pip editable install互換性問題を解決）
+- `src/infrastructure/triage_use_case.py` 作成:
+  - `TriageSTPFailureUseCase(ITriageUseCase)` 実装:
+    - `start(failure)`: UUID生成 → graph.invoke → HITL検出 → PENDING_APPROVAL or COMPLETED返却
+    - `resume(run_id, approved)`: 拒否時はToolMessage注入 → graph.invoke → COMPLETED返却
+    - `_build_result()`: `snapshot.next` で中断状態を判定
+    - `_pending_result()`: pending_action_descriptionにSSI登録内容を表示
+    - `_completed_result()`: LLM最終メッセージをJSONパース
+  - `_parse_llm_output()`: 最後のAIMessage（tool_callなし）からJSON抽出、markdown fenceにも対応
+  - `_extract_steps()`: AIMessage tool_calls × ToolMessage resultsをStepリストに変換
+  - `_format_ssi_action()`: HITL確認メッセージ生成
+
 ## Current Status
 
-**Phase:** Phase 3b 完了 → Phase 3c (TriageSTPFailureUseCase) 開始待ち
+**Phase:** Phase 3 完了 → Phase 4 (Presentation Layer) 開始待ち
 **Branch:** `claude/setup-langgraph-project-oXB7j`
-**Last updated:** 2026-04-04
+**Last updated:** 2026-04-05
 
 ---
 
 ## Next Steps
 
-1. **Phase 3c: TriageSTPFailureUseCase** — `ITriageUseCase` 実装クラス（start/resume + 結果パース + Step抽出）
-2. **Phase 4: Presentation Layer** — FastAPI エンドポイント
+1. **Phase 4: Presentation Layer** — Pydantic schemas + FastAPI エンドポイント（POST /api/v1/triage + POST /api/v1/triage/{run_id}/resume）
+2. **動作確認**: `uv pip install -e .` 後、FastAPI `/docs` からTRD-001を試す
