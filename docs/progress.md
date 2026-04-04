@@ -55,9 +55,30 @@ This file is updated by Claude at the end of every development step.
 
 ---
 
+### Step 2 — Phase 1: Project Scaffolding (2026-04-04)
+
+**What was done:**
+- `pyproject.toml` 作成（ピン止めバージョン）:
+  - Runtime: langgraph==1.1.6, langchain-anthropic==1.4.0, fastapi==0.135.3, uvicorn==0.43.0, pydantic==2.12.5, python-dotenv==1.2.2
+  - Dev: pytest==9.0.2, httpx==0.28.1, ruff==0.15.9, mypy==1.20.0
+- `src/` ディレクトリ構成作成:
+  - `src/presentation/`, `src/domain/`, `src/infrastructure/` (各`__init__.py`付き)
+- `tests/unit/`, `tests/integration/` 作成（各`__init__.py`付き）
+- `.env.example` 作成（`ANTHROPIC_API_KEY=`のみ）
+- `.gitignore` に `.env` が含まれていることを確認済み
+
+---
+
+## Current Status
+
+**Phase:** Phase 1 完了 → Phase 2 (Domain Layer) 開始待ち
+**Branch:** `claude/setup-langgraph-project-oXB7j`
+**Last updated:** 2026-04-04
+
+---
+
 ## Next Steps
 
-1. **Phase 1: Project Scaffolding** — `pyproject.toml`, `src/` ディレクトリ構成, `.env.example`
-2. **Phase 2: Domain Layer** — エンティティ定義（STPFailure, TradeDetail, TriageResult, RootCause enum）
-3. **Phase 3: Infrastructure Layer** — LangGraph ReActエージェント + ツール群 + モックデータ + HITL
-4. **Phase 4: Presentation Layer** — FastAPI エンドポイント（triage + resume）
+1. **Phase 2: Domain Layer** — エンティティ定義（STPFailure, TradeDetail, SettlementInstruction, TriageResult, RootCause enum） + ITriageUseCase インターフェース
+2. **Phase 3: Infrastructure Layer** — LangGraph ReActエージェント + ツール群 + モックデータ + HITL
+3. **Phase 4: Presentation Layer** — FastAPI エンドポイント（triage + resume）
