@@ -165,8 +165,34 @@ This file is updated by Claude at the end of every development step.
 
 ---
 
+### Step 8 — Phase 5: Testing (2026-04-05)
+
+**What was done:**
+- `tests/conftest.py`: `integration` マーカー登録
+- `tests/unit/test_tools.py`: 6ツール全テスト（15ケース）
+  - `restore_ssi_store` fixture でwrite操作後のstore状態を自動復元
+- `tests/unit/test_entities.py`: RootCause/TriageStatus enum + STPFailure/TriageResult/Step バリデーション
+- `tests/unit/test_output_parsing.py`: `_parse_llm_output`（5ケース）+ `_extract_steps`（5ケース）
+- `tests/integration/test_triage_api.py`: FastAPI end-to-end テスト（6ケース）
+  - `ANTHROPIC_API_KEY` 未設定時は自動skip
+- `pyproject.toml` 更新: `addopts = "-m 'not integration'"` で `pytest` だけならunit tests のみ実行
+
+**テスト実行方法:**
+```bash
+pytest                        # unit tests のみ（LLM不要）
+pytest -m integration         # integration tests のみ（LLM必要）
+pytest -m "not integration"   # 明示的にunit tests のみ
+```
+
+## Current Status
+
+**Phase:** Phase 5 完了（全実装完了）
+**Branch:** `claude/setup-langgraph-project-oXB7j`
+**Last updated:** 2026-04-05
+
+---
+
 ## Next Steps
 
-1. **動作確認**: `uv pip install -e ".[dev]"` 後、`uvicorn src.main:app --reload` で起動、`/docs` からTRD-001を試す
-2. **Phase 5: Testing** — Domain層ユニットテスト + `/api/v1/triage` 統合テスト
-3. **Phase 6: Observability** — 構造化ログ
+1. **動作確認**: `uv pip install -e ".[dev]"` → `pytest` → `uvicorn src.main:app --reload`
+2. **Phase 6: Observability** — 構造化ログ（各LangGraphノードの入出力）

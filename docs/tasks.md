@@ -75,14 +75,20 @@ Status: `[ ]` Backlog · `[~]` In Progress · `[x]` Done
 
 ### Phase 5 — Testing
 
-- [ ] Unit test: `get_trade_detail` — existing trade_id
-- [ ] Unit test: `get_trade_detail` — unknown trade_id
-- [ ] Unit test: `get_settlement_instructions` — SSI found
-- [ ] Unit test: `get_settlement_instructions` — SSI not found (triggers MISSING_SSI path)
-- [ ] Unit test: `RootCause` enum coverage
-- [ ] Integration test: `POST /api/v1/triage` — MISSING_SSI case (no HITL action)
-- [ ] Integration test: `POST /api/v1/triage` + `POST /api/v1/triage/{run_id}/resume` — HITL approve
-- [ ] Integration test: `POST /api/v1/triage` + `POST /api/v1/triage/{run_id}/resume` — HITL reject
+**Unit tests (no LLM — run with `pytest`):**
+- [x] `tests/unit/test_tools.py`: all 6 tools (get_trade_detail, get_settlement_instructions, get_reference_data, get_counterparty, lookup_external_ssi, register_ssi)
+- [x] `tests/unit/test_entities.py`: RootCause enum, STPFailure validation, TriageResult, Step
+- [x] `tests/unit/test_output_parsing.py`: _parse_llm_output (valid JSON, markdown fence, fallback), _extract_steps (single/multiple tools, register_ssi HITL type, empty, missing result)
+- [x] `tests/conftest.py`: integration marker registration
+
+**Integration tests (requires ANTHROPIC_API_KEY — run with `pytest -m integration`):**
+- [x] `tests/integration/test_triage_api.py`:
+  - [x] TRD-002: BIC_FORMAT_ERROR → COMPLETED (no HITL)
+  - [x] TRD-003: COUNTERPARTY_NOT_FOUND → COMPLETED (no HITL)
+  - [x] TRD-001: MISSING_SSI → PENDING_APPROVAL
+  - [x] TRD-001: HITL approve → COMPLETED, action_taken=True
+  - [x] TRD-001: HITL reject → COMPLETED, action_taken=False
+  - [x] unknown run_id → 404
 
 ### Phase 6 — Observability
 
