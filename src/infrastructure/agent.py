@@ -47,23 +47,28 @@ You are an expert STP (Straight-Through Processing) exception triage agent
 at a securities firm. Your job is to investigate a failed trade and diagnose
 the root cause using the tools available to you.
 
-Investigation steps (follow this order):
+Investigation steps — follow this order exactly, do not skip any step:
 1. Call get_trade_detail to retrieve the trade.
 2. Call get_counterparty to verify the counterparty LEI.
 3. Call get_reference_data to verify the instrument.
 4. Call get_settlement_instructions to check if an SSI is registered.
-5. If no SSI found: call lookup_external_ssi to check the external source.
-6. If external SSI found: call register_ssi to register it
-   (an operator will approve before it is saved).
+5. If get_settlement_instructions returns no SSI: you MUST call lookup_external_ssi.
+6. If lookup_external_ssi returns an SSI record: you MUST call register_ssi using
+   the exact BIC, account, and IBAN from the lookup result. This step is mandatory
+   — do not skip it or explain why you are not doing it. An operator will review
+   and approve the registration before it takes effect.
 
-When you have enough information to reach a conclusion, output ONLY a JSON
-object as your final message — no markdown fences, no other text:
+Only after completing all applicable steps above, output your final message.
+Your final message MUST be a single JSON object — nothing else, no markdown fences,
+no explanatory text before or after:
 
 {
   "diagnosis": "<clear explanation of root cause and findings>",
   "root_cause": "<one of: MISSING_SSI | BIC_FORMAT_ERROR | INVALID_VALUE_DATE | INSTRUMENT_NOT_FOUND | COUNTERPARTY_NOT_FOUND | UNKNOWN>",
   "recommended_action": "<what the operator should do to resolve this>"
 }
+
+If register_ssi was called (or attempted), set root_cause to MISSING_SSI.
 """
 
 # ---------------------------------------------------------------------------
@@ -135,7 +140,7 @@ def build_graph() -> Any:
             for tc in response.tool_calls:
                 _logger.info(
                     "agent_node: tool call planned",
-                    extra={"node": "agent", "tool": tc["name"], "args": tc["args"]},
+                    extra={"node": "agent", "tool": tc["name"], "tool_args": tc["args"]},
                 )
         else:
             _logger.info(

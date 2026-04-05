@@ -228,8 +228,60 @@ pytest -m "not integration"   # 明示的にunit tests のみ
 
 ---
 
+---
+
+### Step 10 — Phase 7 + 8 + 11: Docs / Docker / Frontend (2026-04-06)
+
+**What was done:**
+
+- **`src/main.py`** に `CORSMiddleware` を追加（`http://localhost:5173` を許可）
+- **`src/infrastructure/agent.py`** のシステムプロンプト強化:
+  - `lookup_external_ssi` でSSI発見後に `register_ssi` を必ず呼ぶよう `MUST` で明示
+  - 最終JSON出力フォーマットをより厳密に指示
+- **`src/infrastructure/agent.py`** のlogging修正: `extra` の `args` キー名を `tool_args` に変更（`LogRecord` 予約属性と衝突していた）
+- **Phase 7: ドキュメント**
+  - `README.md` を全面更新（概要・セットアップ・API・テスト・Docker・構成）
+  - `docs/architecture.md` 新規作成:
+    - Mermaid: LangGraph StateGraph フロー図（HITL一時停止ポイントを強調）
+    - Mermaid: HITL Sequence Diagram（Client/FastAPI/LangGraph/Operator）
+    - Mermaid: Clean Architecture 層構成図
+    - ツール一覧・AgentState定義
+- **Phase 8: Docker**
+  - `Dockerfile`（バックエンド用: python:3.12-slim, non-editable install）
+  - `.dockerignore`
+  - `docker-compose.yml`（backend + frontend, healthcheck付き, `env_file: .env` でAPIキー管理）
+  - `.gitignore` 拡張（`frontend/node_modules/`, `frontend/dist/`, `*.egg-info/`）
+  - `.gitattributes` 新規作成（`* text=auto eol=lf` — Windows CRLF対策）
+- **Phase 11: React Frontend**（`frontend/` ディレクトリ）
+  - `package.json`: React 18, Vite 6, TypeScript 5, axios
+  - `tsconfig.json` / `tsconfig.app.json` / `tsconfig.node.json`
+  - `vite.config.ts`: `/api` をバックエンドにproxy（ローカルdev時のCORS不要）
+  - `index.html`
+  - `src/types/triage.ts`: バックエンドスキーマのTypeScriptミラー
+  - `src/api/client.ts`: axiosインスタンス
+  - `src/api/triage.ts`: `startTriage()` / `resumeTriage()`
+  - `src/components/StatusBadge.tsx`: COMPLETED（緑）/ PENDING_APPROVAL（橙）
+  - `src/components/StepList.tsx`: stepsタイムライン表示
+  - `src/pages/TriagePage.tsx`: UIステートマシン（input → loading → pending → completed）
+  - `src/App.tsx` / `src/main.tsx`
+  - `frontend/Dockerfile`（マルチステージ: Node 20 build + nginx serve）
+  - `frontend/nginx.conf`（SPA routing + `/api/` proxy）
+  - `frontend/.env.example`
+
+**備考:**
+- Node.js 20+ が必要（現在v16のため `npm install` は手動アップグレード後に実施）
+
+## Current Status
+
+**Phase:** Phase 7/8/11 完了（ファイル実装済み）
+**Branch:** `claude/setup-langgraph-project-oXB7j`
+**Last updated:** 2026-04-06
+
+---
+
 ## Next Steps
 
-1. **動作確認**: `uv pip install -e ".[dev]"` → `pytest` → `uvicorn src.main:app --reload`
-2. **統合テスト**: `pytest -m integration`（要 ANTHROPIC_API_KEY）
-3. **PRマージ**: `claude/setup-langgraph-project-oXB7j` → `main`
+1. **Node.js 20+ にアップグレード**: `nvm install 20` または公式サイトからインストール
+2. **フロントエンド起動確認**: `cd frontend && npm install && npm run dev`
+3. **Dockerビルド確認**: `docker-compose up --build`
+4. **PRマージ**: `claude/setup-langgraph-project-oXB7j` → `main`
