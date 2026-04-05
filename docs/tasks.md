@@ -92,8 +92,17 @@ Status: `[ ]` Backlog · `[~]` In Progress · `[x]` Done
 
 ### Phase 6 — Observability
 
-- [ ] Add structured logging (node name + tool name + input/output) at each LangGraph node
-- [ ] Include `steps` list in `TriageResponse`
+- [x] Add `src/infrastructure/logging_config.py`: JSON structured formatter + `setup_logging()`
+- [x] Add logging to `agent.py` nodes:
+  - `agent_node`: LLM呼び出し、tool call計画（tool名・args）、最終応答
+  - `register_ssi_node`: SSI登録実行（HITL承認後）+ 完了
+- [x] Add logging to `triage_use_case.py`:
+  - triage開始（run_id, trade_id, error_message）
+  - HITL中断（run_id, trade_id）
+  - HITL決定受信（run_id, approved）
+  - triage完了（run_id, root_cause, action_taken, step_count）
+- [x] `src/main.py` で `setup_logging()` を起動時に呼び出し
+- [x] `steps` リストは TriageResponse に含まれている（Phase 4 完了済み）
 
 ---
 

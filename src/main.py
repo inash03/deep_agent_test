@@ -5,9 +5,11 @@ from __future__ import annotations
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
+from src.infrastructure.logging_config import setup_logging
 from src.presentation.router import router
 
 load_dotenv()
+setup_logging()
 
 app = FastAPI(
     title="STP Exception Triage Agent",

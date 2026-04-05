@@ -192,7 +192,44 @@ pytest -m "not integration"   # 明示的にunit tests のみ
 
 ---
 
+### Step 9 — Phase 6: Observability (2026-04-05)
+
+**What was done:**
+- `src/infrastructure/logging_config.py` 作成:
+  - `StructuredFormatter`: 各ログ行をJSON1行で出力（timestamp, level, logger, message + extra fields）
+  - `setup_logging(level)`: ルートロガーにStreamHandlerを設定
+- `src/infrastructure/agent.py` にログ追加（`_logger = logging.getLogger("stp_triage.agent")`）:
+  - `agent_node`: LLM呼び出し開始（message_count）、tool call計画（tool名・args）、最終応答
+  - `register_ssi_node`: 承認後の登録実行（lei, currency, bic）、完了
+- `src/infrastructure/triage_use_case.py` にログ追加（`_logger = logging.getLogger("stp_triage.use_case")`）:
+  - `start()`: triage開始（run_id, trade_id, error_message）
+  - `_pending_result()`: HITL中断（run_id, trade_id）
+  - `resume()`: HITL決定受信（run_id, approved）
+  - `_completed_result()`: triage完了（root_cause, action_taken, step_count）
+  - `_completed_result()` 内の重複 `_extract_steps()` 呼び出しを修正
+- `src/main.py` に `setup_logging()` 追加（起動時に1回だけ設定）
+
+**サンプルログ出力（TRD-001実行時）:**
+```json
+{"timestamp": "2026-04-05T10:00:00.000+00:00", "level": "INFO", "logger": "stp_triage.use_case", "message": "triage started", "run_id": "...", "trade_id": "TRD-001", "error_message": "SETT FAIL - SSI not found..."}
+{"timestamp": "...", "level": "INFO", "logger": "stp_triage.agent", "message": "agent_node: tool call planned", "node": "agent", "tool": "get_trade_detail", "args": {"trade_id": "TRD-001"}}
+{"timestamp": "...", "level": "INFO", "logger": "stp_triage.agent", "message": "agent_node: tool call planned", "node": "agent", "tool": "register_ssi", "args": {...}}
+{"timestamp": "...", "level": "INFO", "logger": "stp_triage.use_case", "message": "hitl interrupt: awaiting operator approval", "run_id": "..."}
+{"timestamp": "...", "level": "INFO", "logger": "stp_triage.use_case", "message": "hitl decision received", "run_id": "...", "approved": true}
+{"timestamp": "...", "level": "INFO", "logger": "stp_triage.agent", "message": "register_ssi_node: executing SSI registration (HITL approved)", ...}
+{"timestamp": "...", "level": "INFO", "logger": "stp_triage.use_case", "message": "triage completed", "root_cause": "MISSING_SSI", "action_taken": true, "step_count": 6}
+```
+
+## Current Status
+
+**Phase:** 全Phase完了（Phase 1〜6）
+**Branch:** `claude/setup-langgraph-project-oXB7j`
+**Last updated:** 2026-04-05
+
+---
+
 ## Next Steps
 
 1. **動作確認**: `uv pip install -e ".[dev]"` → `pytest` → `uvicorn src.main:app --reload`
-2. **Phase 6: Observability** — 構造化ログ（各LangGraphノードの入出力）
+2. **統合テスト**: `pytest -m integration`（要 ANTHROPIC_API_KEY）
+3. **PRマージ**: `claude/setup-langgraph-project-oXB7j` → `main`

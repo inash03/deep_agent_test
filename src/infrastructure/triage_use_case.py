@@ -15,6 +15,7 @@ Two-phase execution:
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
@@ -22,6 +23,8 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 from src.domain.entities import RootCause, Step, TriageResult, TriageStatus
 from src.domain.interfaces import ITriageUseCase, STPFailure
 from src.infrastructure.agent import build_graph
+
+_logger = logging.getLogger("stp_triage.use_case")
 
 
 class TriageSTPFailureUseCase(ITriageUseCase):
@@ -36,6 +39,11 @@ class TriageSTPFailureUseCase(ITriageUseCase):
         """Start a new triage run. Returns COMPLETED or PENDING_APPROVAL."""
         run_id = str(uuid.uuid4())
         config = {"configurable": {"thread_id": run_id}}
+
+        _logger.info(
+            "triage started",
+            extra={"run_id": run_id, "trade_id": failure.trade_id, "error_message": failure.error_message},
+        )
 
         initial_state = {
             "messages": [
@@ -58,6 +66,11 @@ class TriageSTPFailureUseCase(ITriageUseCase):
     def resume(self, run_id: str, *, approved: bool) -> TriageResult:
         """Resume a PENDING_APPROVAL run after HITL decision."""
         config = {"configurable": {"thread_id": run_id}}
+
+        _logger.info(
+            "hitl decision received",
+            extra={"run_id": run_id, "approved": approved},
+        )
 
         if not approved:
             # Inject a rejection ToolMessage so the agent can continue
@@ -112,6 +125,10 @@ class TriageSTPFailureUseCase(ITriageUseCase):
 
     def _pending_result(self, run_id: str, state: dict) -> TriageResult:
         last_msg = state["messages"][-1]
+        _logger.info(
+            "hitl interrupt: awaiting operator approval",
+            extra={"run_id": run_id, "trade_id": state.get("trade_id")},
+        )
         tool_call = next(
             (tc for tc in last_msg.tool_calls if tc["name"] == "register_ssi"),
             None,
@@ -131,6 +148,17 @@ class TriageSTPFailureUseCase(ITriageUseCase):
         self, run_id: str, state: dict, *, action_taken: bool
     ) -> TriageResult:
         diagnosis, root_cause, recommended_action = _parse_llm_output(state["messages"])
+        steps = _extract_steps(state["messages"])
+        _logger.info(
+            "triage completed",
+            extra={
+                "run_id": run_id,
+                "trade_id": state.get("trade_id"),
+                "root_cause": root_cause.value if root_cause else None,
+                "action_taken": action_taken,
+                "step_count": len(steps),
+            },
+        )
         return TriageResult(
             trade_id=state["trade_id"],
             status=TriageStatus.COMPLETED,
@@ -139,7 +167,7 @@ class TriageSTPFailureUseCase(ITriageUseCase):
             root_cause=root_cause,
             recommended_action=recommended_action,
             action_taken=action_taken,
-            steps=_extract_steps(state["messages"]),
+            steps=steps,
         )
 
 

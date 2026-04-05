@@ -22,6 +22,7 @@ HITL flow:
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Annotated, Any, Literal
 
@@ -34,6 +35,8 @@ from langgraph.prebuilt import ToolNode
 from typing_extensions import TypedDict
 
 from src.infrastructure.tools import ALL_TOOLS, READ_ONLY_TOOLS, register_ssi
+
+_logger = logging.getLogger("stp_triage.agent")
 
 # ---------------------------------------------------------------------------
 # System prompt
@@ -120,7 +123,26 @@ def build_graph() -> Any:
         # Prepend system prompt if not already present
         if not messages or not isinstance(messages[0], SystemMessage):
             messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
+
+        _logger.info(
+            "agent_node: invoking LLM",
+            extra={"node": "agent", "trade_id": state.get("trade_id"), "message_count": len(messages)},
+        )
+
         response = llm.invoke(messages)
+
+        if response.tool_calls:
+            for tc in response.tool_calls:
+                _logger.info(
+                    "agent_node: tool call planned",
+                    extra={"node": "agent", "tool": tc["name"], "args": tc["args"]},
+                )
+        else:
+            _logger.info(
+                "agent_node: final response (no tool calls)",
+                extra={"node": "agent", "trade_id": state.get("trade_id")},
+            )
+
         return {"messages": [response]}
 
     # ------------------------------------------------------------------
@@ -132,7 +154,21 @@ def build_graph() -> Any:
     def register_ssi_node(state: AgentState) -> dict[str, Any]:
         last = state["messages"][-1]
         tool_call = next(tc for tc in last.tool_calls if tc["name"] == "register_ssi")
+        _logger.info(
+            "register_ssi_node: executing SSI registration (HITL approved)",
+            extra={
+                "node": "register_ssi_node",
+                "trade_id": state.get("trade_id"),
+                "lei": tool_call["args"].get("lei"),
+                "currency": tool_call["args"].get("currency"),
+                "bic": tool_call["args"].get("bic"),
+            },
+        )
         result = register_ssi.invoke(tool_call["args"])
+        _logger.info(
+            "register_ssi_node: SSI registration complete",
+            extra={"node": "register_ssi_node", "trade_id": state.get("trade_id")},
+        )
         return {
             "messages": [ToolMessage(content=result, tool_call_id=tool_call["id"])],
             "action_taken": True,
