@@ -106,6 +106,69 @@ Status: `[ ]` Backlog · `[~]` In Progress · `[x]` Done
 
 ---
 
+## Future Backlog
+
+> 動作確認完了後に着手予定。依存関係を考慮して順番を整理済み。
+
+### Phase 7 — Documentation & Diagrams
+*依存なし。今すぐ着手可能。*
+
+- [ ] `README.md` を更新:
+  - プロジェクト概要・ユースケース説明
+  - セットアップ手順（install / .env / uvicorn起動）
+  - APIエンドポイント一覧と使い方（curl例）
+  - テスト実行方法（unit / integration）
+- [ ] `docs/architecture.md` にMermaid状態遷移図を作成:
+  - LangGraph StateGraph の全node/edge（agent → read_tools → register_ssi_node → END）
+  - HITLフローの分岐（interrupt_before → approve/reject → resume）
+  - Clean Architecture の層構成図
+
+### Phase 8 — Containerization
+*Phase 7 完了後。GCPデプロイの前提条件。*
+
+- [ ] `Dockerfile` 作成（Python 3.12-slim, uvicorn起動）
+- [ ] `.dockerignore` 作成
+- [ ] `docker-compose.yml` 作成（ローカル開発用、.envファイルをマウント）
+- [ ] コンテナでのユニットテスト実行確認
+
+### Phase 9 — GCP Database
+*Phase 8 完了後。モックデータをDBに置き換える。*
+
+- [ ] GCP Cloud SQL（PostgreSQL）または Firestore のテーブル設計
+  - `trades` テーブル、`settlement_instructions` テーブル、`counterparties` テーブル、`reference_data` テーブル
+- [ ] `src/infrastructure/` にDB接続クライアント実装（Cloud SQLの場合はSQLAlchemy）
+- [ ] `mock_store.py` をDBアクセス実装に置き換え（インターフェース変更なし）
+- [ ] `triage_run_history` テーブル：`TriageResult`（run_id, trade_id, root_cause, steps等）を永続化
+
+### Phase 10 — GCP Secret Manager
+*Phase 9 完了後（GCPインフラが整った後）。*
+
+- [ ] GCP Secret Manager に `ANTHROPIC_API_KEY` 等のシークレットを登録
+- [ ] `src/infrastructure/secrets.py` 実装：`google-cloud-secret-manager` ライブラリで取得
+- [ ] `.env` ファイルによるローカル開発との切り替え（環境変数 `USE_SECRET_MANAGER` で制御）
+- [ ] `pyproject.toml` に `google-cloud-secret-manager` を追加
+- [ ] Cloud Run / GKE サービスアカウントに Secret Manager アクセス権を付与
+
+### Phase 11 — Frontend (React)
+*Phase 9〜10 完了後。バックエンドAPIが安定してから着手。*
+
+- [ ] React + TypeScript プロジェクトを `frontend/` に作成（Vite推奨）
+- [ ] トリアージ実行画面: trade_id・error_message入力フォーム
+- [ ] 結果表示: status / diagnosis / root_cause / recommended_action / steps ビジュアライズ
+- [ ] HITL承認画面: PENDING_APPROVAL時に pending_action_description を表示し Approve/Reject ボタン
+- [ ] ポーリングまたはWebSocket でHITL待機状態を検知
+
+### Phase 12 — MCP Server Externalization
+*Phase 11 完了後。最も高度な変更。*
+
+- [ ] 現在 `tools.py` に直書きのtool実装を MCP サーバとして外部化
+  - 各tool（get_trade_detail, get_settlement_instructions 等）を独立したMCPサーバエンドポイントとして公開
+- [ ] LangGraph agent を MCP クライアントとして接続するよう変更
+- [ ] MCPサーバのDockerコンテナ化（tool単位 or 機能グループ単位）
+- [ ] MCPサーバの認証・認可設計（サービス間通信のセキュリティ）
+
+---
+
 ## In Progress
 
 *(none)*
