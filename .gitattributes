@@ -1,0 +1,7 @@
+# Enforce LF line endings for all text files (prevents CRLF issues on Windows)
+* text=auto eol=lf
+
+# Explicitly declare binary files
+*.png binary
+*.jpg binary
+*.ico binary
