@@ -9,19 +9,36 @@ Read this file before starting any task.
 
 - Work **step by step**; never implement everything at once
 - **Clarify requirements** before writing code — ask if anything is unclear
-- Define **MVP (Minimum Viable Product)** for new features and **Minimum Viable Change** for bug fixes
 - Do **NOT** refactor code unless explicitly instructed
 - Do **NOT** add features, helpers, or abstractions beyond what was asked
 
-### At the end of each step:
-1. Summarize what was done
-2. Propose next steps
-3. Update `docs/progress.md`
-4. Ask if anything is unclear before proceeding
+### Task state transitions
 
-### Tracking files — keep these up to date:
+Tasks move between sections in `docs/tasks.md`. Checkbox marks (`[x]`) are NOT used.
+Position = state:
+
+| Section | Meaning |
+|---------|---------|
+| `## Backlog` | Not yet started |
+| `## In Progress` | Currently being worked on (max 1 task at a time) |
+| `## Done` | Completed and committed |
+
+**Transition rules:**
+- **Before writing code:** Move the task from Backlog → In Progress
+- **After committing:** Move the task from In Progress → Done
+
+### End-of-step checklist (execute in order)
+
+1. Commit the code change
+2. Move completed task: In Progress → Done (in `docs/tasks.md`)
+3. Move next task: Backlog → In Progress (in `docs/tasks.md`)
+4. Update `docs/progress.md`: replace "Current Status" block at top and append to log
+5. Summarize what was done and propose next steps to the user
+
+### Tracking files
+
 - `docs/progress.md` — progress log (updated every step)
-- `docs/requirements.md` — feature requirements and non-functional requirements
+- `docs/requirements.md` — feature requirements (update only when requirements change)
 - `docs/tasks.md` — concrete task list (Backlog / In Progress / Done)
 
 ---
