@@ -7,11 +7,30 @@
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-11
 **In Progress:** *(none)*
-**Next:** Phase 9 (GCP DB) or Phase 13 (deepagents)
+**Next:** Phase 10 (GCP Secret Manager) or Phase 13 (deepagents)
 
 ---
 
 ## Step Log
+
+### Step 13 — Phase 9: PostgreSQL DB layer + Alembic (2026-04-11)
+
+Files: `pyproject.toml`, `docker-compose.yml`, `.env.example`, `alembic.ini`,
+       `alembic/env.py`, `alembic/script.py.mako`,
+       `alembic/versions/0001_initial_schema.py`,
+       `src/infrastructure/db/{__init__,models,session,repository}.py`,
+       `src/presentation/{router,schemas}.py`
+- sqlalchemy==2.0.36, alembic==1.13.3, psycopg2-binary==2.9.9 を追加
+- docker-compose: postgres:16 サービス追加; backend が `alembic upgrade head` 後に起動
+- SQLAlchemy ORM モデル: TriageRunModel + TriageStepModel (triage_runs / triage_steps)
+- session.py: DATABASE_URL 環境変数から遅延初期化、FastAPI Depends 対応
+- repository.py: save (insert/upsert by run_id) + list_recent
+- Alembic: alembic.ini (placeholder URL) + env.py (DATABASE_URL で上書き) + 初回 migration
+- router.py: Depends(get_db) 追加; start/resume 後に DB 保存; GET /api/v1/triage/history 追加
+- schemas.py: TriageHistoryResponse 追加
+- 単体テスト 34件 引き続き全パス
+
+---
 
 ### Step 12 — Phase 8 (partial): Docker test stage (2026-04-11)
 
