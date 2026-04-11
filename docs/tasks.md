@@ -14,10 +14,6 @@ Max 1 task in In Progress at a time.
 
 ## Backlog
 
-### Phase 8 — Containerization (partial)
-
-- コンテナでのユニットテスト実行確認
-
 ### Phase 9 — GCP Database
 
 - GCP Cloud SQL（PostgreSQL）または Firestore のテーブル設計
@@ -67,6 +63,6 @@ Max 1 task in In Progress at a time.
 - Phase 5: Testing (unit tests × 3 files, integration tests × 6 cases)
 - Phase 6: Observability (logging_config.py, structured logging in agent + use_case)
 - Phase 7: Documentation (README.md, docs/architecture.md)
-- Phase 8: Containerization — Dockerfile, .dockerignore, docker-compose.yml
+- Phase 8: Containerization — Dockerfile (multi-stage), .dockerignore, docker-compose.yml (+ test service)
 - Phase 11: React Frontend — frontend/ (Vite + React 18 + TypeScript, TriagePage, HITL UI)
 - Process improvement: CLAUDE.md task state transitions, tasks.md/progress.md restructure

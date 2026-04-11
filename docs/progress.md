@@ -5,13 +5,24 @@
 ## Current Status
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
-**Last updated:** 2026-04-08
+**Last updated:** 2026-04-11
 **In Progress:** *(none)*
-**Next:** Phase 8 partial (Docker unit test) or Phase 9 (GCP DB)
+**Next:** Phase 9 (GCP DB) or Phase 13 (deepagents)
 
 ---
 
 ## Step Log
+
+### Step 12 — Phase 8 (partial): Docker test stage (2026-04-11)
+
+Files: `Dockerfile`, `docker-compose.yml`
+- Dockerfile: multi-stage build (base → production / base → test)
+  - test stage: installs `.[dev]`, copies `tests/`, CMD = pytest
+- docker-compose.yml: added `test` service (profile: test)
+  - Run with: `docker compose --profile test run test`
+- Verified: 34 unit tests pass (Python 3.12, uv venv)
+
+---
 
 ### Step 11 — Process improvement: CLAUDE.md / tasks.md / progress.md (2026-04-08)
 
