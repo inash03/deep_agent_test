@@ -14,12 +14,23 @@ Max 1 task in In Progress at a time.
 
 ## Backlog
 
-### Phase 9 — GCP Database
+### Phase 9 — GCP Database + Alembic
 
-- GCP Cloud SQL（PostgreSQL）または Firestore のテーブル設計
-- `src/infrastructure/` にDB接続クライアント実装（Cloud SQLの場合はSQLAlchemy）
-- `mock_store.py` をDBアクセス実装に置き換え（インターフェース変更なし）
-- `triage_run_history` テーブル：`TriageResult` の永続化
+> 本番DB: Cloud SQL (PostgreSQL, db-f1-micro) または e2-micro VM 上の PostgreSQL
+> 開発DB: docker-compose.yml に postgres:16 サービスを追加（$0）
+> マイグレーション管理: Alembic + SQLAlchemy
+
+- `pyproject.toml` に `sqlalchemy`, `alembic`, `psycopg2-binary` を追加
+- `docker-compose.yml` に `postgres:16` サービスを追加（開発用）
+- `src/infrastructure/db/models.py`: SQLAlchemy モデル定義
+  - `triage_runs` テーブル（TriageResult 永続化）
+  - `steps` テーブル（Step リスト）
+- Alembic 初期化（`alembic init alembic`）+ `env.py` を DATABASE_URL 対応に設定
+- 初回マイグレーション生成・適用（`alembic revision --autogenerate`）
+- `src/infrastructure/db/repository.py`: DB経由の TriageResult 保存・取得
+- `mock_store.py` を DB 実装に置き換え（`ITriageUseCase` インターフェース変更なし）
+- シードスクリプト（`scripts/seed.py`）: テスト用初期データ投入
+- Postgres MCP サーバ設定（`~/.claude/mcp_servers.json`）でスキーマ確認・検証
 
 ### Phase 10 — GCP Secret Manager
 
