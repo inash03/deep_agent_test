@@ -72,3 +72,10 @@ class TriageResponse(BaseModel):
                 for s in result.steps
             ],
         )
+
+
+class TriageHistoryResponse(BaseModel):
+    """GET /api/v1/triage/history のレスポンス。"""
+
+    items: list[TriageResponse]
+    total: int
