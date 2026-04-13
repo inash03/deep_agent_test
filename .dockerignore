@@ -1,0 +1,27 @@
+# Python artifacts
+.venv/
+__pycache__/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Secrets — never bake into image
+.env
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Tests and docs (not needed at runtime)
+tests/
+docs/
+
+# Frontend artifacts
+frontend/node_modules/
+frontend/dist/
+
+# Misc
+*.md
+.env.example
