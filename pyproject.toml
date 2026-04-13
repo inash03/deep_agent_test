@@ -30,6 +30,12 @@ dev = [
     "ruff==0.15.9",
     "mypy==1.20.0",
 ]
+gcp = [
+    # GCP Secret Manager クライアント
+    # SECRET_BACKEND=gcp の場合のみ必要
+    # インストール: pip install -e ".[gcp]"
+    "google-cloud-secret-manager==2.20.2",
+]
 
 [tool.ruff]
 line-length = 100
