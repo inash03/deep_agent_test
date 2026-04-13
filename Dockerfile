@@ -7,7 +7,9 @@ RUN pip install --no-cache-dir uv
 
 # Install runtime dependencies (non-editable — no .egg-link needed in container)
 COPY pyproject.toml ./
-RUN uv pip install --system --no-cache .
+# [gcp] extra を含めてインストール: SECRET_BACKEND=gcp で GCP Secret Manager を使う場合に必要
+# SECRET_BACKEND=env (デフォルト) の場合も無害（インポートされないだけ）
+RUN uv pip install --system --no-cache ".[gcp]"
 
 # Copy application source
 COPY src/ ./src/
