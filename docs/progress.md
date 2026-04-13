@@ -5,13 +5,25 @@
 ## Current Status
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
-**Last updated:** 2026-04-11
+**Last updated:** 2026-04-13
 **In Progress:** *(none)*
-**Next:** Phase 10 (GCP Secret Manager) or Phase 13 (deepagents)
+**Next:** Phase 11 (Frontend 動作確認) or Phase 13 (deepagents)
 
 ---
 
 ## Step Log
+
+### Step 14 — Phase 10: Secret Manager 抽象化レイヤー (2026-04-13)
+
+Files: `src/infrastructure/secrets.py`, `src/main.py`, `pyproject.toml`, `.env.example`
+- secrets.py: `load_secrets()` — SECRET_BACKEND 環境変数で切り替え
+  - `env` (デフォルト): .env / os.environ をそのまま使用
+  - `gcp`: GCP Secret Manager から取得して os.environ に注入
+- pyproject.toml: optional extra `[gcp]` = google-cloud-secret-manager==2.20.2
+- main.py: `load_dotenv()` → `load_secrets()` → `setup_logging()` の順序を明示
+- .env.example: SECRET_BACKEND / GCP_PROJECT_ID を追加
+
+---
 
 ### Step 13 — Phase 9: PostgreSQL DB layer + Alembic (2026-04-11)
 

@@ -14,13 +14,6 @@ Max 1 task in In Progress at a time.
 
 ## Backlog
 
-### Phase 10 — GCP Secret Manager
-
-- GCP Secret Manager に `ANTHROPIC_API_KEY` 等のシークレットを登録
-- `src/infrastructure/secrets.py` 実装
-- `.env` ファイルによるローカル開発との切り替え
-- Cloud Run / GKE サービスアカウントへのアクセス権付与
-
 ### Phase 11 — Frontend (partial)
 
 - `npm install` + `npm run dev` で動作確認（Node.js 20+ が必要）
@@ -58,5 +51,6 @@ Max 1 task in In Progress at a time.
 - Phase 7: Documentation (README.md, docs/architecture.md)
 - Phase 8: Containerization — Dockerfile (multi-stage), .dockerignore, docker-compose.yml (+ test service)
 - Phase 9: DB layer — SQLAlchemy models, Alembic migration, repository, history endpoint
+- Phase 10: Secret Manager abstraction — secrets.py, SECRET_BACKEND 環境変数で .env / GCP 切り替え
 - Phase 11: React Frontend — frontend/ (Vite + React 18 + TypeScript, TriagePage, HITL UI)
 - Process improvement: CLAUDE.md task state transitions, tasks.md/progress.md restructure
