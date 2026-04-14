@@ -27,6 +27,7 @@ services:
     environment:
       # Override DATABASE_URL to use the postgres container hostname
       DATABASE_URL: postgresql://stp_user:stp_pass@postgres:5432/stp_agent
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
       # Mount source for hot-reload in dev; remove for production
       - ./src:/app/src:ro
@@ -49,7 +50,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: http://localhost:8000
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     ports:
       - "5173:80"
     depends_on:

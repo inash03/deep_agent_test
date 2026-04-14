@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,9 +29,10 @@ app = FastAPI(
     version="0.1.0",
 )
 
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server
+    allow_origins=_cors_origins,
     allow_methods=["POST"],
     allow_headers=["Content-Type"],
 )
