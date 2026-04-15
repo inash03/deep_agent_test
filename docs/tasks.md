@@ -8,18 +8,6 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-### Phase 14 — DB Foundation + Seed
-
-- 5 つの新 ORM モデル追加 (`src/infrastructure/db/models.py`)
-- Alembic migration 0002 作成 (`alembic/versions/0002_add_domain_tables.py`)
-- `TradeStatus` / `StpExceptionStatus` / `StpException` エンティティ追加 (`src/domain/entities.py`)
-- `src/infrastructure/seed.py` 作成（mock_store.py のデータを DB に挿入）
-- `docker-compose.yml` に seed ステップ追加
-
----
-
-## Backlog
-
 ### Phase 15 — Backend CRUD API
 
 - `src/infrastructure/db/trade_repository.py` 作成
@@ -28,6 +16,10 @@ Max 1 task in In Progress at a time.
 - `src/presentation/routers/` ディレクトリ以下に trades / counterparties / stp_exceptions / seed ルーター作成
 - `src/presentation/schemas.py` に `TradeOut` / `CounterpartyOut` / `StpExceptionOut` 追加
 - `src/main.py`: 新ルーター登録 + CORS `allow_methods` 修正
+
+---
+
+## Backlog
 
 ### Phase 16 — LangGraph ツール DB 移行
 

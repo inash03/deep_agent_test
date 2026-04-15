@@ -7,6 +7,10 @@ These are deliberately separate from domain entities:
 
 from __future__ import annotations
 
+import uuid
+from datetime import date, datetime
+from decimal import Decimal
+
 from pydantic import BaseModel, Field
 
 from src.domain.entities import TriageResult
@@ -79,3 +83,77 @@ class TriageHistoryResponse(BaseModel):
 
     items: list[TriageResponse]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Trade schemas
+# ---------------------------------------------------------------------------
+
+
+class TradeOut(BaseModel):
+    trade_id: str
+    counterparty_lei: str
+    instrument_id: str
+    currency: str
+    amount: str  # string to preserve decimal precision
+    value_date: date
+    trade_date: date
+    settlement_currency: str
+    stp_status: str
+
+
+class TradeListResponse(BaseModel):
+    items: list[TradeOut]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Counterparty schemas
+# ---------------------------------------------------------------------------
+
+
+class CounterpartyOut(BaseModel):
+    lei: str
+    name: str
+    bic: str
+    is_active: bool
+
+
+class CounterpartyListResponse(BaseModel):
+    items: list[CounterpartyOut]
+    total: int
+
+
+class CounterpartyUpdateRequest(BaseModel):
+    name: str | None = None
+    bic: str | None = None
+    is_active: bool | None = None
+
+
+# ---------------------------------------------------------------------------
+# STP Exception schemas
+# ---------------------------------------------------------------------------
+
+
+class StpExceptionOut(BaseModel):
+    id: uuid.UUID
+    trade_id: str
+    error_message: str
+    status: str
+    triage_run_id: uuid.UUID | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class StpExceptionListResponse(BaseModel):
+    items: list[StpExceptionOut]
+    total: int
+
+
+class StpExceptionCreateRequest(BaseModel):
+    trade_id: str = Field(..., min_length=1, examples=["TRD-006"])
+    error_message: str = Field(..., min_length=1, examples=["Manual STP failure for demo"])
+
+
+class StpExceptionStatusUpdateRequest(BaseModel):
+    status: str = Field(..., examples=["IN_PROGRESS"])
