@@ -8,23 +8,11 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-### Phase 17 — フロントエンド共通基盤
-
-- `react-router-dom` + `@types/react-router-dom` を `package.json` に追加
-- `src/styles/theme.ts` 作成（共通スタイル定数）
-- `src/components/NavBar.tsx` / `PageLayout.tsx` / `Table.tsx` / `Pagination.tsx` 作成
-- `src/App.tsx` を `BrowserRouter` + `Routes` に書き換え
+*(none)*
 
 ---
 
 ## Backlog
-
-### Phase 18 — 各画面実装
-
-- `src/types/trade.ts` + `src/api/trades.ts` + `TradeListPage.tsx`
-- `src/types/counterparty.ts` + `src/api/counterparties.ts` + `CounterpartyListPage.tsx` + `CounterpartyEditPage.tsx`
-- `src/types/stpException.ts` + `src/api/stpExceptions.ts` + `StpExceptionListPage.tsx` + `StpExceptionCreatePage.tsx`
-- `src/api/admin.ts` + NavBar のデータリフレッシュボタン実装
 
 ### Phase 11 — Frontend (partial)
 
@@ -66,3 +54,7 @@ Max 1 task in In Progress at a time.
 - Phase 10: Secret Manager abstraction — secrets.py, SECRET_BACKEND 環境変数で .env / GCP 切り替え
 - Phase 11: React Frontend — frontend/ (Vite + React 18 + TypeScript, TriagePage, HITL UI)
 - Process improvement: CLAUDE.md task state transitions, tasks.md/progress.md restructure
+- Phase 14: DB Foundation + Seed — 5 ORM models, Alembic 0002 migration, seed.py, TradeStatus/StpExceptionStatus entities
+- Phase 15: Backend CRUD API — trade/counterparty/stp_exception repositories + routers, schemas, CORS fix
+- Phase 16: LangGraph tools DB migration — tools.py DB/mock fallback, ssi_repository, reference_data_repository
+- Phase 17+18: Frontend routing + all CRUD pages — NavBar, PageLayout, Pagination, TradeListPage, CounterpartyListPage/EditPage, StpExceptionListPage/CreatePage, theme.ts
