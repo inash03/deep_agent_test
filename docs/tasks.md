@@ -8,24 +8,15 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-### Phase 15 — Backend CRUD API
-
-- `src/infrastructure/db/trade_repository.py` 作成
-- `src/infrastructure/db/counterparty_repository.py` 作成
-- `src/infrastructure/db/stp_exception_repository.py` 作成
-- `src/presentation/routers/` ディレクトリ以下に trades / counterparties / stp_exceptions / seed ルーター作成
-- `src/presentation/schemas.py` に `TradeOut` / `CounterpartyOut` / `StpExceptionOut` 追加
-- `src/main.py`: 新ルーター登録 + CORS `allow_methods` 修正
-
----
-
-## Backlog
-
 ### Phase 16 — LangGraph ツール DB 移行
 
 - `src/infrastructure/db/ssi_repository.py` 作成
 - `src/infrastructure/db/reference_data_repository.py` 作成
 - `src/infrastructure/tools.py`: `mock_store.*` 呼び出しを DB リポジトリに切り替え
+
+---
+
+## Backlog
 
 ### Phase 17 — フロントエンド共通基盤
 
