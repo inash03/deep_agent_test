@@ -8,22 +8,16 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-### Phase 16 — LangGraph ツール DB 移行
-
-- `src/infrastructure/db/ssi_repository.py` 作成
-- `src/infrastructure/db/reference_data_repository.py` 作成
-- `src/infrastructure/tools.py`: `mock_store.*` 呼び出しを DB リポジトリに切り替え
-
----
-
-## Backlog
-
 ### Phase 17 — フロントエンド共通基盤
 
 - `react-router-dom` + `@types/react-router-dom` を `package.json` に追加
 - `src/styles/theme.ts` 作成（共通スタイル定数）
 - `src/components/NavBar.tsx` / `PageLayout.tsx` / `Table.tsx` / `Pagination.tsx` 作成
 - `src/App.tsx` を `BrowserRouter` + `Routes` に書き換え
+
+---
+
+## Backlog
 
 ### Phase 18 — 各画面実装
 

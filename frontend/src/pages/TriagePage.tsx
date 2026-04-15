@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { startTriage, resumeTriage } from '../api/triage'
-import type { TriageResponse } from '../types/triage'
+import { PageLayout } from '../components/PageLayout'
 import { StatusBadge } from '../components/StatusBadge'
 import { StepList } from '../components/StepList'
+import { BTN_BASE, CARD, COLOR } from '../styles/theme'
+import type { TriageResponse } from '../types/triage'
 
 type UIState =
   | { phase: 'input' }
@@ -10,23 +12,6 @@ type UIState =
   | { phase: 'pending'; result: TriageResponse }
   | { phase: 'completed'; result: TriageResponse }
   | { phase: 'error'; message: string }
-
-const CARD: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e5e7eb',
-  borderRadius: '8px',
-  padding: '1.5rem',
-  marginBottom: '1rem',
-}
-
-const BTN_BASE: React.CSSProperties = {
-  padding: '0.5rem 1.25rem',
-  borderRadius: '6px',
-  border: 'none',
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontSize: '0.95rem',
-}
 
 export function TriagePage() {
   const [tradeId, setTradeId] = useState('')
@@ -68,16 +53,15 @@ export function TriagePage() {
   }
 
   return (
-    <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem', fontFamily: 'system-ui, sans-serif' }}>
-      <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>STP Exception Triage Agent</h1>
-      <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+    <PageLayout title="STP Exception Triage Agent">
+      <p style={{ color: COLOR.textMuted, marginBottom: '1.5rem', marginTop: '-0.5rem' }}>
         LangGraph ReAct agent investigates STP failures and diagnoses the root cause.
       </p>
 
       {/* Input Form */}
       {(uiState.phase === 'input' || uiState.phase === 'error') && (
-        <div style={CARD}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>New Triage Request</h2>
+        <div style={{ ...CARD, maxWidth: 600 }}>
+          <h2 style={{ fontSize: '1.05rem', marginBottom: '1rem', fontWeight: 600 }}>New Triage Request</h2>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>
@@ -125,7 +109,7 @@ export function TriagePage() {
             )}
             <button
               type="submit"
-              style={{ ...BTN_BASE, backgroundColor: '#2563eb', color: '#fff', alignSelf: 'flex-start' }}
+              style={{ ...BTN_BASE, backgroundColor: COLOR.primary, color: '#fff', alignSelf: 'flex-start' }}
             >
               Start Triage
             </button>
@@ -135,7 +119,7 @@ export function TriagePage() {
 
       {/* Loading */}
       {uiState.phase === 'loading' && (
-        <div style={{ ...CARD, color: '#6b7280', textAlign: 'center' }}>
+        <div style={{ ...CARD, color: COLOR.textMuted, textAlign: 'center', maxWidth: 600 }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏳</div>
           <p>{uiState.message}</p>
           <p style={{ fontSize: '0.8rem' }}>The agent is investigating via multiple tool calls. This may take 10–30 seconds.</p>
@@ -144,7 +128,7 @@ export function TriagePage() {
 
       {/* HITL Approval Panel */}
       {uiState.phase === 'pending' && (
-        <div style={{ ...CARD, borderColor: '#fed7aa', backgroundColor: '#fff7ed' }}>
+        <div style={{ ...CARD, borderColor: '#fed7aa', backgroundColor: '#fff7ed', maxWidth: 700 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
             <span style={{ fontSize: '1.5rem' }}>⚠️</span>
             <div>
@@ -187,14 +171,14 @@ export function TriagePage() {
 
       {/* Completed Result */}
       {uiState.phase === 'completed' && (
-        <div style={CARD}>
+        <div style={{ ...CARD, maxWidth: 700 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
                 <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Triage Result</h2>
                 <StatusBadge status={uiState.result.status} />
               </div>
-              <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: 0 }}>
+              <p style={{ fontSize: '0.85rem', color: COLOR.textMuted, margin: 0 }}>
                 Trade: {uiState.result.trade_id} &nbsp;|&nbsp; Run ID: {uiState.result.run_id}
               </p>
             </div>
@@ -218,7 +202,7 @@ export function TriagePage() {
           <StepList steps={uiState.result.steps} />
         </div>
       )}
-    </div>
+    </PageLayout>
   )
 }
 
