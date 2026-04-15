@@ -8,11 +8,46 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-*(none)*
+### Phase 14 — DB Foundation + Seed
+
+- 5 つの新 ORM モデル追加 (`src/infrastructure/db/models.py`)
+- Alembic migration 0002 作成 (`alembic/versions/0002_add_domain_tables.py`)
+- `TradeStatus` / `StpExceptionStatus` / `StpException` エンティティ追加 (`src/domain/entities.py`)
+- `src/infrastructure/seed.py` 作成（mock_store.py のデータを DB に挿入）
+- `docker-compose.yml` に seed ステップ追加
 
 ---
 
 ## Backlog
+
+### Phase 15 — Backend CRUD API
+
+- `src/infrastructure/db/trade_repository.py` 作成
+- `src/infrastructure/db/counterparty_repository.py` 作成
+- `src/infrastructure/db/stp_exception_repository.py` 作成
+- `src/presentation/routers/` ディレクトリ以下に trades / counterparties / stp_exceptions / seed ルーター作成
+- `src/presentation/schemas.py` に `TradeOut` / `CounterpartyOut` / `StpExceptionOut` 追加
+- `src/main.py`: 新ルーター登録 + CORS `allow_methods` 修正
+
+### Phase 16 — LangGraph ツール DB 移行
+
+- `src/infrastructure/db/ssi_repository.py` 作成
+- `src/infrastructure/db/reference_data_repository.py` 作成
+- `src/infrastructure/tools.py`: `mock_store.*` 呼び出しを DB リポジトリに切り替え
+
+### Phase 17 — フロントエンド共通基盤
+
+- `react-router-dom` + `@types/react-router-dom` を `package.json` に追加
+- `src/styles/theme.ts` 作成（共通スタイル定数）
+- `src/components/NavBar.tsx` / `PageLayout.tsx` / `Table.tsx` / `Pagination.tsx` 作成
+- `src/App.tsx` を `BrowserRouter` + `Routes` に書き換え
+
+### Phase 18 — 各画面実装
+
+- `src/types/trade.ts` + `src/api/trades.ts` + `TradeListPage.tsx`
+- `src/types/counterparty.ts` + `src/api/counterparties.ts` + `CounterpartyListPage.tsx` + `CounterpartyEditPage.tsx`
+- `src/types/stpException.ts` + `src/api/stpExceptions.ts` + `StpExceptionListPage.tsx` + `StpExceptionCreatePage.tsx`
+- `src/api/admin.ts` + NavBar のデータリフレッシュボタン実装
 
 ### Phase 11 — Frontend (partial)
 
