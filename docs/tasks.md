@@ -14,6 +14,31 @@ Max 1 task in In Progress at a time.
 
 ## Backlog
 
+### Phase 19 — DB を Neon PostgreSQL に移行
+
+- `docker-compose.yml` から postgres サービスを削除
+- `.env.example` に Neon の `DATABASE_URL` を追記
+- Neon のブランチ（main）に対して `alembic upgrade head` を実行
+- ローカル動作確認（`docker compose up` で postgres コンテナなしで起動できること）
+
+### Phase 20 — バックエンドを Cloud Run に移行
+
+- Artifact Registry にバックエンドイメージを push するための `cloudbuild.yaml` または `Makefile` ターゲットを追加
+- Cloud Run サービスを作成（リージョン: us-central1、メモリ: 512Mi〜1Gi）
+- 環境変数（`DATABASE_URL`, `ANTHROPIC_API_KEY`, `SECRET_BACKEND` 等）を Cloud Run の Secret Manager 経由で設定
+- CORS_ORIGINS をフロントエンドの URL に更新
+- LangGraph MemorySaver の注意点：Cloud Run はステートレスのため、複数インスタンスでは HITL の run_id が失われる可能性がある（min-instances=1 で回避、または将来的に DB/Redis ベースの checkpointer に移行）
+- フロントエンドの `VITE_API_URL` を Cloud Run の URL に更新
+
+### Phase 21 — GCP read-only IAM ロールと MCP 連携
+
+- GCP サービスアカウント `claude-reader` を作成
+  - 付与ロール: `roles/compute.viewer`, `roles/logging.viewer`, `roles/monitoring.viewer`, `roles/run.viewer`
+- サービスアカウントキー（JSON）を生成・保管
+- `~/.claude/settings.json` に `GOOGLE_APPLICATION_CREDENTIALS` 環境変数を設定
+- 動作確認: Claude Code から `gcloud compute instances list` などが実行できること
+- （将来）GCP 用 MCP サーバが成熟したら移行を検討
+
 ### Phase 11 — Frontend (partial)
 
 - `npm install` + `npm run dev` で動作確認（Node.js 20+ が必要）
