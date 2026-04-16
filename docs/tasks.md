@@ -104,6 +104,18 @@ push to main
 - Implement `POST /api/v1/triage/deep` + resume endpoint (`src/presentation/router_deep.py`)
 - Add `docs/comparison.md` — LangGraph vs deepagents comparison
 
+### Phase 23 — フロントエンドを Firebase Hosting に移行（低優先度）
+
+> Azure Blob Storage の静的ホスティングに相当。VM が不要になり HTTPS も無料。
+> Phase 20（Cloud Run 移行）と Phase 22（CI/CD）完了後に検討。
+
+- Firebase プロジェクトを作成（GCP プロジェクトと連携可能）
+- `firebase.json` と `.firebaserc` を追加
+- `frontend/` に `firebase deploy` でデプロイできることを確認
+- SPA ルーティング対応: `firebase.json` に `"rewrites": [{"source": "**", "destination": "/index.html"}]` を設定
+- CI/CD への組み込み: GitHub Actions に `firebase-action/deploy` ステップを追加
+- `VITE_API_URL` を Cloud Run の URL に固定し、VM への依存をなくす
+
 ---
 
 ## Done
