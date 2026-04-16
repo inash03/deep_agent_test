@@ -42,12 +42,36 @@ gcloud compute instances add-access-config free-dev-vm \
 
 ### Phase 20 — バックエンドを Cloud Run に移行
 
-- Artifact Registry にバックエンドイメージを push するための `cloudbuild.yaml` または `Makefile` ターゲットを追加
-- Cloud Run サービスを作成（リージョン: us-central1、メモリ: 512Mi〜1Gi）
-- 環境変数（`DATABASE_URL`, `ANTHROPIC_API_KEY`, `SECRET_BACKEND` 等）を Cloud Run の Secret Manager 経由で設定
-- CORS_ORIGINS をフロントエンドの URL に更新
-- LangGraph MemorySaver の注意点：Cloud Run はステートレスのため、複数インスタンスでは HITL の run_id が失われる可能性がある（min-instances=1 で回避、または将来的に DB/Redis ベースの checkpointer に移行）
-- フロントエンドの `VITE_API_URL` を Cloud Run の URL に更新
+- Artifact Registry リポジトリを作成（`gcloud artifacts repositories create`）
+- バックエンド用 Cloud Run サービスを作成（リージョン: us-central1、メモリ: 512Mi〜1Gi）
+- 環境変数（`DATABASE_URL`, `ANTHROPIC_API_KEY`, `SECRET_BACKEND` 等）を Secret Manager 経由で設定
+- `CORS_ORIGINS` をフロントエンドの URL（VM の外部 IP またはカスタムドメイン）に更新
+- `docker-compose.yml` からバックエンドサービスを削除し、フロントエンドのみに簡略化
+- フロントエンドの `VITE_API_URL` を Cloud Run の URL（`https://xxx.run.app`）に更新
+- MemorySaver 注意点: Cloud Run はステートレス → `min-instances=1` で回避（将来は DB ベースの checkpointer に移行）
+
+### Phase 22 — CI/CD パイプライン（GitHub Actions + Cloud Run）
+
+> Azure DevOps + self-hosted agent の経験があれば概念は同じ。
+> GitHub Actions の hosted runner が Cloud Build の hosted agent に相当。
+
+パイプラインのトリガーとフロー:
+```
+push to main
+  → GitHub Actions workflow
+    → Docker build（バックエンドイメージ）
+    → push to Artifact Registry
+    → Cloud Run に新リビジョンをデプロイ
+```
+
+実装タスク:
+- `.github/workflows/deploy-backend.yml` を作成
+  - トリガー: `push` to `main`（`src/` 配下の変更のみ）
+  - ステップ: Workload Identity Federation で認証 → `docker build` → `docker push` → `gcloud run deploy`
+- GCP 側の事前設定（人間作業）:
+  - Workload Identity Pool + Provider の作成（サービスアカウントキーファイル不要の推奨認証方式）
+  - GitHub Actions に `WORKLOAD_IDENTITY_PROVIDER` と `SERVICE_ACCOUNT` の secrets を登録
+- フロントエンド（静的ファイル）は将来的に Cloud Storage + Cloud CDN に移行することで VM も不要にできる
 
 ### Phase 21 — GCP read-only IAM ロールと MCP 連携
 
