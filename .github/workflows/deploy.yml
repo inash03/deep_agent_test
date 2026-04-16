@@ -12,9 +12,14 @@ on:
       - 'alembic/**'
       - 'pyproject.toml'
 
+concurrency:
+  group: deploy-vm
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: GCP_VM
     steps:
       - name: Deploy to VM via SSH
         uses: appleboy/ssh-action@v1.2.0
