@@ -14,6 +14,32 @@ Max 1 task in In Progress at a time.
 
 ## Backlog
 
+### Ops — GCP 静的外部 IP の予約（人間作業）
+
+> VM を再起動するたびに外部 IP が変わる問題の恒久対策。
+> e2-micro VM に割り当てている間は無料枠に含まれる（VM 停止中は課金あり）。
+
+手順（Cloud Shell または gcloud から実行）:
+```bash
+# 1. 静的 IP を予約
+gcloud compute addresses create stp-agent-ip --region=us-central1
+
+# 2. 予約した IP アドレスを確認
+gcloud compute addresses describe stp-agent-ip --region=us-central1
+
+# 3. VM の既存エフェメラル IP を解除
+gcloud compute instances delete-access-config free-dev-vm \
+  --access-config-name="External NAT" --zone=us-central1-a
+
+# 4. 静的 IP を VM に割り当て
+gcloud compute instances add-access-config free-dev-vm \
+  --access-config-name="External NAT" \
+  --address=<上記で確認した IP> \
+  --zone=us-central1-a
+```
+
+完了後は `.env` の `VITE_API_URL` と `CORS_ORIGINS` を新しい固定 IP に更新する。
+
 ### Phase 20 — バックエンドを Cloud Run に移行
 
 - Artifact Registry にバックエンドイメージを push するための `cloudbuild.yaml` または `Makefile` ターゲットを追加
