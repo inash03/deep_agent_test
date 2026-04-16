@@ -8,18 +8,11 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-### Phase 19 — DB を Neon PostgreSQL に移行
+*(none)*
 
 ---
 
 ## Backlog
-
-### Phase 19 — DB を Neon PostgreSQL に移行
-
-- `docker-compose.yml` から postgres サービスを削除
-- `.env.example` に Neon の `DATABASE_URL` を追記
-- Neon のブランチ（main）に対して `alembic upgrade head` を実行
-- ローカル動作確認（`docker compose up` で postgres コンテナなしで起動できること）
 
 ### Phase 20 — バックエンドを Cloud Run に移行
 
@@ -83,3 +76,4 @@ Max 1 task in In Progress at a time.
 - Phase 15: Backend CRUD API — trade/counterparty/stp_exception repositories + routers, schemas, CORS fix
 - Phase 16: LangGraph tools DB migration — tools.py DB/mock fallback, ssi_repository, reference_data_repository
 - Phase 17+18: Frontend routing + all CRUD pages — NavBar, PageLayout, Pagination, TradeListPage, CounterpartyListPage/EditPage, StpExceptionListPage/CreatePage, theme.ts
+- Phase 19: DB を Neon PostgreSQL に移行 — postgres コンテナ削除、DATABASE_URL を外部化
