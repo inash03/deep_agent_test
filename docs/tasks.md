@@ -14,6 +14,20 @@ Max 1 task in In Progress at a time.
 
 ## Backlog
 
+### Phase 25 — アクセス制御（Basic Auth）
+
+> エージェント呼び出しは LLM コストが発生するため、外部からの無断アクセスを防ぐ。
+> フロントエンド（Nginx）とバックエンド（FastAPI）の両方を保護する。
+
+実装内容:
+- `.env` / `.env.example` に `APP_USERNAME`, `APP_PASSWORD` を追加
+- **フロントエンド**: Nginx 設定に `auth_basic` を追加し、`htpasswd` でパスワードファイルを生成
+- **バックエンド**: FastAPI に `HTTPBasic` ミドルウェアを追加（`/docs` と `/health` は除外）
+- `docker-compose.yml` でパスワードファイルをマウント
+
+Cloud Run 移行後の発展:
+- Cloud IAP（Identity-Aware Proxy）に切り替えると Google アカウントで認証可能
+
 ### Phase 24 — エージェント機能増強
 
 #### 24-A: ツールの追加
