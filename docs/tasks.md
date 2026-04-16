@@ -8,7 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-*(none)*
+### Phase 22 前半 — VM への自動デプロイ（GitHub Actions）
 
 ---
 

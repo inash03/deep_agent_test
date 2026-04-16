@@ -1,0 +1,32 @@
+name: Deploy to VM
+
+on:
+  push:
+    branches:
+      - 'claude/setup-langgraph-project-oXB7j'
+    paths:
+      - 'src/**'
+      - 'frontend/**'
+      - 'docker-compose.yml'
+      - 'Dockerfile'
+      - 'alembic/**'
+      - 'pyproject.toml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VM via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd ~/deep_agent_test
+            git fetch origin
+            git reset --hard origin/claude/setup-langgraph-project-oXB7j
+            docker compose up --build -d
+            docker compose ps
