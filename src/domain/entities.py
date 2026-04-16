@@ -5,12 +5,27 @@ Pure business logic — no framework dependencies.
 
 from __future__ import annotations
 
-from datetime import date
+import uuid
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+
+
+class TradeStatus(str, Enum):
+    NEW = "NEW"
+    STP_PASSED = "STP_PASSED"
+    STP_FAILED = "STP_FAILED"
+    SETTLED = "SETTLED"
+
+
+class StpExceptionStatus(str, Enum):
+    OPEN = "OPEN"
+    IN_PROGRESS = "IN_PROGRESS"
+    RESOLVED = "RESOLVED"
+    CLOSED = "CLOSED"
 
 
 class RootCause(str, Enum):
@@ -122,3 +137,20 @@ class TriageResult(BaseModel):
 
     # Always populated
     steps: list[Step] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# STP Exception (persisted domain object)
+# ---------------------------------------------------------------------------
+
+
+class StpException(BaseModel):
+    """A single STP exception record for a failed trade."""
+
+    id: uuid.UUID
+    trade_id: str
+    error_message: str
+    status: StpExceptionStatus
+    triage_run_id: uuid.UUID | None = None
+    created_at: datetime
+    updated_at: datetime

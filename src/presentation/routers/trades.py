@@ -1,0 +1,50 @@
+"""Trade list endpoints."""
+
+from __future__ import annotations
+
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
+from src.infrastructure.db.session import get_db
+from src.infrastructure.db.trade_repository import TradeRepository
+from src.presentation.schemas import TradeListResponse, TradeOut
+
+router = APIRouter(prefix="/api/v1/trades", tags=["trades"])
+
+
+def _to_out(row) -> TradeOut:
+    return TradeOut(
+        trade_id=row.trade_id,
+        counterparty_lei=row.counterparty_lei,
+        instrument_id=row.instrument_id,
+        currency=row.currency,
+        amount=str(row.amount),
+        value_date=row.value_date,
+        trade_date=row.trade_date,
+        settlement_currency=row.settlement_currency,
+        stp_status=row.stp_status,
+    )
+
+
+@router.get("", response_model=TradeListResponse)
+def list_trades(
+    trade_id: str | None = Query(None, description="部分一致フィルタ"),
+    stp_status: str | None = Query(None, description="完全一致フィルタ (e.g. STP_FAILED)"),
+    trade_date: date | None = Query(None, description="取引日フィルタ (YYYY-MM-DD)"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> TradeListResponse:
+    repo = TradeRepository(db)
+    items, total = repo.list(trade_id=trade_id, stp_status=stp_status, trade_date=trade_date, limit=limit, offset=offset)
+    return TradeListResponse(items=[_to_out(r) for r in items], total=total)
+
+
+@router.get("/{trade_id}", response_model=TradeOut)
+def get_trade(trade_id: str, db: Session = Depends(get_db)) -> TradeOut:
+    row = TradeRepository(db).get_by_trade_id(trade_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Trade '{trade_id}' not found")
+    return _to_out(row)
