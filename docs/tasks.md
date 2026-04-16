@@ -14,6 +14,51 @@ Max 1 task in In Progress at a time.
 
 ## Backlog
 
+### Phase 24 — エージェント機能増強
+
+#### 24-A: ツールの追加
+
+現在のツール: `get_trade_detail`, `get_settlement_instructions`, `get_reference_data`,
+`get_counterparty`, `lookup_external_ssi`, `register_ssi`
+
+追加するツール:
+- `reactivate_counterparty(lei)` — `is_active=False` のカウンターパーティを再有効化（HITL 承認対象）
+- `update_ssi(lei, currency, **fields)` — 既存 SSI の BIC/口座番号等を修正
+- `get_triage_history(trade_id)` — 同一取引の過去トリアージ結果を参照
+- `get_counterparty_exception_history(lei)` — 同一カウンターパーティの直近 N 件の STP 失敗件数・傾向
+- `escalate(trade_id, reason)` — 自動解決不能と判断した場合に担当者エスカレーション（新 HITL タイプ）
+
+#### 24-B: 複雑・曖昧なシナリオの追加
+
+> 「明確すぎず、非現実的でもない」レベルに設定する。
+> SWIFT 拒否コードや複合障害など、調査しないと原因が特定できないケース。
+
+追加シナリオ（seed データにも反映）:
+
+| シナリオ | エラーメッセージ例 | 真の原因 |
+|---------|-----------------|---------|
+| SWIFT 拒否コード | `MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.` | BIC は正しいが SSI の口座番号が古い |
+| SWIFT 拒否コード | `MT103 rejected. Code: AG01. Counterparty: LEI 213800XYZ.` | カウンターパーティが取引禁止フラグ（is_active=false） |
+| 複合障害 | `Pre-settlement validation failed for TRD-008. Multiple checks not passed.` | SSI 未登録 かつ カウンターパーティ非アクティブの両方 |
+| カストディアン拒否 | `Custodian HSBC rejected settlement instruction for TRD-009. No further details provided.` | SSI の IBAN フォーマット誤り |
+| タイムアウト/不明 | `Settlement confirmation not received within SLA window for TRD-010. Status unknown.` | SSI は存在するが BIC が失効（調査しても確定できないため escalate 推奨） |
+
+SWIFT コードの知識はエージェントのシステムプロンプトに追加する（AC01=口座番号不正、AG01=取引禁止、AM04=残高不足 など）。
+
+#### 24-C: アクション多様化（HITL の拡張）
+
+現在の HITL: SSI 登録の承認/却下（1種類）
+
+追加する HITL パターン:
+- カウンターパーティ再アクティブ化の承認
+- 複数の修正案を提示して人間が選択（例:「A: SSI を更新する / B: エスカレーションする」）
+- エスカレーション通知の確認
+
+#### 24-D: パターン分析
+
+- `get_counterparty_exception_history` の結果を使い、同一カウンターパーティで直近 30 日間に 3 件以上の失敗があれば警告メッセージを diagnosis に含める
+- 過去に同じ root_cause で解決済みのトリアージがあれば、その解決策を推奨アクションに反映する
+
 ### Ops — GCP 静的外部 IP の予約（人間作業）
 
 > VM を再起動するたびに外部 IP が変わる問題の恒久対策。
