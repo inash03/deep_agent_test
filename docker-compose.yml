@@ -1,31 +1,4 @@
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: production
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
-    volumes:
-      # Mount source for hot-reload in dev; remove for production
-      - ./src:/app/src:ro
-      - ./alembic:/app/alembic:ro
-      - ./alembic.ini:/app/alembic.ini:ro
-    command: >
-      sh -c "alembic upgrade head &&
-             python -m src.infrastructure.seed &&
-             uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
   frontend:
     build:
       context: ./frontend
@@ -34,9 +7,6 @@ services:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     ports:
       - "5173:80"
-    depends_on:
-      backend:
-        condition: service_healthy
 
   test:
     build:

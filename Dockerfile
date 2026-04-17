@@ -13,13 +13,17 @@ RUN uv pip install --system --no-cache ".[gcp]"
 
 # Copy application source
 COPY src/ ./src/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
+COPY scripts/entrypoint.sh ./scripts/entrypoint.sh
+RUN chmod +x ./scripts/entrypoint.sh
 
 # --- production stage ---
 FROM base AS production
 
 EXPOSE 8000
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./scripts/entrypoint.sh"]
 
 # --- test stage ---
 FROM base AS test
