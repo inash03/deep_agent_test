@@ -46,3 +46,8 @@ export interface TriageRequest {
 export interface ResumeRequest {
   approved: boolean
 }
+
+export interface TriageHistoryResponse {
+  items: TriageResponse[]
+  total: number
+}

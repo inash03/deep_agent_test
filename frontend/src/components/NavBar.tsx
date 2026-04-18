@@ -4,9 +4,12 @@ import { useState } from 'react'
 
 const LINKS = [
   { to: '/', label: 'Triage', end: true },
+  { to: '/history', label: 'History', end: false },
   { to: '/trades', label: 'Trades', end: false },
   { to: '/stp-exceptions', label: 'STP Exceptions', end: false },
   { to: '/counterparties', label: 'Counterparties', end: false },
+  { to: '/ssis', label: 'SSIs', end: false },
+  { to: '/reference-data', label: 'Ref Data', end: false },
 ]
 
 export function NavBar() {

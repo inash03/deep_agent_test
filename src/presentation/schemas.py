@@ -159,3 +159,47 @@ class StpExceptionCreateRequest(BaseModel):
 
 class StpExceptionStatusUpdateRequest(BaseModel):
     status: str = Field(..., examples=["IN_PROGRESS"])
+
+
+# ---------------------------------------------------------------------------
+# SSI schemas
+# ---------------------------------------------------------------------------
+
+
+class SsiOut(BaseModel):
+    id: uuid.UUID
+    lei: str
+    currency: str
+    bic: str
+    account: str
+    iban: str | None = None
+    is_external: bool
+    updated_at: datetime
+
+
+class SsiListResponse(BaseModel):
+    items: list[SsiOut]
+    total: int
+
+
+class SsiUpdateRequest(BaseModel):
+    bic: str | None = None
+    account: str | None = None
+    iban: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Reference Data schemas
+# ---------------------------------------------------------------------------
+
+
+class ReferenceDataOut(BaseModel):
+    instrument_id: str
+    description: str
+    asset_class: str
+    is_active: bool
+
+
+class ReferenceDataListResponse(BaseModel):
+    items: list[ReferenceDataOut]
+    total: int

@@ -12,7 +12,9 @@ from src.infrastructure.logging_config import setup_logging
 from src.infrastructure.secrets import load_secrets
 from src.presentation.router import router
 from src.presentation.routers.counterparties import router as counterparties_router
+from src.presentation.routers.reference_data import router as reference_data_router
 from src.presentation.routers.seed import router as seed_router
+from src.presentation.routers.ssis import router as ssis_router
 from src.presentation.routers.stp_exceptions import router as stp_exceptions_router
 from src.presentation.routers.trades import router as trades_router
 
@@ -45,4 +47,6 @@ app.include_router(router)
 app.include_router(trades_router)
 app.include_router(counterparties_router)
 app.include_router(stp_exceptions_router)
+app.include_router(ssis_router)
+app.include_router(reference_data_router)
 app.include_router(seed_router)
