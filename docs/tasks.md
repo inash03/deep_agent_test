@@ -8,28 +8,23 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-#### Phase 26-D — FoAgent 新規実装
+#### Phase 26-E — トレードイベント API
 
-**目的:** FoCheck 結果を調査し、Amend/Cancel イベントの提案やBoAgent 差し戻し対応を行う FoAgent を実装する。
+**目的:** Amend/Cancel イベントの作成・承認・バージョン管理を API で操作できるようにする。
 
 **Backend:**
-- `src/infrastructure/tools.py` 更新
-  - `get_fo_check_results(trade_id)` 新規追加（read）
-  - `get_bo_sendback_reason(trade_id)` 新規追加（read）
-  - `create_amend_event(trade_id, reason, amended_fields)` 新規追加（HITL write）
-  - `create_cancel_event(trade_id, reason)` 新規追加（HITL write）
-  - `provide_explanation(trade_id, explanation)` 新規追加（write: FoValidated に遷移）
-  - `escalate_to_fo_user(trade_id, reason)` 新規追加（write: FoUserToValidate に遷移）
-- `src/infrastructure/fo_agent.py` 新規
-  - `FoAgentState` TypedDict
-  - `FO_SYSTEM_PROMPT`: FoCheck 結果調査 → 修正提案/説明付与/エスカレーション
-  - `_FO_HITL_TOOL_TO_NODE`: create_amend_event, create_cancel_event
-  - `build_fo_graph()` → LangGraph StateGraph
-- `src/infrastructure/fo_triage_use_case.py` 新規
-  - `FoTriageUseCase`: start(trade_id) / resume(run_id, approved)
-- `src/presentation/routers/trades.py` 更新
-  - `POST /api/v1/trades/{trade_id}/fo-triage`
-  - `POST /api/v1/trades/{trade_id}/fo-triage/{run_id}/resume`
+- `src/presentation/routers/trade_events.py` 新規
+  - `GET /api/v1/trades/{trade_id}/events`: イベント一覧（バージョン履歴含む）
+  - `POST /api/v1/trades/{trade_id}/events`: イベント作成（FoUser から手動）
+  - `PATCH /api/v1/trade-events/{event_id}/fo-approve`: FO 承認/却下
+  - `PATCH /api/v1/trade-events/{event_id}/bo-approve`: BO 承認/却下
+- バージョン管理ロジック（`trade_repository.py`）
+  - イベント作成時: `create_next_version()` で EventPending 行生成
+  - BO 承認完了時: `activate_version()` + 旧バージョン `is_current=False` 化
+  - Amend Done: 新バージョン `workflow_status=Initial`（FoCheck から再スタート）
+  - Cancel Done: 新バージョン `workflow_status=Cancelled`
+- `src/presentation/schemas.py` 更新
+  - `TradeEventOut`, `TradeEventCreateRequest`, `TradeVersionOut` 追加
 
 ---
 
@@ -346,3 +341,4 @@ push to main
 - Phase 26-A: DB Foundation — TradeWorkflowStatus/EventType/CheckResult エンティティ追加、TradeModel PK→UUID + version/workflow_status/is_current 等カラム追加、TradeEventModel/AppSettingModel 新規、Alembic 0003 マイグレーション、seed.py 更新（workflow_status, app_settings）、trade_repository.py 拡張、trade_event_repository.py / app_setting_repository.py 新規
 - Phase 26-B: ルールエンジン — CheckResult に severity 追加、check_rules.py（FoRule/BoRule + FoCheck 7 ルール + BoCheck 7 ルール）、rule_engine.py（run_fo_check/run_bo_check/maybe_* auto-trigger）、POST /api/v1/trades/{id}/fo-check・bo-check エンドポイント、settings.py ルーター（GET /api/v1/settings + PATCH /api/v1/settings/{key}）
 - Phase 26-C: BoAgent リネーム + 拡張 — tools.py に get_bo_check_results/get_fo_explanation/send_back_to_fo/escalate_to_bo_user 追加、bo_agent.py（BoAgentState + build_bo_graph() + 4 HITL ノード + BO_SYSTEM_PROMPT）、bo_triage_use_case.py（BoTriageUseCase）、routers/bo_triage.py（POST /api/v1/trades/{id}/bo-triage + resume）、test_entities.py の RootCause 期待値更新
+- Phase 26-D: FoAgent 新規実装 — tools.py に get_fo_check_results/get_bo_sendback_reason/create_amend_event/create_cancel_event/provide_explanation/escalate_to_fo_user 追加 + FO_*_TOOLS エクスポート、fo_agent.py（FoAgentState + build_fo_graph() + 2 HITL ノード + FO_SYSTEM_PROMPT）、fo_triage_use_case.py（FoTriageUseCase）、routers/fo_triage.py（POST /api/v1/trades/{id}/fo-triage + resume）

@@ -6,12 +6,25 @@
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-18
-**In Progress:** Phase 26-D — FoAgent 新規実装
-**Next:** Phase 26-D → Phase 26-E (Events API) → Phase 26-F (Frontend)
+**In Progress:** Phase 26-E — トレードイベント API
+**Next:** Phase 26-E → Phase 26-F (Frontend)
 
 ---
 
 ## Step Log
+
+### Step 28 — Phase 26-D: FoAgent 新規実装 (2026-04-18)
+
+Files: `src/infrastructure/tools.py`, `src/infrastructure/fo_agent.py` (新規),
+       `src/infrastructure/fo_triage_use_case.py` (新規),
+       `src/presentation/routers/fo_triage.py` (新規), `src/main.py`
+
+- `tools.py`: `get_fo_check_results(trade_id)` — fo_check_results JSONB + workflow_status + sendback_count 返却。`get_bo_sendback_reason(trade_id)` — bo_sendback_reason フィールド取得。`create_amend_event(trade_id, reason, amended_fields)` — HITL: create_next_version() + 現バージョン EventPending 遷移。`create_cancel_event(trade_id, reason)` — HITL: Cancelled 遷移。`provide_explanation(trade_id, explanation)` — 非HITL: FoValidated 遷移 + fo_explanation 保存。`escalate_to_fo_user(trade_id, reason)` — 非HITL: FoUserToValidate 遷移。`FO_READ_ONLY_TOOLS`（7ツール）・`FO_HITL_TOOLS`（2ツール）・`FO_ALL_TOOLS`（9ツール）エクスポート追加
+- `fo_agent.py`: `_FO_HITL_TOOL_TO_NODE`（create_amend_event/create_cancel_event → 各 node）。`FoAgentState` TypedDict。`FO_SYSTEM_PROMPT`（調査手順4ステップ + 是正アクション A〜D）。`build_fo_graph()` — 2 HITL ノード + read_tools_node + agent_node、`interrupt_before=["create_amend_event_node", "create_cancel_event_node"]`
+- `fo_triage_use_case.py`: `FoTriageUseCase.start(trade_id, error_context)` / `.resume(run_id, approved)` — bo_triage_use_case.py と同構造、FO グラフ用に実装
+- `routers/fo_triage.py`: `POST /api/v1/trades/{trade_id}/fo-triage` + `POST /api/v1/trades/{trade_id}/fo-triage/{run_id}/resume`
+- `main.py`: `fo_triage_router` を登録
+- 全 34 ユニットテスト通過
 
 ### Step 27 — Phase 26-C: BoAgent リネーム + 拡張 (2026-04-18)
 
