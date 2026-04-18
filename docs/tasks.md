@@ -8,7 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-*(none)*
+*(none — 24-B完了。次は 24-A のツール追加)*
 
 ---
 
@@ -42,22 +42,19 @@ Cloud Run 移行後の発展:
 - `get_counterparty_exception_history(lei)` — 同一カウンターパーティの直近 N 件の STP 失敗件数・傾向
 - `escalate(trade_id, reason)` — 自動解決不能と判断した場合に担当者エスカレーション（新 HITL タイプ）
 
-#### 24-B: 複雑・曖昧なシナリオの追加
+#### 24-B: 複雑・曖昧なシナリオの追加 ✅ 完了
 
-> 「明確すぎず、非現実的でもない」レベルに設定する。
-> SWIFT 拒否コードや複合障害など、調査しないと原因が特定できないケース。
+追加済みシナリオ（TRD-008〜012）:
 
-追加シナリオ（seed データにも反映）:
+| Trade ID | エラーメッセージ | 真の原因 | root_cause |
+|---------|-----------------|---------|------------|
+| TRD-008 | `MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.` | SSI の口座番号が古い | SWIFT_AC01 |
+| TRD-009 | `MT103 rejected by SWIFT. Reason code: AG01. Counterparty LEI: 213800XYZINACTIVE001.` | カウンターパーティ非アクティブ | SWIFT_AG01 |
+| TRD-010 | `Pre-settlement validation failed for TRD-010. Multiple checks not passed.` | SSI 未登録 かつ CP 非アクティブ | COMPOUND_FAILURE |
+| TRD-011 | `Custodian HSBC rejected settlement instruction for TRD-011. No further details provided.` | SSI の IBAN フォーマット誤り | IBAN_FORMAT_ERROR |
+| TRD-012 | `Settlement confirmation not received within SLA window for TRD-012. Status unknown.` | BIC が失効（調査困難） | UNKNOWN |
 
-| シナリオ | エラーメッセージ例 | 真の原因 |
-|---------|-----------------|---------|
-| SWIFT 拒否コード | `MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.` | BIC は正しいが SSI の口座番号が古い |
-| SWIFT 拒否コード | `MT103 rejected. Code: AG01. Counterparty: LEI 213800XYZ.` | カウンターパーティが取引禁止フラグ（is_active=false） |
-| 複合障害 | `Pre-settlement validation failed for TRD-008. Multiple checks not passed.` | SSI 未登録 かつ カウンターパーティ非アクティブの両方 |
-| カストディアン拒否 | `Custodian HSBC rejected settlement instruction for TRD-009. No further details provided.` | SSI の IBAN フォーマット誤り |
-| タイムアウト/不明 | `Settlement confirmation not received within SLA window for TRD-010. Status unknown.` | SSI は存在するが BIC が失効（調査しても確定できないため escalate 推奨） |
-
-SWIFT コードの知識はエージェントのシステムプロンプトに追加する（AC01=口座番号不正、AG01=取引禁止、AM04=残高不足 など）。
+システムプロンプトに SWIFT コード知識（AC01/AG01/AM04/BE01）、is_active チェック、IBAN/BIC 検証ガイダンスを追加済み。
 
 #### 24-C: アクション多様化（HITL の拡張）
 
