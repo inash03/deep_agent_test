@@ -34,6 +34,8 @@ def _to_out(row) -> TradeOut:
         trade_date=row.trade_date,
         settlement_currency=row.settlement_currency,
         stp_status=row.stp_status,
+        fo_check_results=row.fo_check_results,
+        bo_check_results=row.bo_check_results,
     )
 
 

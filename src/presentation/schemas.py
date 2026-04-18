@@ -105,6 +105,8 @@ class TradeOut(BaseModel):
     trade_date: date
     settlement_currency: str
     stp_status: str
+    fo_check_results: list[dict] | None = None
+    bo_check_results: list[dict] | None = None
 
 
 class TradeListResponse(BaseModel):
