@@ -24,11 +24,11 @@ export function TriageHistoryPage() {
           <table style={TABLE}>
             <thead>
               <tr>
-                <TH>Trade ID</TH>
-                <TH>Status</TH>
-                <TH>Root Cause</TH>
-                <TH>Action Taken</TH>
-                <TH>Diagnosis</TH>
+                <th style={TH}>Trade ID</th>
+                <th style={TH}>Status</th>
+                <th style={TH}>Root Cause</th>
+                <th style={TH}>Action Taken</th>
+                <th style={TH}>Diagnosis</th>
               </tr>
             </thead>
             <tbody>
@@ -39,19 +39,19 @@ export function TriageHistoryPage() {
                     style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
                     onClick={() => setExpanded(expanded === row.run_id ? null : (row.run_id ?? null))}
                   >
-                    <TD style={{ fontWeight: 600 }}>{row.trade_id}</TD>
-                    <TD><StatusBadge status={row.status} /></TD>
-                    <TD style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#b45309' }}>
+                    <td style={{ ...TD, fontWeight: 600 }}>{row.trade_id}</td>
+                    <td style={TD}><StatusBadge status={row.status} /></td>
+                    <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem', color: '#b45309' }}>
                       {row.root_cause ?? '—'}
-                    </TD>
-                    <TD>
+                    </td>
+                    <td style={TD}>
                       <span style={{ color: row.action_taken ? '#065f46' : COLOR.textMuted }}>
                         {row.action_taken ? 'Yes' : 'No'}
                       </span>
-                    </TD>
-                    <TD style={{ fontSize: '0.85rem', color: COLOR.textMuted, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    </td>
+                    <td style={{ ...TD, fontSize: '0.85rem', color: COLOR.textMuted, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.diagnosis ?? '—'}
-                    </TD>
+                    </td>
                   </tr>
                   {expanded === row.run_id && (
                     <tr key={`${row.run_id}-detail`} style={{ backgroundColor: '#f9fafb' }}>

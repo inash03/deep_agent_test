@@ -24,23 +24,23 @@ export function ReferenceDataListPage() {
           <table style={TABLE}>
             <thead>
               <tr>
-                <TH>Instrument ID</TH>
-                <TH>Description</TH>
-                <TH>Asset Class</TH>
-                <TH>Status</TH>
+                <th style={TH}>Instrument ID</th>
+                <th style={TH}>Description</th>
+                <th style={TH}>Asset Class</th>
+                <th style={TH}>Status</th>
               </tr>
             </thead>
             <tbody>
               {items.map(row => (
                 <tr key={row.instrument_id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <TD style={{ fontFamily: 'monospace', fontWeight: 600 }}>{row.instrument_id}</TD>
-                  <TD>{row.description}</TD>
-                  <TD>{row.asset_class}</TD>
-                  <TD>
+                  <td style={{ ...TD, fontFamily: 'monospace', fontWeight: 600 }}>{row.instrument_id}</td>
+                  <td style={TD}>{row.description}</td>
+                  <td style={TD}>{row.asset_class}</td>
+                  <td style={TD}>
                     <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: '0.75rem', background: row.is_active ? '#d1fae5' : '#fee2e2', color: row.is_active ? '#065f46' : '#991b1b' }}>
                       {row.is_active ? 'Active' : 'Inactive'}
                     </span>
-                  </TD>
+                  </td>
                 </tr>
               ))}
               {items.length === 0 && (

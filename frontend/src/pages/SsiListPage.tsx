@@ -61,33 +61,33 @@ export function SsiListPage() {
           <table style={TABLE}>
             <thead>
               <tr>
-                <TH>LEI</TH>
-                <TH>Currency</TH>
-                <TH>BIC</TH>
-                <TH>Account</TH>
-                <TH>IBAN</TH>
-                <TH>Type</TH>
-                <TH>Updated</TH>
-                <TH></TH>
+                <th style={TH}>LEI</th>
+                <th style={TH}>Currency</th>
+                <th style={TH}>BIC</th>
+                <th style={TH}>Account</th>
+                <th style={TH}>IBAN</th>
+                <th style={TH}>Type</th>
+                <th style={TH}>Updated</th>
+                <th style={TH}></th>
               </tr>
             </thead>
             <tbody>
               {items.map(row => (
                 <tr key={row.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <TD style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.lei}</TD>
-                  <TD>{row.currency}</TD>
-                  <TD style={{ fontFamily: 'monospace' }}>{row.bic}</TD>
-                  <TD style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.account}</TD>
-                  <TD style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: row.iban ? '#111' : COLOR.textMuted }}>
+                  <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.lei}</td>
+                  <td style={TD}>{row.currency}</td>
+                  <td style={{ ...TD, fontFamily: 'monospace' }}>{row.bic}</td>
+                  <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.account}</td>
+                  <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem', color: row.iban ? '#111' : COLOR.textMuted }}>
                     {row.iban ?? '—'}
-                  </TD>
-                  <TD>
+                  </td>
+                  <td style={TD}>
                     <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: '0.75rem', background: row.is_external ? '#dbeafe' : '#d1fae5', color: row.is_external ? '#1e40af' : '#065f46' }}>
                       {row.is_external ? 'External' : 'Internal'}
                     </span>
-                  </TD>
-                  <TD style={{ fontSize: '0.8rem', color: COLOR.textMuted }}>{new Date(row.updated_at).toLocaleDateString()}</TD>
-                  <TD>
+                  </td>
+                  <td style={{ ...TD, fontSize: '0.8rem', color: COLOR.textMuted }}>{new Date(row.updated_at).toLocaleDateString()}</td>
+                  <td style={TD}>
                     {!row.is_external && (
                       <button
                         onClick={() => navigate(`/ssis/${row.id}`)}
@@ -96,7 +96,7 @@ export function SsiListPage() {
                         Edit
                       </button>
                     )}
-                  </TD>
+                  </td>
                 </tr>
               ))}
               {items.length === 0 && (
