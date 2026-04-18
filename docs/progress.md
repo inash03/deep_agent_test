@@ -6,12 +6,26 @@
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-18
-**In Progress:** Phase 26-E — トレードイベント API
-**Next:** Phase 26-E → Phase 26-F (Frontend)
+**In Progress:** Phase 26-F — フロントエンド
+**Next:** Phase 26-F 完了で Phase 26 完結
 
 ---
 
 ## Step Log
+
+### Step 29 — Phase 26-E: トレードイベント API (2026-04-18)
+
+Files: `src/presentation/schemas.py`, `src/presentation/routers/trade_events.py` (新規),
+       `src/main.py`
+
+- `schemas.py`: `TradeVersionOut`（バージョン詳細）、`TradeEventOut`（イベント詳細）、`TradeEventListResponse`、`TradeEventCreateRequest`（event_type/reason/requested_by/amended_fields）、`EventApproveRequest`（approved/comment）を追加
+- `routers/trade_events.py`:
+  - `GET /api/v1/trades/{trade_id}/events` — TradeEventRepository.list_for_trade() 返却
+  - `POST /api/v1/trades/{trade_id}/events` — AMEND: create_next_version() + trade EventPending 遷移 + TradeEvent 作成。CANCEL: TradeEvent のみ作成。重複イベントは 409 で弾く
+  - `PATCH /api/v1/trade-events/{id}/fo-approve` — 承認: FoValidated 遷移。却下: Cancelled + AMEND の場合は pending version を削除し trade を FoAgentToCheck に戻す
+  - `PATCH /api/v1/trade-events/{id}/bo-approve` — 承認+AMEND: activate_version() + 新バージョン workflow_status=Initial（FoCheck 再スタート）。承認+CANCEL: trade workflow_status=Cancelled。却下: Cancelled + pending version 削除
+- `main.py`: `trade_events_router` を登録
+- 全 34 ユニットテスト通過
 
 ### Step 28 — Phase 26-D: FoAgent 新規実装 (2026-04-18)
 
