@@ -243,3 +243,58 @@ class AppSettingListResponse(BaseModel):
 
 class AppSettingUpdateRequest(BaseModel):
     value: str = Field(..., examples=["auto"])
+
+
+# ---------------------------------------------------------------------------
+# Trade Event schemas (Phase 26-E)
+# ---------------------------------------------------------------------------
+
+
+class TradeVersionOut(BaseModel):
+    """A specific version of a trade (used in event responses)."""
+    trade_id: str
+    version: int
+    workflow_status: str
+    is_current: bool
+    counterparty_lei: str
+    instrument_id: str
+    currency: str
+    amount: str
+    value_date: date
+    trade_date: date
+    settlement_currency: str
+
+
+class TradeEventOut(BaseModel):
+    id: uuid.UUID
+    trade_id: str
+    from_version: int
+    to_version: int
+    event_type: str        # AMEND | CANCEL
+    workflow_status: str   # FoUserToValidate | FoValidated | Done | Cancelled
+    requested_by: str
+    reason: str | None = None
+    amended_fields: dict | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TradeEventListResponse(BaseModel):
+    items: list[TradeEventOut]
+    total: int
+
+
+class TradeEventCreateRequest(BaseModel):
+    event_type: str = Field(..., examples=["AMEND"], description="AMEND or CANCEL")
+    reason: str = Field(..., min_length=1)
+    requested_by: str = Field(..., min_length=1, examples=["fo_user_01"])
+    amended_fields: dict | None = Field(
+        default=None,
+        description="Required for AMEND. Keys: value_date, trade_date, amount, currency, settlement_currency, instrument_id.",
+        examples=[{"value_date": "2026-05-01"}],
+    )
+
+
+class EventApproveRequest(BaseModel):
+    approved: bool
+    comment: str | None = None
