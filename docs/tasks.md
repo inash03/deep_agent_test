@@ -8,7 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-*(none — 24-C完了。次は 24-D パターン分析)*
+*(none — Phase 24 全完了)*
 
 ---
 
@@ -66,10 +66,11 @@ triage_use_case.py の HITL 判定を `register_ssi` ハードコードから汎
 
 Backend に `pending_action_type` フィールドを追加し、フロントエンドがアクション種別に応じた UI を表示。
 
-#### 24-D: パターン分析
+#### 24-D: パターン分析 ✅ 完了
 
-- `get_counterparty_exception_history` の結果を使い、同一カウンターパーティで直近 30 日間に 3 件以上の失敗があれば警告メッセージを diagnosis に含める
-- 過去に同じ root_cause で解決済みのトリアージがあれば、その解決策を推奨アクションに反映する
+システムプロンプトに調査手順 3・4 を追加:
+- ステップ 3: `get_counterparty_exception_history` — 30 日間に 3 件以上の失敗で警告を diagnosis に含める
+- ステップ 4: `get_triage_history` — 同一 root_cause の解決済みトリアージがあれば "Previously resolved by: ..." を recommended_action に反映
 
 ### Ops — GCP 静的外部 IP の予約（人間作業）
 
