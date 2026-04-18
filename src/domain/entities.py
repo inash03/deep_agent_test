@@ -181,6 +181,7 @@ class TriageResult(BaseModel):
 class CheckResult(BaseModel):
     rule_name: str
     passed: bool
+    severity: str = "error"  # "error" | "warning"
     message: str
 
 

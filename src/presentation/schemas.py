@@ -206,3 +206,40 @@ class ReferenceDataOut(BaseModel):
 class ReferenceDataListResponse(BaseModel):
     items: list[ReferenceDataOut]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Check result schemas (FoCheck / BoCheck)
+# ---------------------------------------------------------------------------
+
+
+class CheckResultOut(BaseModel):
+    rule_name: str
+    passed: bool
+    severity: str
+    message: str
+
+
+class CheckResultsResponse(BaseModel):
+    trade_id: str
+    workflow_status: str
+    results: list[CheckResultOut]
+
+
+# ---------------------------------------------------------------------------
+# App settings schemas
+# ---------------------------------------------------------------------------
+
+
+class AppSettingOut(BaseModel):
+    key: str
+    value: str
+    description: str | None = None
+
+
+class AppSettingListResponse(BaseModel):
+    items: list[AppSettingOut]
+
+
+class AppSettingUpdateRequest(BaseModel):
+    value: str = Field(..., examples=["auto"])

@@ -8,7 +8,38 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-#### Phase 26-B — ルールエンジン実装
+#### Phase 26-C — BoAgent リネーム + 拡張
+
+**目的:** 既存エージェントを BoAgent として整理し、新しいワークフローに対応させる。
+
+**Backend:**
+- `src/infrastructure/agent.py` → `src/infrastructure/bo_agent.py` にリネーム
+  - `build_graph()` → `build_bo_graph()`
+  - `AgentState` → `BoAgentState`
+  - `SYSTEM_PROMPT` → `BO_SYSTEM_PROMPT`
+  - `_HITL_TOOL_TO_NODE` → `_BO_HITL_TOOL_TO_NODE`
+- `src/infrastructure/triage_use_case.py` → `src/infrastructure/bo_triage_use_case.py` にリネーム
+  - `TriageSTPFailureUseCase` → `BoTriageUseCase`
+- `src/infrastructure/tools.py` 更新
+  - `get_bo_check_results(trade_id)` 新規追加（read）
+  - `get_fo_explanation(trade_id)` 新規追加（read）
+  - `send_back_to_fo(trade_id, reason)` 新規追加（HITL write）
+  - `escalate_to_bo_user(trade_id, reason)` 新規追加（write）
+  - BoAgent のツールリスト・HITLリストを更新
+- `BO_SYSTEM_PROMPT` 更新
+  - BoCheck 結果を参照して調査する手順
+  - 1 回目差し戻し: `send_back_to_fo` 呼び出し条件（FO 起因の問題）
+  - 2 回目以降: `send_back_to_fo` 禁止、`escalate_to_bo_user` を使用
+  - FoAgent の説明（`get_fo_explanation`）を考慮したトリアージ手順
+- `src/presentation/routers/` 更新
+  - `POST /api/v1/trades/{trade_id}/bo-triage` 新規追加
+  - `POST /api/v1/trades/{trade_id}/bo-triage/{run_id}/resume` 新規追加
+  - 既存 `/api/v1/stp-exceptions/{id}/start-triage` → BoTriage に委譲
+- 全 import を `agent.py` → `bo_agent.py`、`TriageSTPFailureUseCase` → `BoTriageUseCase` に更新
+
+---
+
+## Backlog
 
 **目的:** FoCheck / BoCheck のルールを定義し、取引データに対して実行する。
 
@@ -77,37 +108,6 @@ Max 1 task in In Progress at a time.
   - `update_workflow_status(trade_id, status, **kwargs)`: workflow_status + 付随フィールド更新
 - `src/infrastructure/db/trade_event_repository.py` 新規
 - `src/infrastructure/db/app_setting_repository.py` 新規
-
----
-
-#### Phase 26-C — BoAgent リネーム + 拡張
-
-**目的:** 既存エージェントを BoAgent として整理し、新しいワークフローに対応させる。
-
-**Backend:**
-- `src/infrastructure/agent.py` → `src/infrastructure/bo_agent.py` にリネーム
-  - `build_graph()` → `build_bo_graph()`
-  - `AgentState` → `BoAgentState`
-  - `SYSTEM_PROMPT` → `BO_SYSTEM_PROMPT`
-  - `_HITL_TOOL_TO_NODE` → `_BO_HITL_TOOL_TO_NODE`
-- `src/infrastructure/triage_use_case.py` → `src/infrastructure/bo_triage_use_case.py` にリネーム
-  - `TriageSTPFailureUseCase` → `BoTriageUseCase`
-- `src/infrastructure/tools.py` 更新
-  - `get_bo_check_results(trade_id)` 新規追加（read）
-  - `get_fo_explanation(trade_id)` 新規追加（read）
-  - `send_back_to_fo(trade_id, reason)` 新規追加（HITL write）
-  - `escalate_to_bo_user(trade_id, reason)` 新規追加（write）
-  - BoAgent のツールリスト・HITLリストを更新
-- `BO_SYSTEM_PROMPT` 更新
-  - BoCheck 結果を参照して調査する手順
-  - 1 回目差し戻し: `send_back_to_fo` 呼び出し条件（FO 起因の問題）
-  - 2 回目以降: `send_back_to_fo` 禁止、`escalate_to_bo_user` を使用
-  - FoAgent の説明（`get_fo_explanation`）を考慮したトリアージ手順
-- `src/presentation/routers/` 更新
-  - `POST /api/v1/trades/{trade_id}/bo-triage` 新規追加
-  - `POST /api/v1/trades/{trade_id}/bo-triage/{run_id}/resume` 新規追加
-  - 既存 `/api/v1/stp-exceptions/{id}/start-triage` → BoTriage に委譲
-- 全 import を `agent.py` → `bo_agent.py`、`TriageSTPFailureUseCase` → `BoTriageUseCase` に更新
 
 ---
 
@@ -375,3 +375,4 @@ push to main
 - Phase 20: バックエンドを Cloud Run に移行 — entrypoint.sh、Artifact Registry、2ジョブ workflow（Cloud Run + VM SSH）
 - Phase 25: アクセス制御 — Nginx Basic Auth（フロント）+ API キー（バックエンド LLM エンドポイント）
 - Phase 26-A: DB Foundation — TradeWorkflowStatus/EventType/CheckResult エンティティ追加、TradeModel PK→UUID + version/workflow_status/is_current 等カラム追加、TradeEventModel/AppSettingModel 新規、Alembic 0003 マイグレーション、seed.py 更新（workflow_status, app_settings）、trade_repository.py 拡張、trade_event_repository.py / app_setting_repository.py 新規
+- Phase 26-B: ルールエンジン — CheckResult に severity 追加、check_rules.py（FoRule/BoRule + FoCheck 7 ルール + BoCheck 7 ルール）、rule_engine.py（run_fo_check/run_bo_check/maybe_* auto-trigger）、POST /api/v1/trades/{id}/fo-check・bo-check エンドポイント、settings.py ルーター（GET /api/v1/settings + PATCH /api/v1/settings/{key}）

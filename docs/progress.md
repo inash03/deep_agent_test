@@ -6,12 +6,26 @@
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-18
-**In Progress:** Phase 26-B — ルールエンジン実装
-**Next:** Phase 26-B 実装 → Phase 26-C (BoAgent リネーム) → Phase 26-D (FoAgent 新規)
+**In Progress:** Phase 26-C — BoAgent リネーム + 拡張
+**Next:** Phase 26-C → Phase 26-D (FoAgent 新規) → Phase 26-E (Events API)
 
 ---
 
 ## Step Log
+
+### Step 26 — Phase 26-B: ルールエンジン実装 (2026-04-18)
+
+Files: `src/domain/entities.py` (severity追加), `src/domain/check_rules.py` (新規),
+       `src/infrastructure/rule_engine.py` (新規),
+       `src/presentation/schemas.py`, `src/presentation/routers/trades.py`,
+       `src/presentation/routers/settings.py` (新規), `src/main.py`
+
+- `entities.py`: `CheckResult` に `severity: str = "error"` フィールド追加
+- `check_rules.py`: `FoRule`・`BoRule` dataclass 定義。FoCheck 7 ルール実装（trade_date_not_future/not_weekend, value_date_after_trade_date/not_past/settlement_cycle[警告], amount_positive, settlement_currency_consistency）。BoCheck 7 ルール実装（counterparty_exists/active, ssi_exists, bic_format_valid, iban_format_valid, risk_limit_check[スタブ], compliance_check[スタブ]）
+- `rule_engine.py`: `run_fo_check(trade_id, db)` — ERROR 失敗あり→FoAgentToCheck / なし→FoValidated。`run_bo_check(trade_id, db)` — 失敗あり→BoAgentToCheck / なし→BoValidated。`maybe_run_fo_check`・`maybe_run_bo_check` — app_settings の auto/manual を参照する auto-trigger ヘルパー
+- `trades.py` ルーター: `POST /api/v1/trades/{id}/fo-check`・`POST /api/v1/trades/{id}/bo-check` エンドポイント追加（CheckResultsResponse 返却）
+- `settings.py` ルーター（新規）: `GET /api/v1/settings` + `PATCH /api/v1/settings/{key}`
+- `main.py`: settings_router を登録
 
 ### Step 25 — Phase 26-A: DB Foundation + エンティティ拡張 (2026-04-18)
 

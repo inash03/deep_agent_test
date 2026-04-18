@@ -1,4 +1,4 @@
-"""Trade list endpoints."""
+"""Trade list and check endpoints."""
 
 from __future__ import annotations
 
@@ -9,7 +9,13 @@ from sqlalchemy.orm import Session
 
 from src.infrastructure.db.session import get_db
 from src.infrastructure.db.trade_repository import TradeRepository
-from src.presentation.schemas import TradeListResponse, TradeOut
+from src.infrastructure.rule_engine import run_bo_check, run_fo_check
+from src.presentation.schemas import (
+    CheckResultOut,
+    CheckResultsResponse,
+    TradeListResponse,
+    TradeOut,
+)
 
 router = APIRouter(prefix="/api/v1/trades", tags=["trades"])
 
@@ -55,3 +61,43 @@ def get_trade(trade_id: str, db: Session = Depends(get_db)) -> TradeOut:
     if row is None:
         raise HTTPException(status_code=404, detail=f"Trade '{trade_id}' not found")
     return _to_out(row)
+
+
+@router.post("/{trade_id}/fo-check", response_model=CheckResultsResponse)
+def fo_check(trade_id: str, db: Session = Depends(get_db)) -> CheckResultsResponse:
+    """Run FoCheck rules and advance workflow_status to FoValidated or FoAgentToCheck."""
+    try:
+        results, new_status = run_fo_check(trade_id, db)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return CheckResultsResponse(
+        trade_id=trade_id,
+        workflow_status=new_status,
+        results=[
+            CheckResultOut(
+                rule_name=r.rule_name, passed=r.passed,
+                severity=r.severity, message=r.message,
+            )
+            for r in results
+        ],
+    )
+
+
+@router.post("/{trade_id}/bo-check", response_model=CheckResultsResponse)
+def bo_check(trade_id: str, db: Session = Depends(get_db)) -> CheckResultsResponse:
+    """Run BoCheck rules and advance workflow_status to BoValidated or BoAgentToCheck."""
+    try:
+        results, new_status = run_bo_check(trade_id, db)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return CheckResultsResponse(
+        trade_id=trade_id,
+        workflow_status=new_status,
+        results=[
+            CheckResultOut(
+                rule_name=r.rule_name, passed=r.passed,
+                severity=r.severity, message=r.message,
+            )
+            for r in results
+        ],
+    )
