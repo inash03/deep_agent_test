@@ -4,21 +4,14 @@ Data source selection:
   - If DATABASE_URL is set → reads from PostgreSQL via repositories (production)
   - Otherwise            → reads from in-memory mock_store (unit tests / dev without DB)
 
-Eleven tools in two categories:
-  Read-only (no side effects):
-    - get_trade_detail
-    - get_settlement_instructions
-    - get_reference_data
-    - get_counterparty
-    - lookup_external_ssi
-    - get_triage_history
-    - get_counterparty_exception_history
+BoAgent tools (13):
+  Read-only / non-HITL:
+    get_trade_detail, get_counterparty, get_settlement_instructions,
+    lookup_external_ssi, get_triage_history, get_counterparty_exception_history,
+    get_bo_check_results, get_fo_explanation, escalate_to_bo_user
 
-  Write (side effects — requires HITL approval before calling):
-    - register_ssi
-    - reactivate_counterparty
-    - update_ssi
-    - escalate
+  HITL write (requires operator approval):
+    register_ssi, reactivate_counterparty, update_ssi, send_back_to_fo
 """
 
 from __future__ import annotations
@@ -63,7 +56,8 @@ def get_trade_detail(trade_id: str) -> str:
     """Retrieve trade details from the trade system by trade ID.
 
     Returns trade information including counterparty LEI, instrument ID,
-    currency, amount, value date, and settlement currency.
+    currency, amount, value date, settlement currency, workflow_status,
+    and sendback_count.
     Returns an error message if the trade is not found.
     """
     with _db_session() as db:
@@ -74,10 +68,14 @@ def get_trade_detail(trade_id: str) -> str:
                 return json.dumps({"error": f"Trade '{trade_id}' not found in trade system."})
             return json.dumps({
                 "trade_id": row.trade_id,
+                "version": row.version,
+                "workflow_status": row.workflow_status,
+                "sendback_count": row.sendback_count,
                 "counterparty_lei": row.counterparty_lei,
                 "instrument_id": row.instrument_id,
                 "currency": row.currency,
                 "amount": str(row.amount),
+                "trade_date": row.trade_date.isoformat(),
                 "value_date": row.value_date.isoformat(),
                 "settlement_currency": row.settlement_currency,
             })
@@ -313,6 +311,141 @@ def get_counterparty_exception_history(lei: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# BoAgent read-only tools (Phase 26-C)
+# ---------------------------------------------------------------------------
+
+
+@tool
+def get_bo_check_results(trade_id: str) -> str:
+    """Retrieve the stored BoCheck rule results for a trade.
+
+    Returns the list of rule results (passed/failed + message) plus the
+    current workflow_status and sendback_count.
+    Call this first in BoAgent triage to understand which rules failed.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"error": "Database not available."})
+        from src.infrastructure.db.trade_repository import TradeRepository
+        trade = TradeRepository(db).get_current(trade_id)
+        if trade is None:
+            return json.dumps({"error": f"Trade '{trade_id}' not found."})
+        if trade.bo_check_results is None:
+            return json.dumps({
+                "trade_id": trade_id,
+                "found": False,
+                "workflow_status": trade.workflow_status,
+                "sendback_count": trade.sendback_count,
+                "message": "No BoCheck results available. BoCheck has not been run yet.",
+            })
+        return json.dumps({
+            "trade_id": trade_id,
+            "found": True,
+            "workflow_status": trade.workflow_status,
+            "sendback_count": trade.sendback_count,
+            "results": trade.bo_check_results,
+        })
+
+
+@tool
+def get_fo_explanation(trade_id: str) -> str:
+    """Retrieve the FoAgent's explanation recorded when transitioning to FoValidated.
+
+    Available only on 2nd BoAgent triage (after a send_back_to_fo cycle).
+    Returns the FoAgent's rationale for why the trade content is correct
+    despite the BoCheck concerns.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"error": "Database not available."})
+        from src.infrastructure.db.trade_repository import TradeRepository
+        trade = TradeRepository(db).get_current(trade_id)
+        if trade is None:
+            return json.dumps({"error": f"Trade '{trade_id}' not found."})
+        if not trade.fo_explanation:
+            return json.dumps({
+                "trade_id": trade_id,
+                "found": False,
+                "message": "No FoAgent explanation recorded for this trade.",
+            })
+        return json.dumps({
+            "trade_id": trade_id,
+            "found": True,
+            "fo_explanation": trade.fo_explanation,
+        })
+
+
+# ---------------------------------------------------------------------------
+# BoAgent write tools — HITL or immediate
+# ---------------------------------------------------------------------------
+
+
+@tool
+def send_back_to_fo(trade_id: str, reason: str) -> str:
+    """Send the trade back to FoAgent for re-investigation.
+
+    Use ONLY when the root cause is clearly FO-side (e.g. bad value date,
+    wrong instrument, amount error) and sendback_count == 0.
+    WARNING: Requires HITL operator approval.
+    Cannot be called a second time for the same trade — use escalate_to_bo_user instead.
+
+    Args:
+        trade_id: The trade to send back.
+        reason: Clear explanation of what FO needs to fix.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"success": False, "error": "Database not available."})
+        from src.infrastructure.db.trade_repository import TradeRepository
+        repo = TradeRepository(db)
+        trade = repo.get_current(trade_id)
+        if trade is None:
+            return json.dumps({"success": False, "error": f"Trade '{trade_id}' not found."})
+        new_count = trade.sendback_count + 1
+        repo.update_workflow_status(
+            trade_id, "FoAgentToCheck",
+            bo_sendback_reason=reason,
+            sendback_count=new_count,
+        )
+        db.commit()
+        return json.dumps({
+            "success": True,
+            "trade_id": trade_id,
+            "new_status": "FoAgentToCheck",
+            "sendback_count": new_count,
+            "message": f"Trade '{trade_id}' sent back to FoAgent (sendback #{new_count}). Reason: {reason}",
+        })
+
+
+@tool
+def escalate_to_bo_user(trade_id: str, reason: str) -> str:
+    """Escalate the trade to a BO User for manual resolution.
+
+    Use when: the issue is unfixable by BoAgent alone, a 2nd sendback would
+    be needed (prohibited), or the root cause requires human judgment.
+
+    Args:
+        trade_id: The trade to escalate.
+        reason: Explanation of why automated resolution is not possible.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"success": False, "error": "Database not available."})
+        from src.infrastructure.db.trade_repository import TradeRepository
+        repo = TradeRepository(db)
+        row = repo.update_workflow_status(trade_id, "BoUserToValidate")
+        if row is None:
+            return json.dumps({"success": False, "error": f"Trade '{trade_id}' not found."})
+        db.commit()
+        return json.dumps({
+            "success": True,
+            "trade_id": trade_id,
+            "new_status": "BoUserToValidate",
+            "message": f"Trade '{trade_id}' escalated to BO User. Reason: {reason}",
+        })
+
+
+# ---------------------------------------------------------------------------
 # Write tools — require HITL approval before invocation
 # ---------------------------------------------------------------------------
 
@@ -439,9 +572,10 @@ def escalate(trade_id: str, reason: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Tool lists (exported for use in the LangGraph agent)
+# Tool lists (exported for use in the LangGraph agents)
 # ---------------------------------------------------------------------------
 
+# Legacy tool lists (kept for backward compatibility with old /api/v1/triage)
 READ_ONLY_TOOLS = [
     get_trade_detail,
     get_settlement_instructions,
@@ -455,3 +589,25 @@ READ_ONLY_TOOLS = [
 WRITE_TOOLS = [register_ssi, reactivate_counterparty, update_ssi, escalate]
 
 ALL_TOOLS = READ_ONLY_TOOLS + WRITE_TOOLS
+
+# BoAgent tool lists (Phase 26-C)
+BO_READ_ONLY_TOOLS = [
+    get_trade_detail,
+    get_counterparty,
+    get_settlement_instructions,
+    lookup_external_ssi,
+    get_triage_history,
+    get_counterparty_exception_history,
+    get_bo_check_results,
+    get_fo_explanation,
+    escalate_to_bo_user,  # non-HITL write — executed immediately
+]
+
+BO_HITL_TOOLS = [
+    register_ssi,
+    reactivate_counterparty,
+    update_ssi,
+    send_back_to_fo,
+]
+
+BO_ALL_TOOLS = BO_READ_ONLY_TOOLS + BO_HITL_TOOLS
