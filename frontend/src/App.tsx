@@ -14,7 +14,7 @@ import { TriagePage } from './pages/TriagePage'
 export default function App() {
   return (
     <BrowserRouter>
-      <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', paddingTop: 52, overflowX: 'hidden' }}>
         <NavBar />
         <Routes>
           <Route path="/" element={<TriagePage />} />

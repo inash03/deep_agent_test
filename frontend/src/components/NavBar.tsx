@@ -31,48 +31,54 @@ export function NavBar() {
   return (
     <nav style={{
       backgroundColor: '#1e293b',
-      padding: '0 1.5rem',
       display: 'flex',
       alignItems: 'center',
       height: 52,
-      gap: '1.5rem',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 100,
     }}>
-      <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap', marginRight: '0.5rem' }}>
+      <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap', padding: '0 1rem 0 1.5rem', flexShrink: 0 }}>
         STP Triage
       </span>
-      {LINKS.map(({ to, label, end }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={end}
-          style={({ isActive }) => ({
-            color: isActive ? '#60a5fa' : '#94a3b8',
-            textDecoration: 'none',
-            fontWeight: isActive ? 600 : 400,
-            fontSize: '0.875rem',
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '1.5rem', overflowX: 'auto', padding: '0 0.5rem' }}>
+        {LINKS.map(({ to, label, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            style={({ isActive }) => ({
+              color: isActive ? '#60a5fa' : '#94a3b8',
+              textDecoration: 'none',
+              fontWeight: isActive ? 600 : 400,
+              fontSize: '0.875rem',
+              whiteSpace: 'nowrap',
+            })}
+          >
+            {label}
+          </NavLink>
+        ))}
+      </div>
+      <div style={{ flexShrink: 0, padding: '0 1.5rem 0 0.5rem' }}>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          style={{
+            backgroundColor: 'transparent',
+            border: '1px solid #475569',
+            color: '#94a3b8',
+            borderRadius: 6,
+            padding: '0.3rem 0.75rem',
+            fontSize: '0.8rem',
+            cursor: refreshing ? 'not-allowed' : 'pointer',
             whiteSpace: 'nowrap',
-          })}
+          }}
         >
-          {label}
-        </NavLink>
-      ))}
-      <div style={{ flex: 1 }} />
-      <button
-        onClick={handleRefresh}
-        disabled={refreshing}
-        style={{
-          backgroundColor: 'transparent',
-          border: '1px solid #475569',
-          color: '#94a3b8',
-          borderRadius: 6,
-          padding: '0.3rem 0.75rem',
-          fontSize: '0.8rem',
-          cursor: refreshing ? 'not-allowed' : 'pointer',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {refreshing ? 'Resetting…' : '↺ Reset Data'}
-      </button>
+          {refreshing ? 'Resetting…' : '↺ Reset Data'}
+        </button>
+      </div>
     </nav>
   )
 }

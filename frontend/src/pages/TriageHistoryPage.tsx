@@ -21,6 +21,7 @@ export function TriageHistoryPage() {
         {loading ? (
           <p style={{ color: COLOR.textMuted }}>Loading…</p>
         ) : (
+          <div style={{ overflowX: 'auto' }}>
           <table style={TABLE}>
             <thead>
               <tr>
@@ -73,6 +74,7 @@ export function TriageHistoryPage() {
               )}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </PageLayout>

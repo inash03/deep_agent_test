@@ -58,6 +58,7 @@ export function SsiListPage() {
         {loading ? (
           <p style={{ color: COLOR.textMuted }}>Loading…</p>
         ) : (
+          <div style={{ overflowX: 'auto' }}>
           <table style={TABLE}>
             <thead>
               <tr>
@@ -104,6 +105,7 @@ export function SsiListPage() {
               )}
             </tbody>
           </table>
+          </div>
         )}
         <Pagination total={total} limit={LIMIT} offset={offset} onChange={setOffset} />
       </div>

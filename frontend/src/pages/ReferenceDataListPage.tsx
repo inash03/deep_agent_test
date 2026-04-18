@@ -21,6 +21,7 @@ export function ReferenceDataListPage() {
         {loading ? (
           <p style={{ color: COLOR.textMuted }}>Loading…</p>
         ) : (
+          <div style={{ overflowX: 'auto' }}>
           <table style={TABLE}>
             <thead>
               <tr>
@@ -48,6 +49,7 @@ export function ReferenceDataListPage() {
               )}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </PageLayout>
