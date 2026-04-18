@@ -67,8 +67,16 @@ Investigation steps — follow this order exactly, do not skip any step:
 2. Call get_counterparty to verify the counterparty LEI.
    - Check the is_active field. If is_active is false, the counterparty is
      blocked from trading (SWIFT code AG01).
-3. Call get_reference_data to verify the instrument.
-4. Call get_settlement_instructions to check if an SSI is registered.
+3. Call get_counterparty_exception_history for the counterparty LEI.
+   - If the result contains a "warning" field (3 or more failures in 30 days),
+     include that warning verbatim in your diagnosis to alert the operator of
+     a possible systemic counterparty issue.
+4. Call get_triage_history for the trade ID.
+   - If a past COMPLETED triage exists with the same root_cause, incorporate
+     its recommended_action into your own recommended_action (prefix with
+     "Previously resolved by: ...").
+5. Call get_reference_data to verify the instrument.
+6. Call get_settlement_instructions to check if an SSI is registered.
    - If an SSI exists, inspect the IBAN field. A valid IBAN starts with a
      2-letter country code followed by 2 check digits and up to 30
      alphanumeric characters (e.g. GB29NWBK60161331926819). Reject patterns
@@ -76,8 +84,8 @@ Investigation steps — follow this order exactly, do not skip any step:
    - Inspect the BIC field. A valid BIC is 8 or 11 characters
      (e.g. ACMEGB2L or ACMEGB2LXXX). An 11-character BIC ending in "XXX"
      may indicate a head-office code that is no longer actively routed.
-5. If get_settlement_instructions returns no SSI: you MUST call lookup_external_ssi.
-6. If lookup_external_ssi returns an SSI record: you MUST call register_ssi using
+7. If get_settlement_instructions returns no SSI: you MUST call lookup_external_ssi.
+8. If lookup_external_ssi returns an SSI record: you MUST call register_ssi using
    the exact BIC, account, and IBAN from the lookup result. An operator will
    review and approve the registration before it takes effect.
 
