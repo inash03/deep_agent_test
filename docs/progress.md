@@ -6,12 +6,26 @@
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-18
-**In Progress:** Phase 26-C — BoAgent リネーム + 拡張
-**Next:** Phase 26-C → Phase 26-D (FoAgent 新規) → Phase 26-E (Events API)
+**In Progress:** Phase 26-D — FoAgent 新規実装
+**Next:** Phase 26-D → Phase 26-E (Events API) → Phase 26-F (Frontend)
 
 ---
 
 ## Step Log
+
+### Step 27 — Phase 26-C: BoAgent リネーム + 拡張 (2026-04-18)
+
+Files: `src/infrastructure/tools.py`, `src/infrastructure/bo_agent.py` (新規),
+       `src/infrastructure/bo_triage_use_case.py` (新規),
+       `src/presentation/routers/bo_triage.py` (新規), `src/main.py`,
+       `tests/unit/test_entities.py`
+
+- `tools.py`: `get_bo_check_results(trade_id)` — JSONB + sendback_count + workflow_status 返却。`get_fo_explanation(trade_id)` — FoAgent の説明取得。`send_back_to_fo(trade_id, reason)` — HITL: FoAgentToCheck 遷移 + sendback_count インクリメント + bo_sendback_reason 保存。`escalate_to_bo_user(trade_id, reason)` — 非HITL: BoUserToValidate 遷移。`BO_READ_ONLY_TOOLS`・`BO_HITL_TOOLS`・`BO_ALL_TOOLS` エクスポート追加
+- `bo_agent.py`: `_BO_HITL_TOOL_TO_NODE`（register_ssi/reactivate_counterparty/update_ssi/send_back_to_fo → 各 node）。`BoAgentState` TypedDict。`BO_SYSTEM_PROMPT`（調査手順5ステップ + 是正アクション A〜E + sendback_count ガード + SWIFT コード）。`build_bo_graph()` — 4 HITL ノード + read_tools_node + agent_node、`interrupt_before=hitl_node_names`
+- `bo_triage_use_case.py`: `BoTriageUseCase.start(trade_id, error_context)` / `.resume(run_id, approved)` — triage_use_case.py と同構造、BO グラフ用に移植
+- `routers/bo_triage.py`: `POST /api/v1/trades/{trade_id}/bo-triage` + `POST /api/v1/trades/{trade_id}/bo-triage/{run_id}/resume`
+- `main.py`: `bo_triage_router` を登録
+- `test_entities.py`: `RootCause` 期待値に IBAN_FORMAT_ERROR / SWIFT_AC01 / SWIFT_AG01 / COMPOUND_FAILURE を追加（全 34 ユニットテスト通過）
 
 ### Step 26 — Phase 26-B: ルールエンジン実装 (2026-04-18)
 
