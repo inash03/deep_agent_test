@@ -8,7 +8,13 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-#### Phase 26-F — フロントエンド
+（なし — Phase 26 全フェーズ完結）
+
+---
+
+## Backlog
+
+#### Phase 26-F — フロントエンド ✅ 完了
 
 **目的:** 新しいワークフロー全体を UI で操作・確認できるようにする。
 
@@ -352,3 +358,4 @@ push to main
 - Phase 26-C: BoAgent リネーム + 拡張 — tools.py に get_bo_check_results/get_fo_explanation/send_back_to_fo/escalate_to_bo_user 追加、bo_agent.py（BoAgentState + build_bo_graph() + 4 HITL ノード + BO_SYSTEM_PROMPT）、bo_triage_use_case.py（BoTriageUseCase）、routers/bo_triage.py（POST /api/v1/trades/{id}/bo-triage + resume）、test_entities.py の RootCause 期待値更新
 - Phase 26-D: FoAgent 新規実装 — tools.py に get_fo_check_results/get_bo_sendback_reason/create_amend_event/create_cancel_event/provide_explanation/escalate_to_fo_user 追加 + FO_*_TOOLS エクスポート、fo_agent.py（FoAgentState + build_fo_graph() + 2 HITL ノード + FO_SYSTEM_PROMPT）、fo_triage_use_case.py（FoTriageUseCase）、routers/fo_triage.py（POST /api/v1/trades/{id}/fo-triage + resume）
 - Phase 26-E: トレードイベント API — schemas.py に TradeVersionOut/TradeEventOut/TradeEventListResponse/TradeEventCreateRequest/EventApproveRequest 追加、routers/trade_events.py（GET list / POST create / PATCH fo-approve / PATCH bo-approve、状態機械: FoUserToValidate→FoValidated→Done、AMEND承認で activate_version()+Initial 遷移、CANCEL承認で Cancelled 遷移）
+- Phase 26-F: フロントエンド — TradeOut に check results 追加、TradeDetailPage（4タブ: FoCheck/BoCheck/Events/Triage）、SettingsPage、TradeListPage 更新（workflow_status列/フィルタ/クリックナビ）、NavBar+App.tsx 更新

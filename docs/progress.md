@@ -6,12 +6,38 @@
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-18
-**In Progress:** Phase 26-F — フロントエンド
-**Next:** Phase 26-F 完了で Phase 26 完結
+**In Progress:** —（Phase 26 完結）
+**Next:** Phase 25（アクセス制御）or Phase 27（次フェーズ検討）
 
 ---
 
 ## Step Log
+
+### Step 30 — Phase 26-F: フロントエンド (2026-04-18)
+
+Files: `src/presentation/schemas.py`, `src/presentation/routers/trades.py`,
+       `frontend/src/types/trade.ts` (更新), `frontend/src/types/tradeEvent.ts` (新規),
+       `frontend/src/types/settings.ts` (新規),
+       `frontend/src/api/trades.ts` (更新), `frontend/src/api/tradeEvents.ts` (新規),
+       `frontend/src/api/settings.ts` (新規),
+       `frontend/src/pages/SettingsPage.tsx` (新規),
+       `frontend/src/pages/TradeDetailPage.tsx` (新規),
+       `frontend/src/pages/TradeListPage.tsx` (更新),
+       `frontend/src/components/NavBar.tsx` (更新), `frontend/src/App.tsx` (更新)
+
+- `schemas.py` / `trades.py`: `TradeOut` に `fo_check_results`・`bo_check_results`（list[dict]|None）追加、`_to_out()` で返却
+- `types/trade.ts`: `CheckResult`・`CheckResultsResponse` 追加。`Trade` に `version`/`workflow_status`/`is_current`/check results 追加。`WORKFLOW_STATUS_LABELS`・`WORKFLOW_STATUS_COLORS`（12値）追加
+- `types/tradeEvent.ts`: `TradeEvent`・`EVENT_STATUS_LABELS`/`COLORS` 定義（新規）
+- `types/settings.ts`: `AppSetting` 定義（新規）
+- `api/trades.ts`: `workflow_status` パラメータ追加。`runFoCheck`/`runBoCheck`/`startFoTriage`/`resumeFoTriage`/`startBoTriage`/`resumeBoTriage` 追加
+- `api/tradeEvents.ts`: `listTradeEvents`/`createTradeEvent`/`foApproveEvent`/`boApproveEvent`（新規）
+- `api/settings.ts`: `listSettings`/`updateSetting`（新規）
+- `pages/SettingsPage.tsx`: fo/bo_check_trigger auto/manual トグル UI（新規）
+- `pages/TradeDetailPage.tsx`: 4 タブ（FoCheck・BoCheck・Events・Triage）。FoCheck/BoCheck 結果テーブル + Run ボタン、Events 一覧 + 作成フォーム + FO/BO 承認ボタン、FO/BO Triage HITL パネル（新規）
+- `pages/TradeListPage.tsx`: workflow_status 列・フィルタ追加、行クリック → TradeDetailPage 遷移
+- `NavBar.tsx`: Settings リンク追加
+- `App.tsx`: `/trades/:trade_id` + `/settings` ルート追加
+- TypeScript エラーなし、バックエンド 34 テスト通過
 
 ### Step 29 — Phase 26-E: トレードイベント API (2026-04-18)
 
