@@ -45,6 +45,7 @@ class TriageResponse(BaseModel):
 
     # Set when status == PENDING_APPROVAL
     run_id: str | None = None
+    pending_action_type: str | None = None
     pending_action_description: str | None = None
 
     # Set when status == COMPLETED
@@ -61,6 +62,7 @@ class TriageResponse(BaseModel):
             trade_id=result.trade_id,
             status=result.status.value,
             run_id=result.run_id,
+            pending_action_type=result.pending_action_type,
             pending_action_description=result.pending_action_description,
             diagnosis=result.diagnosis,
             root_cause=result.root_cause.value if result.root_cause else None,

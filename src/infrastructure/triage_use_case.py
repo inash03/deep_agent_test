@@ -136,11 +136,13 @@ class TriageSTPFailureUseCase(ITriageUseCase):
             (tc for tc in last_msg.tool_calls if tc["name"] in _HITL_TOOL_NAMES),
             None,
         )
+        action_type = tool_call["name"] if tool_call else None
         description = _format_hitl_action(tool_call) if tool_call else "Pending operator action"
         return TriageResult(
             trade_id=state["trade_id"],
             status=TriageStatus.PENDING_APPROVAL,
             run_id=run_id,
+            pending_action_type=action_type,
             pending_action_description=description,
             steps=_extract_steps(state["messages"]),
         )

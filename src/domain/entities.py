@@ -131,6 +131,7 @@ class TriageResult(BaseModel):
 
     # Populated when status == PENDING_APPROVAL
     run_id: str | None = None
+    pending_action_type: str | None = None
     pending_action_description: str | None = None
 
     # Populated when status == COMPLETED
