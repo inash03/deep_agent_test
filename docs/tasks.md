@@ -14,65 +14,178 @@ Max 1 task in In Progress at a time.
 
 ## Backlog
 
-### Phase 26 — STP ワークフロー・ステータス設計と実装
+### Phase 26 — FO/BO ワークフロー全面実装
 
-> 現状の `stp_status`（NEW / STP_FAILED / STP_PASSED / SETTLED）はシステム全体の粗いステータスで、
-> フロント・バック双方の承認フローを表現できていない。
-> 取引の精算フロー（ライフサイクル）を細粒度に管理するための新ステータス体系を定義・実装する。
+> 取引の精算ライフサイクルを FO/BO 分離ワークフローで管理する。  
+> ルールベース機械チェック → エージェントトリアージ → ユーザ承認 の 3 段構成により、  
+> 人間が確認すべき案件を絞り込む。  
+> 詳細設計は `docs/requirements.md` の Phase 26 セクションを参照。
 
-#### ステータス定義
+---
 
-| ステータス値 | 説明 |
-|------------|------|
-| `Initial` | 初期ステータス（取引登録直後） |
-| `FoCheck` | フロントオフィス観点のルールベース機械チェックを実行中 |
-| `FoAgentToCheck` | FoCheck 結果をエージェントがトリアージ中 |
-| `FoUserToValidate` | FO ユーザによる確認・承認が必要と判定されたもの |
-| `FoValidated` | FO 承認完了 |
-| `BoCheck` | バックオフィス観点のルールベース機械チェックを実行中 |
-| `BoAgentToCheck` | BoCheck 結果をエージェントがトリアージ中 |
-| `BoUserToValidate` | BO ユーザによる確認・承認が必要と判定されたもの |
-| `BoValidated` | BO 承認完了 |
-| `Done` | 全承認完了・精算処理に送出 |
+#### Phase 26-A — DB Foundation + エンティティ拡張
 
-#### 状態遷移イメージ
-
-```
-Initial
-  → FoCheck（ルールベースエンジン起動）
-    → FoAgentToCheck（自動チェック NG → エージェントトリアージ）
-      → FoUserToValidate（エージェントが人間判断が必要と判定）
-        → FoValidated（FO ユーザが承認）
-          → BoCheck（バックオフィス側チェック開始）
-            → BoAgentToCheck（同上）
-              → BoUserToValidate（同上）
-                → BoValidated（BO ユーザが承認）
-                  → Done
-    → FoValidated（自動チェック OK → FO 承認不要でスキップ可）
-```
-
-#### 実装タスク（Phase 26）
+**目的:** バージョン管理・ワークフローステータス・イベント・設定を支えるスキーマを追加する。
 
 **Backend:**
-- `src/domain/entities.py`: `TradeWorkflowStatus` enum を追加（10 値）
-- `src/infrastructure/db/models.py`: `TradeModel` に `workflow_status` カラムを追加
-- `alembic/versions/0003_add_workflow_status.py`: migration 作成
-- `src/infrastructure/seed.py`: シードデータの `workflow_status` を設定
-  - STP_FAILED 取引 → `FoAgentToCheck`（すでにエージェントトリアージ対象）
-  - NEW 取引 → `Initial`
-- `src/presentation/routers/trades.py`: `workflow_status` での絞り込み対応
-- `src/infrastructure/triage_use_case.py`: トリアージ完了時に `workflow_status` を自動遷移
-  - HITL 承認 → `FoUserToValidate`
-  - COMPLETED（人間判断不要） → `FoValidated`（または root_cause 次第）
+- `src/domain/entities.py`
+  - `TradeWorkflowStatus` enum 追加（11 値: Initial / FoCheck / FoAgentToCheck / FoUserToValidate / FoValidated / BoCheck / BoAgentToCheck / BoUserToValidate / BoValidated / Done / Cancelled / EventPending）
+  - `EventType` enum 追加（AMEND / CANCEL）
+  - `EventWorkflowStatus` enum 追加（FoUserToValidate / FoValidated / BoUserToValidate / BoValidated / Done / Cancelled）
+  - `CheckResult` dataclass 追加（rule_name, passed, message）
+  - `TradeEvent` entity 追加
+- `src/infrastructure/db/models.py`
+  - `TradeModel` を更新:
+    - PK を UUID `id` に変更（現: `trade_id` が PK）
+    - `(trade_id, version)` に UNIQUE 制約追加
+    - カラム追加: `version INT DEFAULT 1`, `workflow_status VARCHAR(30)`, `is_current BOOL DEFAULT TRUE`
+    - カラム追加: `sendback_count INT DEFAULT 0`, `fo_check_results JSONB`, `bo_check_results JSONB`
+    - カラム追加: `bo_sendback_reason TEXT`, `fo_explanation TEXT`
+  - `TradeEventModel` 新規追加（id, trade_id, from_version, to_version, event_type, workflow_status, requested_by, reason, amended_fields JSONB）
+  - `AppSettingModel` 新規追加（key VARCHAR PK, value VARCHAR, description, updated_at）
+- `alembic/versions/0003_add_workflow_schema.py` 作成
+- `src/infrastructure/seed.py` 更新
+  - STP_FAILED 取引（TRD-001〜005, TRD-008〜012）の `workflow_status` = `FoAgentToCheck`
+  - NEW 取引（TRD-006〜007）の `workflow_status` = `Initial`
+  - `app_settings` シードデータ: `fo_check_trigger=manual`, `bo_check_trigger=manual`
+- `src/infrastructure/db/trade_repository.py` 更新
+  - `get_current(trade_id)`: `is_current=True` の最新バージョンを返す
+  - `list()`: `is_current=True` のみ返す（バージョン履歴は `list_versions(trade_id)` で取得）
+  - `create_next_version(trade_id, event_type, amended_fields)`: バージョンインクリメント + EventPending 行追加
+  - `activate_version(trade_id, version)`: `is_current` の切り替え
+  - `update_workflow_status(trade_id, status, **kwargs)`: workflow_status + 付随フィールド更新
+- `src/infrastructure/db/trade_event_repository.py` 新規
+- `src/infrastructure/db/app_setting_repository.py` 新規
+
+---
+
+#### Phase 26-B — ルールエンジン実装
+
+**目的:** FoCheck / BoCheck のルールを定義し、取引データに対して実行する。
+
+**Backend:**
+- `src/domain/check_rules.py` 新規
+  - `FoCheckRule` / `BoCheckRule` の定義（rule_name, description, check_fn）
+  - FoCheck 7 ルール実装（trade_date_not_future, trade_date_not_weekend, value_date_after_trade_date, value_date_not_past, value_date_settlement_cycle, amount_positive, settlement_currency_consistency）
+  - BoCheck 7 ルール実装（counterparty_exists, counterparty_active, ssi_exists, bic_format_valid, iban_format_valid, risk_limit_check [スタブ], compliance_check [スタブ]）
+- `src/infrastructure/rule_engine.py` 新規
+  - `run_fo_check(trade, db) → list[CheckResult]`
+  - `run_bo_check(trade, db) → list[CheckResult]`
+  - 結果を `trade.fo_check_results` / `trade.bo_check_results` に保存し、workflow_status を遷移
+    - 全通過 → FoValidated / BoValidated
+    - 失敗あり → FoAgentToCheck / BoAgentToCheck
+- `src/presentation/routers/trades.py` 更新
+  - `POST /api/v1/trades/{trade_id}/fo-check`: FoCheck 実行
+  - `POST /api/v1/trades/{trade_id}/bo-check`: BoCheck 実行
+- `src/presentation/routers/settings.py` 新規
+  - `GET /api/v1/settings`: 設定一覧取得
+  - `PATCH /api/v1/settings/{key}`: 設定値更新
+- 自動トリガー実装: `fo_check_trigger=auto` の場合、`Initial` への遷移直後に FoCheck を自動実行。`bo_check_trigger=auto` の場合、`FoValidated` への遷移直後に BoCheck を自動実行。
+
+---
+
+#### Phase 26-C — BoAgent リネーム + 拡張
+
+**目的:** 既存エージェントを BoAgent として整理し、新しいワークフローに対応させる。
+
+**Backend:**
+- `src/infrastructure/agent.py` → `src/infrastructure/bo_agent.py` にリネーム
+  - `build_graph()` → `build_bo_graph()`
+  - `AgentState` → `BoAgentState`
+  - `SYSTEM_PROMPT` → `BO_SYSTEM_PROMPT`
+  - `_HITL_TOOL_TO_NODE` → `_BO_HITL_TOOL_TO_NODE`
+- `src/infrastructure/triage_use_case.py` → `src/infrastructure/bo_triage_use_case.py` にリネーム
+  - `TriageSTPFailureUseCase` → `BoTriageUseCase`
+- `src/infrastructure/tools.py` 更新
+  - `get_bo_check_results(trade_id)` 新規追加（read）
+  - `get_fo_explanation(trade_id)` 新規追加（read）
+  - `send_back_to_fo(trade_id, reason)` 新規追加（HITL write）
+  - `escalate_to_bo_user(trade_id, reason)` 新規追加（write）
+  - BoAgent のツールリスト・HITLリストを更新
+- `BO_SYSTEM_PROMPT` 更新
+  - BoCheck 結果を参照して調査する手順
+  - 1 回目差し戻し: `send_back_to_fo` 呼び出し条件（FO 起因の問題）
+  - 2 回目以降: `send_back_to_fo` 禁止、`escalate_to_bo_user` を使用
+  - FoAgent の説明（`get_fo_explanation`）を考慮したトリアージ手順
+- `src/presentation/routers/` 更新
+  - `POST /api/v1/trades/{trade_id}/bo-triage` 新規追加
+  - `POST /api/v1/trades/{trade_id}/bo-triage/{run_id}/resume` 新規追加
+  - 既存 `/api/v1/stp-exceptions/{id}/start-triage` → BoTriage に委譲
+- 全 import を `agent.py` → `bo_agent.py`、`TriageSTPFailureUseCase` → `BoTriageUseCase` に更新
+
+---
+
+#### Phase 26-D — FoAgent 新規実装
+
+**目的:** FoCheck 結果を調査し、Amend/Cancel イベントの提案やBoAgent 差し戻し対応を行う FoAgent を実装する。
+
+**Backend:**
+- `src/infrastructure/tools.py` 更新
+  - `get_fo_check_results(trade_id)` 新規追加（read）
+  - `get_bo_sendback_reason(trade_id)` 新規追加（read）
+  - `create_amend_event(trade_id, reason, amended_fields)` 新規追加（HITL write）
+  - `create_cancel_event(trade_id, reason)` 新規追加（HITL write）
+  - `provide_explanation(trade_id, explanation)` 新規追加（write: FoValidated に遷移）
+  - `escalate_to_fo_user(trade_id, reason)` 新規追加（write: FoUserToValidate に遷移）
+- `src/infrastructure/fo_agent.py` 新規
+  - `FoAgentState` TypedDict
+  - `FO_SYSTEM_PROMPT`: FoCheck 結果調査 → 修正提案/説明付与/エスカレーション
+  - `_FO_HITL_TOOL_TO_NODE`: create_amend_event, create_cancel_event
+  - `build_fo_graph()` → LangGraph StateGraph
+- `src/infrastructure/fo_triage_use_case.py` 新規
+  - `FoTriageUseCase`: start(trade_id) / resume(run_id, approved)
+- `src/presentation/routers/trades.py` 更新
+  - `POST /api/v1/trades/{trade_id}/fo-triage`
+  - `POST /api/v1/trades/{trade_id}/fo-triage/{run_id}/resume`
+
+---
+
+#### Phase 26-E — トレードイベント API
+
+**目的:** Amend/Cancel イベントの作成・承認・バージョン管理を API で操作できるようにする。
+
+**Backend:**
+- `src/presentation/routers/trade_events.py` 新規
+  - `GET /api/v1/trades/{trade_id}/events`: イベント一覧（バージョン履歴含む）
+  - `POST /api/v1/trades/{trade_id}/events`: イベント作成（FoUser から手動）
+  - `PATCH /api/v1/trade-events/{event_id}/fo-approve`: FO 承認/却下
+  - `PATCH /api/v1/trade-events/{event_id}/bo-approve`: BO 承認/却下
+- バージョン管理ロジック（`trade_repository.py`）
+  - イベント作成時: `create_next_version()` で EventPending 行生成
+  - BO 承認完了時: `activate_version()` + 旧バージョン `is_current=False` 化
+  - Amend Done: 新バージョン `workflow_status=Initial`（FoCheck から再スタート）
+  - Cancel Done: 新バージョン `workflow_status=Cancelled`
+- `src/presentation/schemas.py` 更新
+  - `TradeEventOut`, `TradeEventCreateRequest`, `TradeVersionOut` 追加
+
+---
+
+#### Phase 26-F — フロントエンド
+
+**目的:** 新しいワークフロー全体を UI で操作・確認できるようにする。
 
 **Frontend:**
-- `TradeListPage.tsx`: `workflow_status` 列を追加、フィルタ対応
-- `TriagePage.tsx`: トリアージ完了後に取引の `workflow_status` を表示
-- バッジ色の設計（FO系: 青、BO系: 緑、Done: グレー）
-
-**備考:**
-- Phase 26 完了後も既存の `stp_status`（STP_FAILED 等）は残す（トリアージ判定に使用）
-- `workflow_status` は「ビジネスフロー上の位置」を表し、`stp_status` は「決済システムの技術的状態」を表す
+- `frontend/src/pages/TradeDetailPage.tsx` 新規（`/trades/:id`）
+  - バージョン履歴タブ（バージョン一覧・各バージョンの workflow_status）
+  - FoCheck/BoCheck 結果パネル（ルール名・pass/fail・メッセージ）
+  - イベント一覧（Amend/Cancel）と FO/BO 承認ボタン
+  - FoTriage / BoTriage 起動ボタン + HITL パネル（既存コンポーネント流用）
+  - チェック実行ボタン（manual モード時のみ表示）
+- `frontend/src/pages/SettingsPage.tsx` 新規（`/settings`）
+  - FoCheck トリガー: auto / manual トグル
+  - BoCheck トリガー: auto / manual トグル
+- `frontend/src/pages/TradeListPage.tsx` 更新
+  - `workflow_status` 列を追加
+  - `workflow_status` フィルタ追加
+  - バッジ色設計: FO系=青、BO系=緑、Done=グレー、Cancelled=赤、EventPending=オレンジ
+  - 行クリックで TradeDetailPage に遷移
+- `frontend/src/components/NavBar.tsx` 更新
+  - `/settings` リンク追加
+- `frontend/src/App.tsx` 更新
+  - `/trades/:id` ルート追加
+  - `/settings` ルート追加
+- 新規 API クライアント: `src/api/tradeEvents.ts`, `src/api/settings.ts`
+- 新規型定義: `src/types/tradeEvent.ts`, `src/types/settings.ts`
 
 
 
