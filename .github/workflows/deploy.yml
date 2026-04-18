@@ -1,4 +1,4 @@
-name: Deploy to GCP
+name: Deploy to GCP # Phase 25: Basic Auth + API key protection
 
 on:
   push:
