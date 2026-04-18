@@ -12,6 +12,14 @@ BoAgent tools (13):
 
   HITL write (requires operator approval):
     register_ssi, reactivate_counterparty, update_ssi, send_back_to_fo
+
+FoAgent tools (9):
+  Read-only / non-HITL:
+    get_fo_check_results, get_bo_sendback_reason, get_trade_detail,
+    get_counterparty, get_reference_data, provide_explanation, escalate_to_fo_user
+
+  HITL write (requires operator approval):
+    create_amend_event, create_cancel_event
 """
 
 from __future__ import annotations
@@ -446,6 +454,205 @@ def escalate_to_bo_user(trade_id: str, reason: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# FoAgent read-only tools (Phase 26-D)
+# ---------------------------------------------------------------------------
+
+
+@tool
+def get_fo_check_results(trade_id: str) -> str:
+    """Retrieve the stored FoCheck rule results for a trade.
+
+    Returns the list of rule results (passed/failed + message) plus the
+    current workflow_status and sendback_count.
+    Call this first in FoAgent triage to understand which rules failed.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"error": "Database not available."})
+        from src.infrastructure.db.trade_repository import TradeRepository
+        trade = TradeRepository(db).get_current(trade_id)
+        if trade is None:
+            return json.dumps({"error": f"Trade '{trade_id}' not found."})
+        if trade.fo_check_results is None:
+            return json.dumps({
+                "trade_id": trade_id,
+                "found": False,
+                "workflow_status": trade.workflow_status,
+                "sendback_count": trade.sendback_count,
+                "message": "No FoCheck results available. FoCheck has not been run yet.",
+            })
+        return json.dumps({
+            "trade_id": trade_id,
+            "found": True,
+            "workflow_status": trade.workflow_status,
+            "sendback_count": trade.sendback_count,
+            "results": trade.fo_check_results,
+        })
+
+
+@tool
+def get_bo_sendback_reason(trade_id: str) -> str:
+    """Retrieve the reason BoAgent sent this trade back to FO.
+
+    Only available when sendback_count >= 1.
+    Contains BoAgent's explanation of what FO-side issue it identified
+    and what FO needs to correct or clarify.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"error": "Database not available."})
+        from src.infrastructure.db.trade_repository import TradeRepository
+        trade = TradeRepository(db).get_current(trade_id)
+        if trade is None:
+            return json.dumps({"error": f"Trade '{trade_id}' not found."})
+        if not trade.bo_sendback_reason:
+            return json.dumps({
+                "trade_id": trade_id,
+                "found": False,
+                "message": "No BO sendback reason recorded. This trade was not sent back by BO.",
+            })
+        return json.dumps({
+            "trade_id": trade_id,
+            "found": True,
+            "bo_sendback_reason": trade.bo_sendback_reason,
+            "sendback_count": trade.sendback_count,
+        })
+
+
+# ---------------------------------------------------------------------------
+# FoAgent write tools — HITL or immediate (Phase 26-D)
+# ---------------------------------------------------------------------------
+
+
+@tool
+def create_amend_event(trade_id: str, reason: str, amended_fields: str) -> str:
+    """Propose a trade amendment to correct FO-side data errors.
+
+    WARNING: Requires HITL operator approval. Creates a new pending version
+    with the corrected field values.
+
+    Args:
+        trade_id: The trade to amend.
+        reason: Why the amendment is needed.
+        amended_fields: JSON string of field:new_value pairs to change.
+            Supported fields: value_date (YYYY-MM-DD), trade_date (YYYY-MM-DD),
+            amount (decimal string), currency, settlement_currency, instrument_id.
+            Example: '{"value_date": "2026-05-01", "amount": "1000000.00"}'
+    """
+    import json as _json
+    try:
+        fields: dict = _json.loads(amended_fields) if amended_fields else {}
+    except _json.JSONDecodeError:
+        return json.dumps({"success": False, "error": f"amended_fields is not valid JSON: {amended_fields}"})
+
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"success": False, "error": "Database not available."})
+        from src.infrastructure.db.trade_repository import TradeRepository
+        repo = TradeRepository(db)
+        try:
+            new_row = repo.create_next_version(trade_id, "AMEND", fields)
+            repo.update_workflow_status(trade_id, "EventPending")
+            db.commit()
+            return json.dumps({
+                "success": True,
+                "trade_id": trade_id,
+                "new_version": new_row.version,
+                "amended_fields": fields,
+                "message": f"Amendment proposed for trade '{trade_id}' (version {new_row.version}). Reason: {reason}",
+            })
+        except ValueError as exc:
+            return json.dumps({"success": False, "error": str(exc)})
+
+
+@tool
+def create_cancel_event(trade_id: str, reason: str) -> str:
+    """Propose cancellation of the trade.
+
+    WARNING: Requires HITL operator approval. Transitions the trade to Cancelled
+    when the trade is fundamentally erroneous and cannot be settled.
+
+    Args:
+        trade_id: The trade to cancel.
+        reason: Detailed explanation of why the trade must be cancelled.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"success": False, "error": "Database not available."})
+        from src.infrastructure.db.trade_repository import TradeRepository
+        repo = TradeRepository(db)
+        row = repo.update_workflow_status(trade_id, "Cancelled")
+        if row is None:
+            return json.dumps({"success": False, "error": f"Trade '{trade_id}' not found."})
+        db.commit()
+        return json.dumps({
+            "success": True,
+            "trade_id": trade_id,
+            "new_status": "Cancelled",
+            "message": f"Trade '{trade_id}' cancelled. Reason: {reason}",
+        })
+
+
+@tool
+def provide_explanation(trade_id: str, explanation: str) -> str:
+    """Record FO's explanation and transition the trade to FoValidated.
+
+    Use when BoAgent sent the trade back but the trade data IS correct —
+    the issue is on the BO/SSI/counterparty side, not FO data.
+    FoValidated allows BoAgent to retry triage with the explanation context.
+
+    Args:
+        trade_id: The trade to mark as FoValidated.
+        explanation: FO's explanation of why the trade content is correct
+            and what BO should focus on instead.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"success": False, "error": "Database not available."})
+        from src.infrastructure.db.trade_repository import TradeRepository
+        repo = TradeRepository(db)
+        row = repo.update_workflow_status(trade_id, "FoValidated", fo_explanation=explanation)
+        if row is None:
+            return json.dumps({"success": False, "error": f"Trade '{trade_id}' not found."})
+        db.commit()
+        return json.dumps({
+            "success": True,
+            "trade_id": trade_id,
+            "new_status": "FoValidated",
+            "fo_explanation": explanation,
+            "message": f"Trade '{trade_id}' marked FoValidated with FO explanation.",
+        })
+
+
+@tool
+def escalate_to_fo_user(trade_id: str, reason: str) -> str:
+    """Escalate the trade to a FO User for manual resolution.
+
+    Use when FoAgent cannot determine the correct fix, the issue is ambiguous,
+    or multiple complex problems require senior judgment.
+
+    Args:
+        trade_id: The trade to escalate.
+        reason: Explanation of why automated resolution is not possible.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"success": False, "error": "Database not available."})
+        from src.infrastructure.db.trade_repository import TradeRepository
+        repo = TradeRepository(db)
+        row = repo.update_workflow_status(trade_id, "FoUserToValidate")
+        if row is None:
+            return json.dumps({"success": False, "error": f"Trade '{trade_id}' not found."})
+        db.commit()
+        return json.dumps({
+            "success": True,
+            "trade_id": trade_id,
+            "new_status": "FoUserToValidate",
+            "message": f"Trade '{trade_id}' escalated to FO User. Reason: {reason}",
+        })
+
+
+# ---------------------------------------------------------------------------
 # Write tools — require HITL approval before invocation
 # ---------------------------------------------------------------------------
 
@@ -611,3 +818,21 @@ BO_HITL_TOOLS = [
 ]
 
 BO_ALL_TOOLS = BO_READ_ONLY_TOOLS + BO_HITL_TOOLS
+
+# FoAgent tool lists (Phase 26-D)
+FO_READ_ONLY_TOOLS = [
+    get_fo_check_results,
+    get_bo_sendback_reason,
+    get_trade_detail,
+    get_counterparty,
+    get_reference_data,
+    provide_explanation,     # non-HITL write — executed immediately
+    escalate_to_fo_user,     # non-HITL write — executed immediately
+]
+
+FO_HITL_TOOLS = [
+    create_amend_event,
+    create_cancel_event,
+]
+
+FO_ALL_TOOLS = FO_READ_ONLY_TOOLS + FO_HITL_TOOLS
