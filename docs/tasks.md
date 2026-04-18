@@ -8,7 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-*(none — 24-A完了。次は 24-C HITL拡張 または 24-D パターン分析)*
+*(none — 24-C完了。次は 24-D パターン分析)*
 
 ---
 
@@ -56,14 +56,15 @@ triage_use_case.py の HITL 判定を `register_ssi` ハードコードから汎
 
 システムプロンプトに SWIFT コード知識（AC01/AG01/AM04/BE01）、is_active チェック、IBAN/BIC 検証ガイダンスを追加済み。
 
-#### 24-C: アクション多様化（HITL の拡張）
+#### 24-C: アクション多様化（HITL の拡張）✅ 完了
 
-現在の HITL: SSI 登録の承認/却下（1種類）
+追加済み HITL パターン（TriagePage.tsx の HitlPanel コンポーネント）:
+- `register_ssi`: Approve Registration / Reject（オレンジ）
+- `reactivate_counterparty`: Approve Reactivation / Reject + コンプライアンス警告（ブルー）
+- `update_ssi`: Approve Update / Reject（パープル）
+- `escalate`: Acknowledge & Escalate / Override（レッド + オペレーター警告）
 
-追加する HITL パターン:
-- カウンターパーティ再アクティブ化の承認
-- 複数の修正案を提示して人間が選択（例:「A: SSI を更新する / B: エスカレーションする」）
-- エスカレーション通知の確認
+Backend に `pending_action_type` フィールドを追加し、フロントエンドがアクション種別に応じた UI を表示。
 
 #### 24-D: パターン分析
 
