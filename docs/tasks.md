@@ -8,7 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-*(none — 24-B完了。次は 24-A のツール追加)*
+*(none — 24-A完了。次は 24-C HITL拡張 または 24-D パターン分析)*
 
 ---
 
@@ -30,17 +30,17 @@ Cloud Run 移行後の発展:
 
 ### Phase 24 — エージェント機能増強
 
-#### 24-A: ツールの追加
+#### 24-A: ツールの追加 ✅ 完了
 
-現在のツール: `get_trade_detail`, `get_settlement_instructions`, `get_reference_data`,
-`get_counterparty`, `lookup_external_ssi`, `register_ssi`
+追加済みツール（tools.py / agent.py / triage_use_case.py）:
+- `get_triage_history(trade_id)` — 同一取引の過去トリアージ結果（read-only）
+- `get_counterparty_exception_history(lei)` — 直近30日の STP 失敗件数（3件以上で警告付き、read-only）
+- `reactivate_counterparty(lei)` — `is_active=True` に更新（HITL承認対象）
+- `update_ssi(lei, currency, ...)` — 既存 SSI の BIC/口座番号等を修正（HITL承認対象）
+- `escalate(trade_id, reason)` — 担当者エスカレーション（HITL確認対象）
 
-追加するツール:
-- `reactivate_counterparty(lei)` — `is_active=False` のカウンターパーティを再有効化（HITL 承認対象）
-- `update_ssi(lei, currency, **fields)` — 既存 SSI の BIC/口座番号等を修正
-- `get_triage_history(trade_id)` — 同一取引の過去トリアージ結果を参照
-- `get_counterparty_exception_history(lei)` — 同一カウンターパーティの直近 N 件の STP 失敗件数・傾向
-- `escalate(trade_id, reason)` — 自動解決不能と判断した場合に担当者エスカレーション（新 HITL タイプ）
+agent.py に `_HITL_TOOL_TO_NODE` dict と `_make_hitl_node` ファクトリを追加。
+triage_use_case.py の HITL 判定を `register_ssi` ハードコードから汎化。
 
 #### 24-B: 複雑・曖昧なシナリオの追加 ✅ 完了
 
