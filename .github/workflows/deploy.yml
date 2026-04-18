@@ -12,6 +12,7 @@ on:
       - 'alembic/**'
       - 'pyproject.toml'
       - 'scripts/**'
+      - '.github/workflows/**'
 
 concurrency:
   group: deploy
