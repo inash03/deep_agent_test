@@ -132,14 +132,17 @@ push to main
   - GitHub Actions に `WORKLOAD_IDENTITY_PROVIDER` と `SERVICE_ACCOUNT` の secrets を登録
 - フロントエンド（静的ファイル）は将来的に Cloud Storage + Cloud CDN に移行することで VM も不要にできる
 
-### Phase 21 — GCP read-only IAM ロールと MCP 連携
+### Phase 21 — GCP read-only IAM ロールと MCP 連携（低優先度・保留）
 
-- GCP サービスアカウント `claude-reader` を作成
+> **保留理由**: Web版 Claude Code は Anthropic の VM 上で動作するため、GCP サービスアカウントキーを
+> そこに置くことはセキュリティ上好ましくない（read-only でもクラウドリソース情報が露出するリスク）。
+> デスクトップ版 Claude Code を使う環境が整ったタイミングで再検討する。
+> GCP MCP サーバーが公式に成熟した場合も再検討対象。
+
+- GCP サービスアカウント `claude-reader` 作成済み（`claude-reader@<project>.iam.gserviceaccount.com`）
   - 付与ロール: `roles/compute.viewer`, `roles/logging.viewer`, `roles/monitoring.viewer`, `roles/run.viewer`
-- サービスアカウントキー（JSON）を生成・保管
-- `~/.claude/settings.json` に `GOOGLE_APPLICATION_CREDENTIALS` 環境変数を設定
-- 動作確認: Claude Code から `gcloud compute instances list` などが実行できること
-- （将来）GCP 用 MCP サーバが成熟したら移行を検討
+- サービスアカウントキー（JSON）生成済み・VM に保管済み
+- 残り作業: `~/.claude/settings.json` に `GOOGLE_APPLICATION_CREDENTIALS` を設定（デスクトップ版環境で実施）
 
 ### Phase 11 — Frontend (partial)
 
