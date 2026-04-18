@@ -8,11 +8,73 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-*(none — Phase 24 全完了)*
+*(none)*
 
 ---
 
 ## Backlog
+
+### Phase 26 — STP ワークフロー・ステータス設計と実装
+
+> 現状の `stp_status`（NEW / STP_FAILED / STP_PASSED / SETTLED）はシステム全体の粗いステータスで、
+> フロント・バック双方の承認フローを表現できていない。
+> 取引の精算フロー（ライフサイクル）を細粒度に管理するための新ステータス体系を定義・実装する。
+
+#### ステータス定義
+
+| ステータス値 | 説明 |
+|------------|------|
+| `Initial` | 初期ステータス（取引登録直後） |
+| `FoCheck` | フロントオフィス観点のルールベース機械チェックを実行中 |
+| `FoAgentToCheck` | FoCheck 結果をエージェントがトリアージ中 |
+| `FoUserToValidate` | FO ユーザによる確認・承認が必要と判定されたもの |
+| `FoValidated` | FO 承認完了 |
+| `BoCheck` | バックオフィス観点のルールベース機械チェックを実行中 |
+| `BoAgentToCheck` | BoCheck 結果をエージェントがトリアージ中 |
+| `BoUserToValidate` | BO ユーザによる確認・承認が必要と判定されたもの |
+| `BoValidated` | BO 承認完了 |
+| `Done` | 全承認完了・精算処理に送出 |
+
+#### 状態遷移イメージ
+
+```
+Initial
+  → FoCheck（ルールベースエンジン起動）
+    → FoAgentToCheck（自動チェック NG → エージェントトリアージ）
+      → FoUserToValidate（エージェントが人間判断が必要と判定）
+        → FoValidated（FO ユーザが承認）
+          → BoCheck（バックオフィス側チェック開始）
+            → BoAgentToCheck（同上）
+              → BoUserToValidate（同上）
+                → BoValidated（BO ユーザが承認）
+                  → Done
+    → FoValidated（自動チェック OK → FO 承認不要でスキップ可）
+```
+
+#### 実装タスク（Phase 26）
+
+**Backend:**
+- `src/domain/entities.py`: `TradeWorkflowStatus` enum を追加（10 値）
+- `src/infrastructure/db/models.py`: `TradeModel` に `workflow_status` カラムを追加
+- `alembic/versions/0003_add_workflow_status.py`: migration 作成
+- `src/infrastructure/seed.py`: シードデータの `workflow_status` を設定
+  - STP_FAILED 取引 → `FoAgentToCheck`（すでにエージェントトリアージ対象）
+  - NEW 取引 → `Initial`
+- `src/presentation/routers/trades.py`: `workflow_status` での絞り込み対応
+- `src/infrastructure/triage_use_case.py`: トリアージ完了時に `workflow_status` を自動遷移
+  - HITL 承認 → `FoUserToValidate`
+  - COMPLETED（人間判断不要） → `FoValidated`（または root_cause 次第）
+
+**Frontend:**
+- `TradeListPage.tsx`: `workflow_status` 列を追加、フィルタ対応
+- `TriagePage.tsx`: トリアージ完了後に取引の `workflow_status` を表示
+- バッジ色の設計（FO系: 青、BO系: 緑、Done: グレー）
+
+**備考:**
+- Phase 26 完了後も既存の `stp_status`（STP_FAILED 等）は残す（トリアージ判定に使用）
+- `workflow_status` は「ビジネスフロー上の位置」を表し、`stp_status` は「決済システムの技術的状態」を表す
+
+
 
 ### Phase 25 — アクセス制御（Basic Auth）
 

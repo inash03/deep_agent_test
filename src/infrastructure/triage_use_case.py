@@ -199,6 +199,11 @@ def _parse_llm_output(
             content = content.split("```")[1]
             if content.startswith("json"):
                 content = content[4:]
+            content = content.strip()
+        # Skip any prose that precedes the JSON object (LLM sometimes adds reasoning text)
+        brace_pos = content.find('{')
+        if brace_pos > 0:
+            content = content[brace_pos:]
         data = json.loads(content)
         diagnosis = str(data["diagnosis"])
         root_cause = RootCause(data["root_cause"])
