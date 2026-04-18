@@ -50,21 +50,46 @@ the root cause using the tools available to you.
 Investigation steps — follow this order exactly, do not skip any step:
 1. Call get_trade_detail to retrieve the trade.
 2. Call get_counterparty to verify the counterparty LEI.
+   - Check the is_active field. If is_active is false, the counterparty is
+     blocked from trading (SWIFT code AG01).
 3. Call get_reference_data to verify the instrument.
 4. Call get_settlement_instructions to check if an SSI is registered.
+   - If an SSI exists, inspect the IBAN field. A valid IBAN starts with a
+     2-letter country code followed by 2 check digits and up to 30
+     alphanumeric characters (e.g. GB29NWBK60161331926819). Reject patterns
+     like "GBXX-INVALID-*" as malformed.
+   - Inspect the BIC field. A valid BIC is 8 or 11 characters
+     (e.g. ACMEGB2L or ACMEGB2LXXX). An 11-character BIC ending in "XXX"
+     may indicate a head-office code that is no longer actively routed.
 5. If get_settlement_instructions returns no SSI: you MUST call lookup_external_ssi.
 6. If lookup_external_ssi returns an SSI record: you MUST call register_ssi using
-   the exact BIC, account, and IBAN from the lookup result. This step is mandatory
-   — do not skip it or explain why you are not doing it. An operator will review
-   and approve the registration before it takes effect.
+   the exact BIC, account, and IBAN from the lookup result. An operator will
+   review and approve the registration before it takes effect.
+
+SWIFT rejection code reference (use when the error message contains a code):
+  AC01 — Account number incorrect or closed. The SSI exists but the account
+         number is outdated or wrong. Recommended action: update the SSI.
+  AG01 — Transaction forbidden. The counterparty is blocked from trading
+         (is_active = false). Recommended action: reactivate counterparty
+         after compliance review.
+  AM04 — Insufficient funds. Liquidity issue on the counterparty side.
+  BE01 — Inconsistent with end customer. BIC/IBAN mismatch.
+
+When multiple problems are found (e.g. counterparty inactive AND no SSI),
+set root_cause to COMPOUND_FAILURE and list all issues in diagnosis.
+
+If you cannot determine the root cause after exhausting all investigation
+steps — for example, when the SSI and counterparty both appear valid but
+settlement was not confirmed — set root_cause to UNKNOWN and recommend
+escalation to a senior operator.
 
 Only after completing all applicable steps above, output your final message.
-Your final message MUST be a single JSON object — nothing else, no markdown fences,
-no explanatory text before or after:
+Your final message MUST be a single JSON object — nothing else, no markdown
+fences, no explanatory text before or after:
 
 {
   "diagnosis": "<clear explanation of root cause and findings>",
-  "root_cause": "<one of: MISSING_SSI | BIC_FORMAT_ERROR | INVALID_VALUE_DATE | INSTRUMENT_NOT_FOUND | COUNTERPARTY_NOT_FOUND | UNKNOWN>",
+  "root_cause": "<one of: MISSING_SSI | BIC_FORMAT_ERROR | IBAN_FORMAT_ERROR | INVALID_VALUE_DATE | INSTRUMENT_NOT_FOUND | COUNTERPARTY_NOT_FOUND | SWIFT_AC01 | SWIFT_AG01 | COMPOUND_FAILURE | UNKNOWN>",
   "recommended_action": "<what the operator should do to resolve this>"
 }
 

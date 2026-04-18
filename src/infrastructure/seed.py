@@ -1,10 +1,11 @@
 """Seed data for the STP Exception Triage Agent.
 
-Populates the DB with demo data matching the mock_store.py scenarios:
-  - 5 STP_FAILED trades (TRD-001〜005) with corresponding stp_exceptions
+Populates the DB with demo data:
+  - 5 STP_FAILED trades (TRD-001〜005): basic scenarios
+  - 5 STP_FAILED trades (TRD-008〜012): complex/ambiguous SWIFT scenarios (Phase 24-B)
   - 2 NEW trades (TRD-006〜007) for the "create exception" demo
-  - 3 counterparties, 4 reference data instruments
-  - 3 internal SSIs + 1 external SSI
+  - 6 counterparties (incl. 1 inactive), 4 reference data instruments
+  - 6 internal SSIs + 1 external SSI
 
 Usage:
   python -m src.infrastructure.seed       # run as module (idempotent seed)
@@ -59,6 +60,24 @@ def _insert_counterparties(db: Session) -> None:
             bic="PACFJPJT", is_active=True,
             created_at=_now(), updated_at=_now(),
         ),
+        # Phase 24-B: inactive counterparty (AG01 scenario)
+        CounterpartyModel(
+            lei="213800XYZINACTIVE001", name="Zenith Trading Corp",
+            bic="ZNTHGB2L", is_active=False,
+            created_at=_now(), updated_at=_now(),
+        ),
+        # Phase 24-B: custodian rejection scenario
+        CounterpartyModel(
+            lei="254900CUSTBANK000001", name="Metro Custody Bank",
+            bic="MTCUBS33", is_active=True,
+            created_at=_now(), updated_at=_now(),
+        ),
+        # Phase 24-B: expired BIC scenario
+        CounterpartyModel(
+            lei="529900ATLANTIC000001", name="Atlantic Finance Ltd",
+            bic="ATLCGB2L", is_active=True,
+            created_at=_now(), updated_at=_now(),
+        ),
     ])
 
 
@@ -85,7 +104,7 @@ def _insert_reference_data(db: Session) -> None:
 
 def _insert_ssis(db: Session) -> None:
     db.add_all([
-        # TRD-002: malformed BIC (BIC_FORMAT_ERROR scenario — 9 chars, must be 8 or 11)
+        # TRD-002: malformed BIC (BIC_FORMAT_ERROR — 9 chars, must be 8 or 11)
         SettlementInstructionModel(
             id=uuid.uuid4(), lei="5493001KJTIIGC8Y1R12", currency="EUR",
             bic="GLSBUSS33", account="DE89370400440532013000",
@@ -106,11 +125,32 @@ def _insert_ssis(db: Session) -> None:
             iban=None, is_external=False,
             created_at=_now(), updated_at=_now(),
         ),
-        # TRD-001: external SSI (MISSING_SSI scenario — triggers HITL)
+        # TRD-001: external SSI (MISSING_SSI — triggers HITL)
         SettlementInstructionModel(
             id=uuid.uuid4(), lei="213800QILIUD4ROSUO03", currency="USD",
             bic="ACMEGB2L", account="GB29NWBK60161331926819",
             iban="GB29NWBK60161331926819", is_external=True,
+            created_at=_now(), updated_at=_now(),
+        ),
+        # TRD-008: Acme/EUR internal SSI with outdated account number (AC01)
+        SettlementInstructionModel(
+            id=uuid.uuid4(), lei="213800QILIUD4ROSUO03", currency="EUR",
+            bic="ACMEGB2L", account="GB29NWBK60161331000000",
+            iban="GB29NWBK60161331000000", is_external=False,
+            created_at=_now(), updated_at=_now(),
+        ),
+        # TRD-011: Metro Custody Bank/GBP with malformed IBAN
+        SettlementInstructionModel(
+            id=uuid.uuid4(), lei="254900CUSTBANK000001", currency="GBP",
+            bic="MTCUBS33", account="GBXX-INVALID-IBAN-9999",
+            iban="GBXX-INVALID-IBAN-9999", is_external=False,
+            created_at=_now(), updated_at=_now(),
+        ),
+        # TRD-012: Atlantic Finance/JPY with expired BIC
+        SettlementInstructionModel(
+            id=uuid.uuid4(), lei="529900ATLANTIC000001", currency="JPY",
+            bic="ATLCGB2LXXX", account="AT483200000012345864",
+            iban=None, is_external=False,
             created_at=_now(), updated_at=_now(),
         ),
     ])
@@ -145,6 +185,48 @@ def _insert_trades_and_exceptions(db: Session) -> None:
             "Instrument UNKNOWN_CCY_PAIR not found in reference data",
         ),
     ]
+    # Phase 24-B: complex/ambiguous SWIFT scenarios (TRD-008〜012)
+    complex_failed = [
+        (
+            "TRD-008", "213800QILIUD4ROSUO03", "EURUSD", "EUR",
+            Decimal("800000.00"), date(2026, 4, 8), "EUR", "STP_FAILED",
+            "MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.",
+        ),
+        (
+            "TRD-009", "213800XYZINACTIVE001", "USDJPY", "USD",
+            Decimal("1200000.00"), date(2026, 4, 8), "USD", "STP_FAILED",
+            "MT103 rejected by SWIFT. Reason code: AG01. Counterparty LEI: 213800XYZINACTIVE001.",
+        ),
+        (
+            "TRD-010", "213800XYZINACTIVE001", "GBPUSD", "GBP",
+            Decimal("600000.00"), date(2026, 4, 8), "GBP", "STP_FAILED",
+            "Pre-settlement validation failed for TRD-010. Multiple checks not passed.",
+        ),
+        (
+            "TRD-011", "254900CUSTBANK000001", "GBPUSD", "GBP",
+            Decimal("450000.00"), date(2026, 4, 8), "GBP", "STP_FAILED",
+            "Custodian HSBC rejected settlement instruction for TRD-011. No further details provided.",
+        ),
+        (
+            "TRD-012", "529900ATLANTIC000001", "USDJPY", "JPY",
+            Decimal("90000000.00"), date(2026, 4, 8), "JPY", "STP_FAILED",
+            "Settlement confirmation not received within SLA window for TRD-012. Status unknown.",
+        ),
+    ]
+    for row in complex_failed:
+        trade_id, cp_lei, instr, ccy, amt, vd, sc, status, err = row
+        db.add(TradeModel(
+            trade_id=trade_id, counterparty_lei=cp_lei, instrument_id=instr,
+            currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
+            settlement_currency=sc, stp_status=status,
+            created_at=_now(), updated_at=_now(),
+        ))
+        db.add(StpExceptionModel(
+            id=uuid.uuid4(), trade_id=trade_id, error_message=err,
+            status="OPEN", triage_run_id=None,
+            created_at=_now(), updated_at=_now(),
+        ))
+
     # NEW status trades for the "create exception" demo (no exceptions yet)
     new_trades = [
         (
