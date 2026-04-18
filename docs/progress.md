@@ -5,9 +5,9 @@
 ## Current Status
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
-**Last updated:** 2026-04-15
+**Last updated:** 2026-04-18
 **In Progress:** *(none)*
-**Next:** VM に `git pull && docker compose up --build -d` して全機能を確認 / Phase 12 (MCP外部化) or Phase 13 (deepagents)
+**Next:** デプロイ後に UI レイアウトを確認 / Phase 12 (MCP外部化) or Phase 13 (deepagents)
 
 ---
 
