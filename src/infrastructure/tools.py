@@ -4,16 +4,21 @@ Data source selection:
   - If DATABASE_URL is set → reads from PostgreSQL via repositories (production)
   - Otherwise            → reads from in-memory mock_store (unit tests / dev without DB)
 
-Six tools in two categories:
+Eleven tools in two categories:
   Read-only (no side effects):
     - get_trade_detail
     - get_settlement_instructions
     - get_reference_data
     - get_counterparty
     - lookup_external_ssi
+    - get_triage_history
+    - get_counterparty_exception_history
 
   Write (side effects — requires HITL approval before calling):
     - register_ssi
+    - reactivate_counterparty
+    - update_ssi
+    - escalate
 """
 
 from __future__ import annotations
@@ -21,6 +26,7 @@ from __future__ import annotations
 import json
 import os
 from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 from typing import Generator
 
 from langchain_core.tools import tool
@@ -230,7 +236,84 @@ def lookup_external_ssi(lei: str, currency: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Write tool — requires HITL approval before invocation
+# Additional read-only tools (Phase 24-A)
+# ---------------------------------------------------------------------------
+
+
+@tool
+def get_triage_history(trade_id: str) -> str:
+    """Look up past completed triage results for a given trade ID.
+
+    Returns up to 5 most recent triage runs with root_cause, diagnosis, and
+    recommended_action. Useful for identifying recurring issues.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"found": False, "trade_id": trade_id, "history": [],
+                               "message": "Triage history unavailable (no database)."})
+        from src.infrastructure.db.models import TriageRunModel
+        rows = (
+            db.query(TriageRunModel)
+            .filter(TriageRunModel.trade_id == trade_id,
+                    TriageRunModel.status == "COMPLETED")
+            .order_by(TriageRunModel.created_at.desc())
+            .limit(5)
+            .all()
+        )
+        if not rows:
+            return json.dumps({"found": False, "trade_id": trade_id, "history": [],
+                               "message": "No completed triage history found for this trade."})
+        history = [
+            {
+                "root_cause": r.root_cause,
+                "diagnosis": r.diagnosis,
+                "recommended_action": r.recommended_action,
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in rows
+        ]
+        return json.dumps({"found": True, "trade_id": trade_id,
+                           "count": len(history), "history": history})
+
+
+@tool
+def get_counterparty_exception_history(lei: str) -> str:
+    """Get recent STP failure history for a counterparty LEI (last 30 days).
+
+    Returns the count and details of recent exceptions. If 3 or more failures
+    are found in 30 days, this indicates a systemic counterparty issue.
+    """
+    with _db_session() as db:
+        if db is None:
+            return json.dumps({"lei": lei, "failure_count": 0, "period_days": 30,
+                               "exceptions": [], "message": "History unavailable (no database)."})
+        from src.infrastructure.db.models import StpExceptionModel, TradeModel
+        cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+        rows = (
+            db.query(StpExceptionModel)
+            .join(TradeModel, TradeModel.trade_id == StpExceptionModel.trade_id)
+            .filter(TradeModel.counterparty_lei == lei,
+                    StpExceptionModel.created_at >= cutoff)
+            .order_by(StpExceptionModel.created_at.desc())
+            .limit(10)
+            .all()
+        )
+        exceptions = [
+            {"trade_id": r.trade_id, "error_message": r.error_message,
+             "status": r.status, "created_at": r.created_at.isoformat()}
+            for r in rows
+        ]
+        warning = (
+            "WARNING: 3 or more failures in 30 days — possible systemic issue."
+            if len(exceptions) >= 3 else ""
+        )
+        return json.dumps({"lei": lei, "failure_count": len(exceptions),
+                           "period_days": 30, "exceptions": exceptions,
+                           "warning": warning})
+
+
+# ---------------------------------------------------------------------------
+# Write tools — require HITL approval before invocation
 # ---------------------------------------------------------------------------
 
 
@@ -272,8 +355,91 @@ def register_ssi(lei: str, currency: str, bic: str, account: str, iban: str = ""
     })
 
 
+@tool
+def reactivate_counterparty(lei: str) -> str:
+    """Reactivate an inactive counterparty by setting is_active = True.
+
+    WARNING: This modifies counterparty master data. Requires HITL approval.
+
+    Args:
+        lei: Legal Entity Identifier of the counterparty to reactivate.
+    """
+    with _db_session() as db:
+        if db is not None:
+            from src.infrastructure.db.counterparty_repository import CounterpartyRepository
+            row = CounterpartyRepository(db).update(lei, name=None, bic=None, is_active=True)
+            if row is None:
+                return json.dumps({"success": False,
+                                   "message": f"Counterparty '{lei}' not found."})
+            return json.dumps({"success": True, "lei": lei, "is_active": True,
+                               "message": f"Counterparty '{lei}' reactivated successfully."})
+    return json.dumps({"success": True, "lei": lei,
+                       "message": f"Counterparty '{lei}' reactivated (mock)."})
+
+
+@tool
+def update_ssi(lei: str, currency: str, bic: str = "",
+               account: str = "", iban: str = "") -> str:
+    """Update fields of an existing internal SSI (BIC, account, or IBAN).
+
+    WARNING: This modifies settlement instructions. Requires HITL approval.
+    Only fields with non-empty values are updated.
+
+    Args:
+        lei: Legal Entity Identifier of the counterparty.
+        currency: Settlement currency code (e.g. 'EUR').
+        bic: New BIC (leave empty to keep current value).
+        account: New account number (leave empty to keep current value).
+        iban: New IBAN (leave empty to keep current value).
+    """
+    with _db_session() as db:
+        if db is not None:
+            from src.infrastructure.db.ssi_repository import SsiRepository
+            repo = SsiRepository(db)
+            row = repo.get(lei, currency, is_external=False)
+            if row is None:
+                return json.dumps({"success": False,
+                                   "message": f"No SSI found for LEI '{lei}' / currency '{currency}'."})
+            if bic:
+                row.bic = bic
+            if account:
+                row.account = account
+            if iban:
+                row.iban = iban
+            row.updated_at = datetime.now(timezone.utc)
+            db.commit()
+            return json.dumps({
+                "success": True, "lei": lei, "currency": currency,
+                "bic": row.bic, "account": row.account, "iban": row.iban,
+                "message": f"SSI updated for LEI '{lei}' / currency '{currency}'.",
+            })
+    return json.dumps({"success": False, "message": "Database not available."})
+
+
+@tool
+def escalate(trade_id: str, reason: str) -> str:
+    """Escalate this triage case to a senior operator for manual resolution.
+
+    Use when the root cause cannot be determined after full investigation.
+    Requires HITL acknowledgment from the operator.
+
+    Args:
+        trade_id: The trade being escalated.
+        reason: Explanation of why automated resolution is not possible.
+    """
+    return json.dumps({
+        "escalated": True,
+        "trade_id": trade_id,
+        "reason": reason,
+        "message": (
+            f"Case {trade_id} has been escalated to a senior operator. "
+            f"Reason: {reason}"
+        ),
+    })
+
+
 # ---------------------------------------------------------------------------
-# Tool list (exported for use in the LangGraph agent)
+# Tool lists (exported for use in the LangGraph agent)
 # ---------------------------------------------------------------------------
 
 READ_ONLY_TOOLS = [
@@ -282,8 +448,10 @@ READ_ONLY_TOOLS = [
     get_reference_data,
     get_counterparty,
     lookup_external_ssi,
+    get_triage_history,
+    get_counterparty_exception_history,
 ]
 
-WRITE_TOOLS = [register_ssi]
+WRITE_TOOLS = [register_ssi, reactivate_counterparty, update_ssi, escalate]
 
 ALL_TOOLS = READ_ONLY_TOOLS + WRITE_TOOLS

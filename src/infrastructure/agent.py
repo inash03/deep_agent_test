@@ -34,7 +34,22 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from typing_extensions import TypedDict
 
-from src.infrastructure.tools import ALL_TOOLS, READ_ONLY_TOOLS, register_ssi
+from src.infrastructure.tools import (
+    ALL_TOOLS,
+    READ_ONLY_TOOLS,
+    escalate,
+    reactivate_counterparty,
+    register_ssi,
+    update_ssi,
+)
+
+# Maps each HITL tool name → the graph node that executes it
+_HITL_TOOL_TO_NODE: dict[str, str] = {
+    "register_ssi": "register_ssi_node",
+    "reactivate_counterparty": "reactivate_counterparty_node",
+    "update_ssi": "update_ssi_node",
+    "escalate": "escalate_node",
+}
 
 _logger = logging.getLogger("stp_triage.agent")
 
@@ -113,16 +128,14 @@ class AgentState(TypedDict):
 # ---------------------------------------------------------------------------
 
 
-def _route_after_agent(
-    state: AgentState,
-) -> Literal["read_tools", "register_ssi_node", "__end__"]:
+def _route_after_agent(state: AgentState) -> str:
     """Decide what to do after the LLM responds."""
     last = state["messages"][-1]
     if not isinstance(last, AIMessage) or not last.tool_calls:
-        return END  # LLM is done — no more tool calls
+        return END
     for tc in last.tool_calls:
-        if tc["name"] == "register_ssi":
-            return "register_ssi_node"  # write op → HITL interrupt
+        if tc["name"] in _HITL_TOOL_TO_NODE:
+            return _HITL_TOOL_TO_NODE[tc["name"]]
     return "read_tools"
 
 
@@ -176,33 +189,29 @@ def build_graph() -> Any:
         return {"messages": [response]}
 
     # ------------------------------------------------------------------
-    # Node: register_ssi_node
-    # Executes the register_ssi tool call from the last AIMessage.
-    # The graph is configured with interrupt_before=["register_ssi_node"],
-    # so this node only runs after the operator approves.
+    # HITL node factory — each write tool gets its own node so that
+    # interrupt_before can target it individually.
     # ------------------------------------------------------------------
-    def register_ssi_node(state: AgentState) -> dict[str, Any]:
-        last = state["messages"][-1]
-        tool_call = next(tc for tc in last.tool_calls if tc["name"] == "register_ssi")
-        _logger.info(
-            "register_ssi_node: executing SSI registration (HITL approved)",
-            extra={
-                "node": "register_ssi_node",
-                "trade_id": state.get("trade_id"),
-                "lei": tool_call["args"].get("lei"),
-                "currency": tool_call["args"].get("currency"),
-                "bic": tool_call["args"].get("bic"),
-            },
-        )
-        result = register_ssi.invoke(tool_call["args"])
-        _logger.info(
-            "register_ssi_node: SSI registration complete",
-            extra={"node": "register_ssi_node", "trade_id": state.get("trade_id")},
-        )
-        return {
-            "messages": [ToolMessage(content=result, tool_call_id=tool_call["id"])],
-            "action_taken": True,
-        }
+    def _make_hitl_node(tool_name: str, tool_fn: Any) -> Any:
+        def node(state: AgentState) -> dict[str, Any]:
+            last = state["messages"][-1]
+            tool_call = next(tc for tc in last.tool_calls if tc["name"] == tool_name)
+            _logger.info(
+                f"{tool_name}_node: executing (HITL approved)",
+                extra={"node": f"{tool_name}_node", "trade_id": state.get("trade_id"),
+                       "args": tool_call["args"]},
+            )
+            result = tool_fn.invoke(tool_call["args"])
+            return {
+                "messages": [ToolMessage(content=result, tool_call_id=tool_call["id"])],
+                "action_taken": True,
+            }
+        return node
+
+    register_ssi_node = _make_hitl_node("register_ssi", register_ssi)
+    reactivate_counterparty_node = _make_hitl_node("reactivate_counterparty", reactivate_counterparty)
+    update_ssi_node = _make_hitl_node("update_ssi", update_ssi)
+    escalate_node = _make_hitl_node("escalate", escalate)
 
     # ------------------------------------------------------------------
     # Assemble graph
@@ -212,21 +221,23 @@ def build_graph() -> Any:
     builder.add_node("agent", agent_node)
     builder.add_node("read_tools", read_tools_node)
     builder.add_node("register_ssi_node", register_ssi_node)
+    builder.add_node("reactivate_counterparty_node", reactivate_counterparty_node)
+    builder.add_node("update_ssi_node", update_ssi_node)
+    builder.add_node("escalate_node", escalate_node)
+
+    hitl_node_names = list(_HITL_TOOL_TO_NODE.values())
 
     builder.add_edge(START, "agent")
     builder.add_conditional_edges(
         "agent",
         _route_after_agent,
-        {
-            "read_tools": "read_tools",
-            "register_ssi_node": "register_ssi_node",
-            END: END,
-        },
+        {**{n: n for n in hitl_node_names}, "read_tools": "read_tools", END: END},
     )
     builder.add_edge("read_tools", "agent")
-    builder.add_edge("register_ssi_node", "agent")
+    for node_name in hitl_node_names:
+        builder.add_edge(node_name, "agent")
 
     return builder.compile(
         checkpointer=MemorySaver(),
-        interrupt_before=["register_ssi_node"],
+        interrupt_before=hitl_node_names,
     )
