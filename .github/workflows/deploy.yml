@@ -30,6 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check secrets are set
+        run: |
+          echo "GCP_SA_KEY set: ${{ secrets.GCP_SA_KEY != '' }}"
+          echo "GCP_PROJECT_ID set: ${{ secrets.GCP_PROJECT_ID != '' }}"
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
