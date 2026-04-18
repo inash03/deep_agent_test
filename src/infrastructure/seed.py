@@ -8,7 +8,7 @@ Populates the DB with demo data:
   - 6 internal SSIs + 1 external SSI
 
 Usage:
-  python -m src.infrastructure.seed       # run as module (idempotent seed)
+  python -m src.infrastructure.seed       # additive upsert (adds missing records only)
   python -m src.infrastructure.seed reset  # truncate and re-seed
 """
 
@@ -43,120 +43,72 @@ def _now() -> datetime:
 # ---------------------------------------------------------------------------
 
 
-def _insert_counterparties(db: Session) -> None:
-    db.add_all([
-        CounterpartyModel(
-            lei="213800QILIUD4ROSUO03", name="Acme Bank Ltd",
-            bic="ACMEGB2L", is_active=True,
-            created_at=_now(), updated_at=_now(),
-        ),
-        CounterpartyModel(
-            lei="5493001KJTIIGC8Y1R12", name="Global Securities Inc",
-            bic="GLSBUS33", is_active=True,
-            created_at=_now(), updated_at=_now(),
-        ),
-        CounterpartyModel(
-            lei="9695005MSX1OYEMGDF46", name="Pacific Finance Corp",
-            bic="PACFJPJT", is_active=True,
-            created_at=_now(), updated_at=_now(),
-        ),
-        # Phase 24-B: inactive counterparty (AG01 scenario)
-        CounterpartyModel(
-            lei="213800XYZINACTIVE001", name="Zenith Trading Corp",
-            bic="ZNTHGB2L", is_active=False,
-            created_at=_now(), updated_at=_now(),
-        ),
-        # Phase 24-B: custodian rejection scenario
-        CounterpartyModel(
-            lei="254900CUSTBANK000001", name="Metro Custody Bank",
-            bic="MTCUBS33", is_active=True,
-            created_at=_now(), updated_at=_now(),
-        ),
-        # Phase 24-B: expired BIC scenario
-        CounterpartyModel(
-            lei="529900ATLANTIC000001", name="Atlantic Finance Ltd",
-            bic="ATLCGB2L", is_active=True,
-            created_at=_now(), updated_at=_now(),
-        ),
-    ])
+_COUNTERPARTIES = [
+    {"lei": "213800QILIUD4ROSUO03", "name": "Acme Bank Ltd",       "bic": "ACMEGB2L",  "is_active": True},
+    {"lei": "5493001KJTIIGC8Y1R12", "name": "Global Securities Inc","bic": "GLSBUS33",  "is_active": True},
+    {"lei": "9695005MSX1OYEMGDF46", "name": "Pacific Finance Corp", "bic": "PACFJPJT",  "is_active": True},
+    {"lei": "213800XYZINACTIVE001", "name": "Zenith Trading Corp",  "bic": "ZNTHGB2L",  "is_active": False},
+    {"lei": "254900CUSTBANK000001", "name": "Metro Custody Bank",   "bic": "MTCUBS33",  "is_active": True},
+    {"lei": "529900ATLANTIC000001", "name": "Atlantic Finance Ltd", "bic": "ATLCGB2L",  "is_active": True},
+]
 
 
-def _insert_reference_data(db: Session) -> None:
-    db.add_all([
-        ReferenceDataModel(
-            instrument_id="USDJPY", description="US Dollar / Japanese Yen",
-            asset_class="FX", is_active=True, created_at=_now(), updated_at=_now(),
-        ),
-        ReferenceDataModel(
-            instrument_id="EURUSD", description="Euro / US Dollar",
-            asset_class="FX", is_active=True, created_at=_now(), updated_at=_now(),
-        ),
-        ReferenceDataModel(
-            instrument_id="GBPUSD", description="British Pound / US Dollar",
-            asset_class="FX", is_active=True, created_at=_now(), updated_at=_now(),
-        ),
-        ReferenceDataModel(
-            instrument_id="AUDUSD", description="Australian Dollar / US Dollar",
-            asset_class="FX", is_active=True, created_at=_now(), updated_at=_now(),
-        ),
-    ])
+def _upsert_counterparties(db: Session) -> None:
+    existing = {lei for (lei,) in db.query(CounterpartyModel.lei)}
+    for row in _COUNTERPARTIES:
+        if row["lei"] not in existing:
+            db.add(CounterpartyModel(**row, created_at=_now(), updated_at=_now()))
 
 
-def _insert_ssis(db: Session) -> None:
-    db.add_all([
-        # TRD-002: malformed BIC (BIC_FORMAT_ERROR — 9 chars, must be 8 or 11)
-        SettlementInstructionModel(
-            id=uuid.uuid4(), lei="5493001KJTIIGC8Y1R12", currency="EUR",
-            bic="GLSBUSS33", account="DE89370400440532013000",
-            iban="DE89370400440532013000", is_external=False,
-            created_at=_now(), updated_at=_now(),
-        ),
-        # TRD-004: valid internal SSI
-        SettlementInstructionModel(
-            id=uuid.uuid4(), lei="9695005MSX1OYEMGDF46", currency="AUD",
-            bic="PACFJPJT", account="AU12345678901234",
-            iban=None, is_external=False,
-            created_at=_now(), updated_at=_now(),
-        ),
-        # TRD-005: valid internal SSI
-        SettlementInstructionModel(
-            id=uuid.uuid4(), lei="9695005MSX1OYEMGDF46", currency="USD",
-            bic="PACFJPJT", account="US12345678901234",
-            iban=None, is_external=False,
-            created_at=_now(), updated_at=_now(),
-        ),
-        # TRD-001: external SSI (MISSING_SSI — triggers HITL)
-        SettlementInstructionModel(
-            id=uuid.uuid4(), lei="213800QILIUD4ROSUO03", currency="USD",
-            bic="ACMEGB2L", account="GB29NWBK60161331926819",
-            iban="GB29NWBK60161331926819", is_external=True,
-            created_at=_now(), updated_at=_now(),
-        ),
-        # TRD-008: Acme/EUR internal SSI with outdated account number (AC01)
-        SettlementInstructionModel(
-            id=uuid.uuid4(), lei="213800QILIUD4ROSUO03", currency="EUR",
-            bic="ACMEGB2L", account="GB29NWBK60161331000000",
-            iban="GB29NWBK60161331000000", is_external=False,
-            created_at=_now(), updated_at=_now(),
-        ),
-        # TRD-011: Metro Custody Bank/GBP with malformed IBAN
-        SettlementInstructionModel(
-            id=uuid.uuid4(), lei="254900CUSTBANK000001", currency="GBP",
-            bic="MTCUBS33", account="GBXX-INVALID-IBAN-9999",
-            iban="GBXX-INVALID-IBAN-9999", is_external=False,
-            created_at=_now(), updated_at=_now(),
-        ),
-        # TRD-012: Atlantic Finance/JPY with expired BIC
-        SettlementInstructionModel(
-            id=uuid.uuid4(), lei="529900ATLANTIC000001", currency="JPY",
-            bic="ATLCGB2LXXX", account="AT483200000012345864",
-            iban=None, is_external=False,
-            created_at=_now(), updated_at=_now(),
-        ),
-    ])
+_REFERENCE_DATA = [
+    {"instrument_id": "USDJPY", "description": "US Dollar / Japanese Yen",          "asset_class": "FX", "is_active": True},
+    {"instrument_id": "EURUSD", "description": "Euro / US Dollar",                   "asset_class": "FX", "is_active": True},
+    {"instrument_id": "GBPUSD", "description": "British Pound / US Dollar",          "asset_class": "FX", "is_active": True},
+    {"instrument_id": "AUDUSD", "description": "Australian Dollar / US Dollar",      "asset_class": "FX", "is_active": True},
+]
 
 
-def _insert_trades_and_exceptions(db: Session) -> None:
+def _upsert_reference_data(db: Session) -> None:
+    existing = {iid for (iid,) in db.query(ReferenceDataModel.instrument_id)}
+    for row in _REFERENCE_DATA:
+        if row["instrument_id"] not in existing:
+            db.add(ReferenceDataModel(**row, created_at=_now(), updated_at=_now()))
+
+
+# (lei, currency, is_external, bic, account, iban)
+_SSIS = [
+    ("5493001KJTIIGC8Y1R12", "EUR", False, "GLSBUSS33",  "DE89370400440532013000", "DE89370400440532013000"),
+    ("9695005MSX1OYEMGDF46", "AUD", False, "PACFJPJT",   "AU12345678901234",        None),
+    ("9695005MSX1OYEMGDF46", "USD", False, "PACFJPJT",   "US12345678901234",        None),
+    ("213800QILIUD4ROSUO03", "USD", True,  "ACMEGB2L",   "GB29NWBK60161331926819", "GB29NWBK60161331926819"),
+    ("213800QILIUD4ROSUO03", "EUR", False, "ACMEGB2L",   "GB29NWBK60161331000000", "GB29NWBK60161331000000"),
+    ("254900CUSTBANK000001", "GBP", False, "MTCUBS33",   "GBXX-INVALID-IBAN-9999", "GBXX-INVALID-IBAN-9999"),
+    ("529900ATLANTIC000001", "JPY", False, "ATLCGB2LXXX","AT483200000012345864",    None),
+]
+
+
+def _upsert_ssis(db: Session) -> None:
+    existing = {
+        (lei, ccy, ext)
+        for lei, ccy, ext in db.query(
+            SettlementInstructionModel.lei,
+            SettlementInstructionModel.currency,
+            SettlementInstructionModel.is_external,
+        )
+    }
+    for lei, ccy, is_ext, bic, account, iban in _SSIS:
+        if (lei, ccy, is_ext) not in existing:
+            db.add(SettlementInstructionModel(
+                id=uuid.uuid4(), lei=lei, currency=ccy, is_external=is_ext,
+                bic=bic, account=account, iban=iban,
+                created_at=_now(), updated_at=_now(),
+            ))
+
+
+def _upsert_trades_and_exceptions(db: Session) -> None:
+    existing_trades = {tid for (tid,) in db.query(TradeModel.trade_id)}
+    existing_exc_trades = {tid for (tid,) in db.query(StpExceptionModel.trade_id)}
+
     # (trade_id, cp_lei, instrument, currency, amount, value_date, settlement_ccy, stp_status, error_message)
     failed = [
         (
@@ -213,20 +165,6 @@ def _insert_trades_and_exceptions(db: Session) -> None:
             "Settlement confirmation not received within SLA window for TRD-012. Status unknown.",
         ),
     ]
-    for row in complex_failed:
-        trade_id, cp_lei, instr, ccy, amt, vd, sc, status, err = row
-        db.add(TradeModel(
-            trade_id=trade_id, counterparty_lei=cp_lei, instrument_id=instr,
-            currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
-            settlement_currency=sc, stp_status=status,
-            created_at=_now(), updated_at=_now(),
-        ))
-        db.add(StpExceptionModel(
-            id=uuid.uuid4(), trade_id=trade_id, error_message=err,
-            status="OPEN", triage_run_id=None,
-            created_at=_now(), updated_at=_now(),
-        ))
-
     # NEW status trades for the "create exception" demo (no exceptions yet)
     new_trades = [
         (
@@ -239,27 +177,30 @@ def _insert_trades_and_exceptions(db: Session) -> None:
         ),
     ]
 
-    for row in failed:
+    for row in failed + complex_failed:
         trade_id, cp_lei, instr, ccy, amt, vd, sc, status, err = row
-        db.add(TradeModel(
-            trade_id=trade_id, counterparty_lei=cp_lei, instrument_id=instr,
-            currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
-            settlement_currency=sc, stp_status=status,
-            created_at=_now(), updated_at=_now(),
-        ))
-        db.add(StpExceptionModel(
-            id=uuid.uuid4(), trade_id=trade_id, error_message=err,
-            status="OPEN", triage_run_id=None,
-            created_at=_now(), updated_at=_now(),
-        ))
+        if trade_id not in existing_trades:
+            db.add(TradeModel(
+                trade_id=trade_id, counterparty_lei=cp_lei, instrument_id=instr,
+                currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
+                settlement_currency=sc, stp_status=status,
+                created_at=_now(), updated_at=_now(),
+            ))
+        if trade_id not in existing_exc_trades:
+            db.add(StpExceptionModel(
+                id=uuid.uuid4(), trade_id=trade_id, error_message=err,
+                status="OPEN", triage_run_id=None,
+                created_at=_now(), updated_at=_now(),
+            ))
 
     for trade_id, cp_lei, instr, ccy, amt, vd, sc, status in new_trades:
-        db.add(TradeModel(
-            trade_id=trade_id, counterparty_lei=cp_lei, instrument_id=instr,
-            currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
-            settlement_currency=sc, stp_status=status,
-            created_at=_now(), updated_at=_now(),
-        ))
+        if trade_id not in existing_trades:
+            db.add(TradeModel(
+                trade_id=trade_id, counterparty_lei=cp_lei, instrument_id=instr,
+                currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
+                settlement_currency=sc, stp_status=status,
+                created_at=_now(), updated_at=_now(),
+            ))
 
 
 # ---------------------------------------------------------------------------
@@ -268,15 +209,17 @@ def _insert_trades_and_exceptions(db: Session) -> None:
 
 
 def seed_database(db: Session) -> None:
-    """Idempotent seed — skips if trades table already has rows."""
-    if db.query(TradeModel).count() > 0:
-        return
-    _insert_counterparties(db)
-    _insert_reference_data(db)
-    _insert_ssis(db)
-    _insert_trades_and_exceptions(db)
+    """Additive upsert — inserts any seed records missing from the DB.
+
+    Safe to run on every deploy: existing records (including user edits) are
+    preserved; only records whose PK / unique key is absent are added.
+    """
+    _upsert_counterparties(db)
+    _upsert_reference_data(db)
+    _upsert_ssis(db)
+    _upsert_trades_and_exceptions(db)
     db.commit()
-    print("[seed] initial data inserted.")
+    print("[seed] seed data synced (missing records added).")
 
 
 def reset_and_seed(db: Session) -> None:
@@ -286,10 +229,10 @@ def reset_and_seed(db: Session) -> None:
         "reference_data, counterparties, trades RESTART IDENTITY"
     ))
     db.commit()
-    _insert_counterparties(db)
-    _insert_reference_data(db)
-    _insert_ssis(db)
-    _insert_trades_and_exceptions(db)
+    _upsert_counterparties(db)
+    _upsert_reference_data(db)
+    _upsert_ssis(db)
+    _upsert_trades_and_exceptions(db)
     db.commit()
     print("[seed] data reset and re-seeded.")
 
