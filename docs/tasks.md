@@ -8,7 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-*(none)*
+### Phase 25 — アクセス制御（Basic Auth + API キー）
 
 ---
 

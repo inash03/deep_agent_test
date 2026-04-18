@@ -60,6 +60,7 @@ jobs:
           secrets: |
             ANTHROPIC_API_KEY=anthropic-api-key:latest
             DATABASE_URL=database-url:latest
+            API_KEY=api-key:latest
           env_vars: |
             SECRET_BACKEND=env
             CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
@@ -73,22 +74,28 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         env:
           CLOUD_RUN_URL: ${{ needs.deploy-backend.outputs.url }}
+          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+          APP_USERNAME: ${{ secrets.APP_USERNAME }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           command_timeout: 10m
-          envs: CLOUD_RUN_URL
+          envs: CLOUD_RUN_URL,VITE_API_KEY,APP_USERNAME,APP_PASSWORD
           script: |
             set -e
             cd ~/deep_agent_test
             git fetch origin
             git reset --hard origin/claude/setup-langgraph-project-oXB7j
-            # VITE_API_URL を Cloud Run の URL に更新
-            if grep -q "^VITE_API_URL=" .env; then
-              sed -i "s|^VITE_API_URL=.*|VITE_API_URL=$CLOUD_RUN_URL|" .env
-            else
-              echo "VITE_API_URL=$CLOUD_RUN_URL" >> .env
-            fi
+            # .env に必要な値を更新
+            for var in VITE_API_URL VITE_API_KEY APP_USERNAME APP_PASSWORD; do
+              eval "val=\$$( [ $var = VITE_API_URL ] && echo CLOUD_RUN_URL || echo $var )"
+              if grep -q "^${var}=" .env; then
+                sed -i "s|^${var}=.*|${var}=$val|" .env
+              else
+                echo "${var}=$val" >> .env
+              fi
+            done
             docker compose up --build -d
             docker compose ps

@@ -16,6 +16,7 @@ from src.domain.interfaces import ITriageUseCase
 from src.infrastructure.db.repository import TriageResultRepository
 from src.infrastructure.db.session import get_db
 from src.infrastructure.triage_use_case import TriageSTPFailureUseCase
+from src.presentation.dependencies import verify_api_key
 from src.presentation.schemas import (
     ResumeRequest,
     TriageHistoryResponse,
@@ -58,6 +59,7 @@ def start_triage(
     body: TriageRequest,
     use_case: ITriageUseCase = Depends(get_use_case),
     db: Session = Depends(get_db),
+    _: None = Depends(verify_api_key),
 ) -> TriageResponse:
     failure = STPFailure(trade_id=body.trade_id, error_message=body.error_message)
     result = use_case.start(failure)
@@ -83,6 +85,7 @@ def resume_triage(
     body: ResumeRequest,
     use_case: ITriageUseCase = Depends(get_use_case),
     db: Session = Depends(get_db),
+    _: None = Depends(verify_api_key),
 ) -> TriageResponse:
     try:
         result = use_case.resume(run_id, approved=body.approved)
