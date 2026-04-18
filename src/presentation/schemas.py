@@ -94,6 +94,9 @@ class TriageHistoryResponse(BaseModel):
 
 class TradeOut(BaseModel):
     trade_id: str
+    version: int
+    workflow_status: str
+    is_current: bool
     counterparty_lei: str
     instrument_id: str
     currency: str

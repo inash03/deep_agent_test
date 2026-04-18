@@ -17,6 +17,9 @@ router = APIRouter(prefix="/api/v1/trades", tags=["trades"])
 def _to_out(row) -> TradeOut:
     return TradeOut(
         trade_id=row.trade_id,
+        version=row.version,
+        workflow_status=row.workflow_status,
+        is_current=row.is_current,
         counterparty_lei=row.counterparty_lei,
         instrument_id=row.instrument_id,
         currency=row.currency,
@@ -32,13 +35,17 @@ def _to_out(row) -> TradeOut:
 def list_trades(
     trade_id: str | None = Query(None, description="部分一致フィルタ"),
     stp_status: str | None = Query(None, description="完全一致フィルタ (e.g. STP_FAILED)"),
+    workflow_status: str | None = Query(None, description="完全一致フィルタ (e.g. FoAgentToCheck)"),
     trade_date: date | None = Query(None, description="取引日フィルタ (YYYY-MM-DD)"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> TradeListResponse:
     repo = TradeRepository(db)
-    items, total = repo.list(trade_id=trade_id, stp_status=stp_status, trade_date=trade_date, limit=limit, offset=offset)
+    items, total = repo.list(
+        trade_id=trade_id, stp_status=stp_status, workflow_status=workflow_status,
+        trade_date=trade_date, limit=limit, offset=offset,
+    )
     return TradeListResponse(items=[_to_out(r) for r in items], total=total)
 
 

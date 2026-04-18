@@ -6,12 +6,29 @@
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-18
-**In Progress:** *(none)*
-**Next:** デプロイ後に UI レイアウトを確認 / Phase 12 (MCP外部化) or Phase 13 (deepagents)
+**In Progress:** Phase 26-B — ルールエンジン実装
+**Next:** Phase 26-B 実装 → Phase 26-C (BoAgent リネーム) → Phase 26-D (FoAgent 新規)
 
 ---
 
 ## Step Log
+
+### Step 25 — Phase 26-A: DB Foundation + エンティティ拡張 (2026-04-18)
+
+Files: `src/domain/entities.py`, `src/infrastructure/db/models.py`,
+       `alembic/versions/0003_add_workflow_schema.py`,
+       `src/infrastructure/seed.py`,
+       `src/infrastructure/db/trade_repository.py`,
+       `src/infrastructure/db/trade_event_repository.py` (新規),
+       `src/infrastructure/db/app_setting_repository.py` (新規),
+       `src/presentation/schemas.py`, `src/presentation/routers/trades.py`
+
+- `entities.py`: `TradeWorkflowStatus`（12値）、`EventType`（AMEND/CANCEL）、`EventWorkflowStatus`（6値）、`CheckResult`、`TradeEvent` を追加
+- `models.py`: `TradeModel` の PK を UUID `id` に変更、`(trade_id, version)` UNIQUE 追加、`workflow_status`/`version`/`is_current`/`sendback_count`/`fo_check_results`/`bo_check_results`/`bo_sendback_reason`/`fo_explanation` カラム追加。`TradeEventModel`・`AppSettingModel` 新規追加
+- Alembic 0003: 既存行への `gen_random_uuid()` 付与、STP_FAILED → `FoAgentToCheck` 一括更新、`trade_events`・`app_settings` テーブル作成、デフォルト設定（fo/bo_check_trigger=manual）挿入
+- `seed.py`: 全 Trade にv`ersion=1`/`is_current=True`/`workflow_status` を付与、`AppSettingModel` の upsert 追加
+- `trade_repository.py`: `list()` に `is_current=True` フィルタ追加、`get_current()`・`list_versions()`・`create_next_version()`・`activate_version()`・`update_workflow_status()` 追加
+- `schemas.py`/`routers/trades.py`: `TradeOut` に `version`/`workflow_status`/`is_current` 追加、`workflow_status` フィルタパラメータ追加
 
 ### Step 18 — Phase 17+18: Frontend routing + all CRUD pages (2026-04-15)
 

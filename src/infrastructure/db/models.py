@@ -124,11 +124,21 @@ class TriageStepModel(Base):
 
 
 class TradeModel(Base):
-    """Trade master data with STP processing status."""
+    """Trade master data with STP processing status and workflow state."""
 
     __tablename__ = "trades"
+    __table_args__ = (
+        UniqueConstraint("trade_id", "version", name="uq_trades_trade_id_version"),
+    )
 
-    trade_id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    trade_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # WorkflowStatus: Initial / FoCheck / FoAgentToCheck / FoUserToValidate / FoValidated /
+    #                 BoCheck / BoAgentToCheck / BoUserToValidate / BoValidated / Done /
+    #                 Cancelled / EventPending
+    workflow_status: Mapped[str] = mapped_column(String(30), nullable=False, default="Initial")
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     counterparty_lei: Mapped[str] = mapped_column(String(30), nullable=False)
     instrument_id: Mapped[str] = mapped_column(String(50), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False)
@@ -136,8 +146,13 @@ class TradeModel(Base):
     value_date: Mapped[date] = mapped_column(Date, nullable=False)
     trade_date: Mapped[date] = mapped_column(Date, nullable=False)
     settlement_currency: Mapped[str] = mapped_column(String(10), nullable=False)
-    # TradeStatus: NEW / STP_PASSED / STP_FAILED / SETTLED
+    # Legacy STP status: NEW / STP_PASSED / STP_FAILED / SETTLED
     stp_status: Mapped[str] = mapped_column(String(20), nullable=False, default="NEW")
+    sendback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    fo_check_results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    bo_check_results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    bo_sendback_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    fo_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False,
         default=lambda: datetime.now(timezone.utc),
@@ -239,6 +254,51 @@ class StpExceptionModel(Base):
         DateTime(timezone=True), nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class TradeEventModel(Base):
+    """Trade event record — Amend or Cancel initiated on a trade."""
+
+    __tablename__ = "trade_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    # Soft reference to trades.trade_id
+    trade_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    from_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    to_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    # EventType: AMEND / CANCEL
+    event_type: Mapped[str] = mapped_column(String(10), nullable=False)
+    # EventWorkflowStatus: FoUserToValidate / FoValidated / BoUserToValidate / BoValidated / Done / Cancelled
+    workflow_status: Mapped[str] = mapped_column(String(30), nullable=False)
+    requested_by: Mapped[str] = mapped_column(String(100), nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    amended_fields: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class AppSettingModel(Base):
+    """Application settings table — key/value store for configurable behaviour."""
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    value: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False,
         default=lambda: datetime.now(timezone.utc),

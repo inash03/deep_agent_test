@@ -21,6 +21,35 @@ class TradeStatus(str, Enum):
     SETTLED = "SETTLED"
 
 
+class TradeWorkflowStatus(str, Enum):
+    INITIAL = "Initial"
+    FO_CHECK = "FoCheck"
+    FO_AGENT_TO_CHECK = "FoAgentToCheck"
+    FO_USER_TO_VALIDATE = "FoUserToValidate"
+    FO_VALIDATED = "FoValidated"
+    BO_CHECK = "BoCheck"
+    BO_AGENT_TO_CHECK = "BoAgentToCheck"
+    BO_USER_TO_VALIDATE = "BoUserToValidate"
+    BO_VALIDATED = "BoValidated"
+    DONE = "Done"
+    CANCELLED = "Cancelled"
+    EVENT_PENDING = "EventPending"
+
+
+class EventType(str, Enum):
+    AMEND = "AMEND"
+    CANCEL = "CANCEL"
+
+
+class EventWorkflowStatus(str, Enum):
+    FO_USER_TO_VALIDATE = "FoUserToValidate"
+    FO_VALIDATED = "FoValidated"
+    BO_USER_TO_VALIDATE = "BoUserToValidate"
+    BO_VALIDATED = "BoValidated"
+    DONE = "Done"
+    CANCELLED = "Cancelled"
+
+
 class StpExceptionStatus(str, Enum):
     OPEN = "OPEN"
     IN_PROGRESS = "IN_PROGRESS"
@@ -142,6 +171,36 @@ class TriageResult(BaseModel):
 
     # Always populated
     steps: list[Step] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Rule check result
+# ---------------------------------------------------------------------------
+
+
+class CheckResult(BaseModel):
+    rule_name: str
+    passed: bool
+    message: str
+
+
+# ---------------------------------------------------------------------------
+# Trade event (Amend / Cancel)
+# ---------------------------------------------------------------------------
+
+
+class TradeEvent(BaseModel):
+    id: uuid.UUID
+    trade_id: str
+    from_version: int
+    to_version: int
+    event_type: EventType
+    workflow_status: EventWorkflowStatus
+    requested_by: str
+    reason: str | None = None
+    amended_fields: dict[str, Any] | None = None
+    created_at: datetime
+    updated_at: datetime
 
 
 # ---------------------------------------------------------------------------

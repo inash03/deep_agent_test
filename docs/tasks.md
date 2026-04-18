@@ -8,7 +8,28 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-*(none)*
+#### Phase 26-B — ルールエンジン実装
+
+**目的:** FoCheck / BoCheck のルールを定義し、取引データに対して実行する。
+
+**Backend:**
+- `src/domain/check_rules.py` 新規
+  - `FoCheckRule` / `BoCheckRule` の定義（rule_name, description, check_fn）
+  - FoCheck 7 ルール実装（trade_date_not_future, trade_date_not_weekend, value_date_after_trade_date, value_date_not_past, value_date_settlement_cycle, amount_positive, settlement_currency_consistency）
+  - BoCheck 7 ルール実装（counterparty_exists, counterparty_active, ssi_exists, bic_format_valid, iban_format_valid, risk_limit_check [スタブ], compliance_check [スタブ]）
+- `src/infrastructure/rule_engine.py` 新規
+  - `run_fo_check(trade, db) → list[CheckResult]`
+  - `run_bo_check(trade, db) → list[CheckResult]`
+  - 結果を `trade.fo_check_results` / `trade.bo_check_results` に保存し、workflow_status を遷移
+    - 全通過 → FoValidated / BoValidated
+    - 失敗あり → FoAgentToCheck / BoAgentToCheck
+- `src/presentation/routers/trades.py` 更新
+  - `POST /api/v1/trades/{trade_id}/fo-check`: FoCheck 実行
+  - `POST /api/v1/trades/{trade_id}/bo-check`: BoCheck 実行
+- `src/presentation/routers/settings.py` 新規
+  - `GET /api/v1/settings`: 設定一覧取得
+  - `PATCH /api/v1/settings/{key}`: 設定値更新
+- 自動トリガー実装: `fo_check_trigger=auto` の場合、`Initial` への遷移直後に FoCheck を自動実行。`bo_check_trigger=auto` の場合、`FoValidated` への遷移直後に BoCheck を自動実行。
 
 ---
 
@@ -56,31 +77,6 @@ Max 1 task in In Progress at a time.
   - `update_workflow_status(trade_id, status, **kwargs)`: workflow_status + 付随フィールド更新
 - `src/infrastructure/db/trade_event_repository.py` 新規
 - `src/infrastructure/db/app_setting_repository.py` 新規
-
----
-
-#### Phase 26-B — ルールエンジン実装
-
-**目的:** FoCheck / BoCheck のルールを定義し、取引データに対して実行する。
-
-**Backend:**
-- `src/domain/check_rules.py` 新規
-  - `FoCheckRule` / `BoCheckRule` の定義（rule_name, description, check_fn）
-  - FoCheck 7 ルール実装（trade_date_not_future, trade_date_not_weekend, value_date_after_trade_date, value_date_not_past, value_date_settlement_cycle, amount_positive, settlement_currency_consistency）
-  - BoCheck 7 ルール実装（counterparty_exists, counterparty_active, ssi_exists, bic_format_valid, iban_format_valid, risk_limit_check [スタブ], compliance_check [スタブ]）
-- `src/infrastructure/rule_engine.py` 新規
-  - `run_fo_check(trade, db) → list[CheckResult]`
-  - `run_bo_check(trade, db) → list[CheckResult]`
-  - 結果を `trade.fo_check_results` / `trade.bo_check_results` に保存し、workflow_status を遷移
-    - 全通過 → FoValidated / BoValidated
-    - 失敗あり → FoAgentToCheck / BoAgentToCheck
-- `src/presentation/routers/trades.py` 更新
-  - `POST /api/v1/trades/{trade_id}/fo-check`: FoCheck 実行
-  - `POST /api/v1/trades/{trade_id}/bo-check`: BoCheck 実行
-- `src/presentation/routers/settings.py` 新規
-  - `GET /api/v1/settings`: 設定一覧取得
-  - `PATCH /api/v1/settings/{key}`: 設定値更新
-- 自動トリガー実装: `fo_check_trigger=auto` の場合、`Initial` への遷移直後に FoCheck を自動実行。`bo_check_trigger=auto` の場合、`FoValidated` への遷移直後に BoCheck を自動実行。
 
 ---
 
@@ -378,3 +374,4 @@ push to main
 - Phase 22 前半: VM への自動デプロイ — GitHub Actions + SSH、environment: GCP_VM、concurrency で多重実行防止
 - Phase 20: バックエンドを Cloud Run に移行 — entrypoint.sh、Artifact Registry、2ジョブ workflow（Cloud Run + VM SSH）
 - Phase 25: アクセス制御 — Nginx Basic Auth（フロント）+ API キー（バックエンド LLM エンドポイント）
+- Phase 26-A: DB Foundation — TradeWorkflowStatus/EventType/CheckResult エンティティ追加、TradeModel PK→UUID + version/workflow_status/is_current 等カラム追加、TradeEventModel/AppSettingModel 新規、Alembic 0003 マイグレーション、seed.py 更新（workflow_status, app_settings）、trade_repository.py 拡張、trade_event_repository.py / app_setting_repository.py 新規

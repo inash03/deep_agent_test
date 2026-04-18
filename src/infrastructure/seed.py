@@ -23,6 +23,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from src.infrastructure.db.models import (
+    AppSettingModel,
     CounterpartyModel,
     ReferenceDataModel,
     SettlementInstructionModel,
@@ -105,35 +106,57 @@ def _upsert_ssis(db: Session) -> None:
             ))
 
 
+_APP_SETTINGS = [
+    {
+        "key": "fo_check_trigger",
+        "value": "manual",
+        "description": "Trigger mode for FoCheck: auto (run on Initial entry) or manual",
+    },
+    {
+        "key": "bo_check_trigger",
+        "value": "manual",
+        "description": "Trigger mode for BoCheck: auto (run on FoValidated entry) or manual",
+    },
+]
+
+
+def _upsert_app_settings(db: Session) -> None:
+    existing = {key for (key,) in db.query(AppSettingModel.key)}
+    for row in _APP_SETTINGS:
+        if row["key"] not in existing:
+            db.add(AppSettingModel(**row, updated_at=_now()))
+
+
 def _upsert_trades_and_exceptions(db: Session) -> None:
     existing_trades = {tid for (tid,) in db.query(TradeModel.trade_id)}
     existing_exc_trades = {tid for (tid,) in db.query(StpExceptionModel.trade_id)}
 
-    # (trade_id, cp_lei, instrument, currency, amount, value_date, settlement_ccy, stp_status, error_message)
+    # (trade_id, cp_lei, instrument, currency, amount, value_date, settlement_ccy, stp_status,
+    #  workflow_status, error_message)
     failed = [
         (
             "TRD-001", "213800QILIUD4ROSUO03", "USDJPY", "USD",
-            Decimal("1000000.00"), date(2026, 4, 8), "USD", "STP_FAILED",
+            Decimal("1000000.00"), date(2026, 4, 8), "USD", "STP_FAILED", "FoAgentToCheck",
             "SSI not registered for counterparty 213800QILIUD4ROSUO03 / USD",
         ),
         (
             "TRD-002", "5493001KJTIIGC8Y1R12", "EURUSD", "EUR",
-            Decimal("500000.00"), date(2026, 4, 8), "EUR", "STP_FAILED",
+            Decimal("500000.00"), date(2026, 4, 8), "EUR", "STP_FAILED", "FoAgentToCheck",
             "Invalid BIC format in settlement instructions for 5493001KJTIIGC8Y1R12 / EUR",
         ),
         (
             "TRD-003", "UNKNOWNLEI000000001", "GBPUSD", "GBP",
-            Decimal("250000.00"), date(2026, 4, 8), "GBP", "STP_FAILED",
+            Decimal("250000.00"), date(2026, 4, 8), "GBP", "STP_FAILED", "FoAgentToCheck",
             "Counterparty LEI UNKNOWNLEI000000001 not found in master data",
         ),
         (
             "TRD-004", "9695005MSX1OYEMGDF46", "AUDUSD", "AUD",
-            Decimal("750000.00"), date(2024, 1, 1), "AUD", "STP_FAILED",
+            Decimal("750000.00"), date(2024, 1, 1), "AUD", "STP_FAILED", "FoAgentToCheck",
             "Value date 2024-01-01 is in the past",
         ),
         (
             "TRD-005", "9695005MSX1OYEMGDF46", "UNKNOWN_CCY_PAIR", "USD",
-            Decimal("100000.00"), date(2026, 4, 8), "USD", "STP_FAILED",
+            Decimal("100000.00"), date(2026, 4, 8), "USD", "STP_FAILED", "FoAgentToCheck",
             "Instrument UNKNOWN_CCY_PAIR not found in reference data",
         ),
     ]
@@ -141,49 +164,52 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
     complex_failed = [
         (
             "TRD-008", "213800QILIUD4ROSUO03", "EURUSD", "EUR",
-            Decimal("800000.00"), date(2026, 4, 8), "EUR", "STP_FAILED",
+            Decimal("800000.00"), date(2026, 4, 8), "EUR", "STP_FAILED", "FoAgentToCheck",
             "MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.",
         ),
         (
             "TRD-009", "213800XYZINACTIVE001", "USDJPY", "USD",
-            Decimal("1200000.00"), date(2026, 4, 8), "USD", "STP_FAILED",
+            Decimal("1200000.00"), date(2026, 4, 8), "USD", "STP_FAILED", "FoAgentToCheck",
             "MT103 rejected by SWIFT. Reason code: AG01. Counterparty LEI: 213800XYZINACTIVE001.",
         ),
         (
             "TRD-010", "213800XYZINACTIVE001", "GBPUSD", "GBP",
-            Decimal("600000.00"), date(2026, 4, 8), "GBP", "STP_FAILED",
+            Decimal("600000.00"), date(2026, 4, 8), "GBP", "STP_FAILED", "FoAgentToCheck",
             "Pre-settlement validation failed for TRD-010. Multiple checks not passed.",
         ),
         (
             "TRD-011", "254900CUSTBANK000001", "GBPUSD", "GBP",
-            Decimal("450000.00"), date(2026, 4, 8), "GBP", "STP_FAILED",
+            Decimal("450000.00"), date(2026, 4, 8), "GBP", "STP_FAILED", "FoAgentToCheck",
             "Custodian HSBC rejected settlement instruction for TRD-011. No further details provided.",
         ),
         (
             "TRD-012", "529900ATLANTIC000001", "USDJPY", "JPY",
-            Decimal("90000000.00"), date(2026, 4, 8), "JPY", "STP_FAILED",
+            Decimal("90000000.00"), date(2026, 4, 8), "JPY", "STP_FAILED", "FoAgentToCheck",
             "Settlement confirmation not received within SLA window for TRD-012. Status unknown.",
         ),
     ]
-    # NEW status trades for the "create exception" demo (no exceptions yet)
+    # NEW / Initial trades for the "create exception" demo (no exceptions yet)
     new_trades = [
         (
             "TRD-006", "213800QILIUD4ROSUO03", "EURUSD", "EUR",
-            Decimal("200000.00"), date(2026, 4, 20), "EUR", "NEW",
+            Decimal("200000.00"), date(2026, 4, 20), "EUR", "NEW", "Initial",
         ),
         (
             "TRD-007", "9695005MSX1OYEMGDF46", "GBPUSD", "GBP",
-            Decimal("350000.00"), date(2026, 4, 20), "GBP", "NEW",
+            Decimal("350000.00"), date(2026, 4, 20), "GBP", "NEW", "Initial",
         ),
     ]
 
     for row in failed + complex_failed:
-        trade_id, cp_lei, instr, ccy, amt, vd, sc, status, err = row
+        trade_id, cp_lei, instr, ccy, amt, vd, sc, stp_status, wf_status, err = row
         if trade_id not in existing_trades:
             db.add(TradeModel(
-                trade_id=trade_id, counterparty_lei=cp_lei, instrument_id=instr,
+                trade_id=trade_id, version=1, is_current=True,
+                workflow_status=wf_status,
+                counterparty_lei=cp_lei, instrument_id=instr,
                 currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
-                settlement_currency=sc, stp_status=status,
+                settlement_currency=sc, stp_status=stp_status,
+                sendback_count=0,
                 created_at=_now(), updated_at=_now(),
             ))
         if trade_id not in existing_exc_trades:
@@ -193,12 +219,15 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
                 created_at=_now(), updated_at=_now(),
             ))
 
-    for trade_id, cp_lei, instr, ccy, amt, vd, sc, status in new_trades:
+    for trade_id, cp_lei, instr, ccy, amt, vd, sc, stp_status, wf_status in new_trades:
         if trade_id not in existing_trades:
             db.add(TradeModel(
-                trade_id=trade_id, counterparty_lei=cp_lei, instrument_id=instr,
+                trade_id=trade_id, version=1, is_current=True,
+                workflow_status=wf_status,
+                counterparty_lei=cp_lei, instrument_id=instr,
                 currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
-                settlement_currency=sc, stp_status=status,
+                settlement_currency=sc, stp_status=stp_status,
+                sendback_count=0,
                 created_at=_now(), updated_at=_now(),
             ))
 
@@ -218,6 +247,7 @@ def seed_database(db: Session) -> None:
     _upsert_reference_data(db)
     _upsert_ssis(db)
     _upsert_trades_and_exceptions(db)
+    _upsert_app_settings(db)
     db.commit()
     print("[seed] seed data synced (missing records added).")
 
@@ -226,13 +256,14 @@ def reset_and_seed(db: Session) -> None:
     """Truncate all domain tables (preserves triage history) and re-seed."""
     db.execute(text(
         "TRUNCATE TABLE stp_exceptions, settlement_instructions, "
-        "reference_data, counterparties, trades RESTART IDENTITY"
+        "reference_data, counterparties, trades, app_settings RESTART IDENTITY"
     ))
     db.commit()
     _upsert_counterparties(db)
     _upsert_reference_data(db)
     _upsert_ssis(db)
     _upsert_trades_and_exceptions(db)
+    _upsert_app_settings(db)
     db.commit()
     print("[seed] data reset and re-seeded.")
 
