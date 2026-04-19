@@ -540,10 +540,15 @@ def create_amend_event(trade_id: str, reason: str, amended_fields: str) -> str:
             Example: '{"value_date": "2026-05-01", "amount": "1000000.00"}'
     """
     import json as _json
-    try:
-        fields: dict = _json.loads(amended_fields) if amended_fields else {}
-    except _json.JSONDecodeError:
-        return json.dumps({"success": False, "error": f"amended_fields is not valid JSON: {amended_fields}"})
+    if isinstance(amended_fields, dict):
+        fields: dict = amended_fields
+    elif amended_fields:
+        try:
+            fields = _json.loads(amended_fields)
+        except (_json.JSONDecodeError, TypeError):
+            return json.dumps({"success": False, "error": f"amended_fields is not valid JSON: {amended_fields}"})
+    else:
+        fields = {}
 
     with _db_session() as db:
         if db is None:

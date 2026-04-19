@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import os
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.infrastructure.logging_config import setup_logging
 from src.infrastructure.secrets import load_secrets
@@ -46,6 +48,30 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type", "X-API-Key"],
 )
+
+_logger = logging.getLogger("stp_triage.main")
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exc_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all handler so unhandled 500s still carry CORS headers.
+
+    FastAPI's CORSMiddleware wraps the response sender but exceptions that
+    escape without being caught bypass that wrapper. We re-add CORS headers
+    here manually so browser clients can read the error body.
+    """
+    _logger.error("Unhandled exception on %s: %s", request.url.path, exc, exc_info=True)
+    origin = request.headers.get("origin", "")
+    headers: dict[str, str] = {}
+    if origin and (origin in _cors_origins or "*" in _cors_origins):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Vary"] = "Origin"
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"{type(exc).__name__}: {exc}"},
+        headers=headers or None,
+    )
+
 
 app.include_router(router)
 app.include_router(trades_router)

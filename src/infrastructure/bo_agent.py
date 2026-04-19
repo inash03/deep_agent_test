@@ -25,6 +25,7 @@ HITL flow:
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from typing import Annotated, Any, Literal
@@ -213,7 +214,13 @@ def build_bo_graph() -> Any:
                 extra={"node": f"{tool_name}_node", "trade_id": state.get("trade_id"),
                        "args": tool_call["args"]},
             )
-            result = tool_fn.invoke(tool_call["args"])
+            try:
+                result = tool_fn.invoke(tool_call["args"])
+            except Exception as exc:
+                _logger.error(
+                    "%s_node: tool execution failed: %s", tool_name, exc, exc_info=True
+                )
+                result = json.dumps({"success": False, "error": f"{type(exc).__name__}: {exc}"})
             return {
                 "messages": [ToolMessage(content=result, tool_call_id=tool_call["id"])],
                 "action_taken": True,
