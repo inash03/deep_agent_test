@@ -160,16 +160,32 @@ def run_bo_check(trade_id: str, db: Session) -> tuple[list[CheckResult], str]:
 
 
 def maybe_run_fo_check(trade_id: str, db: Session) -> tuple[list[CheckResult], str] | None:
-    """Run FoCheck only when fo_check_trigger=auto. Returns None if manual."""
+    """Trigger the FoCheck workflow for a trade.
+
+    - auto mode: run rules immediately → FoAgentToCheck or FoValidated.
+    - manual mode: set status to FoCheck (awaiting user-triggered run).
+
+    Returns (results, new_status) when auto ran, None when manual.
+    """
     setting = AppSettingRepository(db).get("fo_check_trigger")
     if setting and setting.value == "auto":
         return run_fo_check(trade_id, db)
+    TradeRepository(db).update_workflow_status(trade_id, "FoCheck")
+    db.commit()
     return None
 
 
 def maybe_run_bo_check(trade_id: str, db: Session) -> tuple[list[CheckResult], str] | None:
-    """Run BoCheck only when bo_check_trigger=auto. Returns None if manual."""
+    """Trigger the BoCheck workflow for a trade.
+
+    - auto mode: run rules immediately → BoAgentToCheck or BoValidated.
+    - manual mode: set status to BoCheck (awaiting user-triggered run).
+
+    Returns (results, new_status) when auto ran, None when manual.
+    """
     setting = AppSettingRepository(db).get("bo_check_trigger")
     if setting and setting.value == "auto":
         return run_bo_check(trade_id, db)
+    TradeRepository(db).update_workflow_status(trade_id, "BoCheck")
+    db.commit()
     return None
