@@ -8,7 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-（なし — Phase 26 全フェーズ完結）
+（なし）
 
 ---
 

@@ -4,7 +4,7 @@
 
 ## Current Status
 
-**Branch:** `claude/setup-langgraph-project-oXB7j`
+**Branch:** `claude/automate-focheck-execution-Y3fMo`
 **Last updated:** 2026-04-19
 **In Progress:** —
 **Next:** 動作確認後に次フェーズ検討
@@ -12,6 +12,19 @@
 ---
 
 ## Step Log
+
+### Step 34 — Fix: FoCheck 自動実行 + 初期ステータス修正 (2026-04-19)
+
+Files: `src/infrastructure/seed.py`, `src/infrastructure/rule_engine.py`,
+       `src/presentation/routers/trade_events.py`,
+       `alembic/versions/0004_fix_focheck_initial_status.py`
+
+- **seed.py**: STP_FAILED 取引（TRD-001〜005, TRD-008〜012）の初期 `workflow_status` を `FoAgentToCheck` → `FoCheck` に修正（FoCheck 未実行なのに `FoAgentToCheck` になっていた誤りを解消）。`_maybe_auto_run_fo_check()` ヘルパーを追加し `seed_database()` / `reset_and_seed()` の末尾で呼び出す。`fo_check_trigger=auto` の場合は全 `FoCheck` 取引に対して即時 `run_fo_check()` を実行
+- **rule_engine.py**: `maybe_run_fo_check` を拡張 — auto モードは従来通り `run_fo_check()` を実行。manual モードは `workflow_status='FoCheck'` をセットして commit（`Initial` → `FoCheck` への遷移を担当）。`maybe_run_bo_check` も同様に `BoCheck` をセット
+- **trade_events.py**: `bo_approve_event` の AMEND 承認後に `maybe_run_fo_check(trade_id, db)` を呼び出す。auto → 即 FoCheck 実行、manual → `FoCheck` ステータスにセット。失敗しても本体の event 応答には影響させない（ログ警告のみ）
+- **alembic/versions/0004**: 既存 DB の `workflow_status='FoAgentToCheck' AND fo_check_results IS NULL` の行を `FoCheck` に修正するマイグレーションを追加
+
+---
 
 ### Step 33 — Fix: ロギング KeyError + STP Exception 画面再設計 (2026-04-19)
 
