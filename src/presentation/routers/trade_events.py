@@ -21,6 +21,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from src.infrastructure.db.models import TradeModel
 from src.infrastructure.db.session import get_db
 from src.infrastructure.db.trade_event_repository import TradeEventRepository
 from src.infrastructure.db.trade_repository import TradeRepository
@@ -68,7 +69,6 @@ def _get_event_or_404(event_id: uuid.UUID, db: Session):
 
 def _cancel_pending_version(trade_id: str, to_version: int, db: Session) -> None:
     """Remove the EventPending trade version created for an AMEND event."""
-    from src.infrastructure.db.models import TradeModel
     db.query(TradeModel).filter(
         TradeModel.trade_id == trade_id,
         TradeModel.version == to_version,
@@ -139,11 +139,32 @@ def create_trade_event(
     from_version = current.version
 
     if body.event_type == "AMEND":
+        # Guard against agent-created pending versions (not tracked in trade_events table).
+        # FoAgent's create_amend_event tool calls create_next_version directly, so the
+        # UNIQUE(trade_id, version) constraint would fire without this check.
+        pending_ver = (
+            db.query(TradeModel)
+            .filter(
+                TradeModel.trade_id == trade_id,
+                TradeModel.is_current.is_(False),
+                TradeModel.workflow_status == "EventPending",
+            )
+            .first()
+        )
+        if pending_ver:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Trade '{trade_id}' already has a pending amendment version v{pending_ver.version} "
+                    "created by the triage agent. The agent flow must complete before a manual event can be created."
+                ),
+            )
         new_row = trade_repo.create_next_version(trade_id, "AMEND", body.amended_fields)
         to_version = new_row.version
         trade_repo.update_workflow_status(trade_id, "EventPending")
     else:  # CANCEL — no new version needed
         to_version = from_version
+        trade_repo.update_workflow_status(trade_id, "EventPending")
 
     event = TradeEventRepository(db).create(
         trade_id=trade_id,

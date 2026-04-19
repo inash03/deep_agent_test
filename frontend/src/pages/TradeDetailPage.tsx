@@ -436,7 +436,7 @@ export function TradeDetailPage() {
           <div style={CARD}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
               <h3 style={{ margin: 0, fontSize: '1rem' }}>Trade Events</h3>
-              <button style={BTN_PRIMARY} onClick={() => setShowEventForm(v => !v)}>
+              <button style={BTN_PRIMARY} onClick={() => { setShowEventForm(v => !v); setError('') }}>
                 {showEventForm ? 'Cancel' : '+ Create Event'}
               </button>
             </div>
@@ -473,6 +473,11 @@ export function TradeDetailPage() {
                         onChange={e => setEvtFields(e.target.value)}
                         placeholder='{"value_date": "2026-05-01"}'
                       />
+                    </div>
+                  )}
+                  {error && (
+                    <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#fee2e2', borderRadius: 4, color: '#991b1b', fontSize: '0.82rem' }}>
+                      ⚠ {error}
                     </div>
                   )}
                   <button
