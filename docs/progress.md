@@ -5,13 +5,22 @@
 ## Current Status
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
-**Last updated:** 2026-04-18
-**In Progress:** —（Phase 26 完結）
+**Last updated:** 2026-04-19
+**In Progress:** —
 **Next:** Phase 25（アクセス制御）or Phase 27（次フェーズ検討）
 
 ---
 
 ## Step Log
+
+### Step 31 — Fix: unused useNavigate import (TS6133) (2026-04-19)
+
+Files: `frontend/src/components/NavBar.tsx`, `frontend/src/version.ts`
+
+- Removed unused `useNavigate` import from `NavBar.tsx` that caused CI `error TS6133`
+- Bumped version `0.1.0 → 0.1.1` (patch: bug fix)
+
+---
 
 ### Step 30 — Phase 26-F: フロントエンド (2026-04-18)
 
