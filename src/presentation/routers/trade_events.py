@@ -16,15 +16,19 @@ State machine (EventWorkflowStatus):
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+_logger = logging.getLogger("stp_triage.trade_events")
+
 from src.infrastructure.db.models import TradeModel
 from src.infrastructure.db.session import get_db
 from src.infrastructure.db.trade_event_repository import TradeEventRepository
 from src.infrastructure.db.trade_repository import TradeRepository
+from src.infrastructure.rule_engine import maybe_run_fo_check
 from src.presentation.dependencies import verify_api_key
 from src.presentation.schemas import (
     EventApproveRequest,
@@ -245,10 +249,13 @@ def bo_approve_event(
     trade_repo = TradeRepository(db)
     event_repo = TradeEventRepository(db)
 
+    amend_approved = body.approved and event.event_type == "AMEND"
+    trade_id_for_trigger = event.trade_id if amend_approved else None
+
     if body.approved:
         event_repo.update_status(event_id, "Done")
         if event.event_type == "AMEND":
-            # Activate the new version and restart the FO workflow
+            # Activate the new version; FoCheck trigger will set the final status below
             activated = trade_repo.activate_version(event.trade_id, event.to_version)
             if activated:
                 activated.workflow_status = "Initial"
@@ -261,4 +268,12 @@ def bo_approve_event(
 
     db.commit()
     db.refresh(event)
+
+    # Trigger FoCheck for the newly activated version (auto: run now; manual: set FoCheck status)
+    if trade_id_for_trigger:
+        try:
+            maybe_run_fo_check(trade_id_for_trigger, db)
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning("fo_check auto-trigger failed after AMEND approval", extra={"trade_id": trade_id_for_trigger, "error": str(exc)})
+
     return _to_out(event)

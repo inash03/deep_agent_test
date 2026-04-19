@@ -39,6 +39,11 @@ gcp = [
     "google-cloud-secret-manager==2.20.2",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"

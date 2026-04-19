@@ -31,6 +31,7 @@ from src.infrastructure.db.models import (
     TradeModel,
 )
 from src.infrastructure.db.session import make_session
+from src.infrastructure.db.trade_repository import TradeRepository
 
 _TRADE_DATE = date(2026, 4, 1)
 
@@ -201,11 +202,11 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
     ]
 
     for row in failed + complex_failed:
-        trade_id, cp_lei, instr, ccy, amt, vd, sc, stp_status, wf_status, err = row
+        trade_id, cp_lei, instr, ccy, amt, vd, sc, stp_status, _wf_status, err = row
         if trade_id not in existing_trades:
             db.add(TradeModel(
                 trade_id=trade_id, version=1, is_current=True,
-                workflow_status=wf_status,
+                workflow_status="FoCheck",
                 counterparty_lei=cp_lei, instrument_id=instr,
                 currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
                 settlement_currency=sc, stp_status=stp_status,
@@ -233,6 +234,33 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Auto-trigger helper
+# ---------------------------------------------------------------------------
+
+
+def _maybe_auto_run_fo_check(db: Session) -> None:
+    """If fo_check_trigger=auto, run FoCheck for all trades in FoCheck status.
+
+    Called after seeding so that auto-mode deployments don't require a manual
+    "Run FoCheck" click for every freshly seeded trade.
+    """
+    setting = db.query(AppSettingModel).filter(AppSettingModel.key == "fo_check_trigger").first()
+    if not (setting and setting.value == "auto"):
+        return
+
+    # Import here to avoid circular dependency at module load time
+    from src.infrastructure.rule_engine import run_fo_check  # noqa: PLC0415
+
+    repo = TradeRepository(db)
+    items, _ = repo.list(workflow_status="FoCheck", limit=100, offset=0)
+    for trade in items:
+        try:
+            run_fo_check(trade.trade_id, db)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[seed] auto FoCheck failed for {trade.trade_id}: {exc}")
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -249,6 +277,7 @@ def seed_database(db: Session) -> None:
     _upsert_trades_and_exceptions(db)
     _upsert_app_settings(db)
     db.commit()
+    _maybe_auto_run_fo_check(db)
     print("[seed] seed data synced (missing records added).")
 
 
@@ -265,6 +294,7 @@ def reset_and_seed(db: Session) -> None:
     _upsert_trades_and_exceptions(db)
     _upsert_app_settings(db)
     db.commit()
+    _maybe_auto_run_fo_check(db)
     print("[seed] data reset and re-seeded.")
 
 
