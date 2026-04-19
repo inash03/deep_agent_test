@@ -15,6 +15,24 @@ const WORKFLOW_STATUSES = [
   'Done', 'Cancelled', 'EventPending',
 ]
 
+const STICKY_TRADE_ID_TH: React.CSSProperties = {
+  ...TH,
+  position: 'sticky',
+  left: 0,
+  zIndex: 3,
+  backgroundColor: COLOR.bgWhite,
+  boxShadow: `2px 0 0 ${COLOR.border}`,
+}
+
+const STICKY_TRADE_ID_TD: React.CSSProperties = {
+  ...TD,
+  position: 'sticky',
+  left: 0,
+  zIndex: 2,
+  backgroundColor: COLOR.bgWhite,
+  boxShadow: `2px 0 0 ${COLOR.border}`,
+}
+
 function Badge({ label, style }: { label: string; style: React.CSSProperties }) {
   return (
     <span style={{
@@ -121,8 +139,8 @@ export function TradeListPage() {
             <table style={TABLE}>
               <thead>
                 <tr>
-                  {['Trade ID', 'Ver', 'Trade Date', 'Counterparty LEI', 'Instrument', 'CCY', 'Amount', 'Value Date', 'Workflow', 'STP'].map(h => (
-                    <th key={h} style={TH}>{h}</th>
+                  {['Trade ID', 'Ver', 'Trade Date', 'Counterparty LEI', 'Instrument', 'CCY', 'Amount', 'Value Date', 'Workflow', 'STP'].map((h, index) => (
+                    <th key={h} style={index === 0 ? STICKY_TRADE_ID_TH : TH}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -137,7 +155,7 @@ export function TradeListPage() {
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
                   >
-                    <td style={{ ...TD, fontWeight: 600, fontFamily: 'monospace' }}>{t.trade_id}</td>
+                    <td style={{ ...STICKY_TRADE_ID_TD, fontWeight: 600, fontFamily: 'monospace' }}>{t.trade_id}</td>
                     <td style={{ ...TD, textAlign: 'center', color: COLOR.textMuted, fontSize: '0.82rem' }}>v{t.version}</td>
                     <td style={TD}>{t.trade_date}</td>
                     <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem' }}>{t.counterparty_lei}</td>
