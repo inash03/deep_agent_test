@@ -33,8 +33,8 @@ export function TradeInputPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    listCounterparties({ limit: 200 }).then(r => setCounterparties(r.items.filter(c => c.is_active)))
-    listReferenceData().then(r => setInstruments(r.items.filter(i => i.is_active)))
+    listCounterparties({ limit: 100 }).then(r => setCounterparties(r.items.filter(c => c.is_active))).catch(() => {})
+    listReferenceData().then(r => setInstruments(r.items.filter(i => i.is_active))).catch(() => {})
   }, [])
 
   useEffect(() => {

@@ -14,6 +14,21 @@ Max 1 task in In Progress at a time.
 
 ## Backlog
 
+#### Phase 28 — 取引入力画面：Counterparty 検索モーダル
+
+**目的:** 取引入力フォームの Counterparty 選択をプルダウンからモーダル検索に変更する。
+現状はプルダウンに全件ロードしているため、件数が増えると使いにくい。
+
+**Frontend:**
+- `frontend/src/pages/TradeInputPage.tsx` 更新
+  - Counterparty フィールドを `<select>` から「選択済み表示 + 変更ボタン」に変更
+  - ボタン押下でモーダルを開く
+  - モーダル内: 名前前方一致・LEI 部分一致などで検索 → 結果一覧から1件選択
+  - 選択後モーダルを閉じ、フォームに LEI + 名前を反映
+- API: `GET /api/v1/counterparties?name=<prefix>&lei=<partial>` を活用（既存エンドポイント）
+
+---
+
 #### Phase 26-F — フロントエンド ✅ 完了
 
 **目的:** 新しいワークフロー全体を UI で操作・確認できるようにする。
