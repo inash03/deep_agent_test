@@ -214,7 +214,7 @@ def build_graph() -> Any:
             _logger.info(
                 f"{tool_name}_node: executing (HITL approved)",
                 extra={"node": f"{tool_name}_node", "trade_id": state.get("trade_id"),
-                       "args": tool_call["args"]},
+                       "tool_args": tool_call["args"]},
             )
             result = tool_fn.invoke(tool_call["args"])
             return {
