@@ -18,7 +18,6 @@ function deriveCurrencies(instrumentId: string): string[] {
 export function TradeInputPage() {
   const navigate = useNavigate()
 
-  const [tradeId, setTradeId] = useState('')
   const [tradeDate, setTradeDate] = useState('')
   const [valueDate, setValueDate] = useState('')
   const [counterpartyLei, setCounterpartyLei] = useState('')
@@ -44,7 +43,7 @@ export function TradeInputPage() {
   const currencyOptions = deriveCurrencies(instrumentId)
 
   const handleCreate = async () => {
-    if (!tradeId.trim() || !tradeDate || !valueDate || !counterpartyLei || !instrumentId || !currency || !amount) {
+    if (!tradeDate || !valueDate || !counterpartyLei || !instrumentId || !currency || !amount) {
       setError('All fields are required.')
       return
     }
@@ -57,7 +56,6 @@ export function TradeInputPage() {
     setSaving(true)
     try {
       const trade = await createTrade({
-        trade_id: tradeId.trim(),
         trade_date: tradeDate,
         value_date: valueDate,
         counterparty_lei: counterpartyLei,
@@ -83,16 +81,6 @@ export function TradeInputPage() {
               {error}
             </div>
           )}
-
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={LABEL}>Trade ID</label>
-            <input
-              style={INPUT}
-              value={tradeId}
-              onChange={e => setTradeId(e.target.value)}
-              placeholder="TRD-020"
-            />
-          </div>
 
           <div style={{ marginBottom: '1rem' }}>
             <label style={LABEL}>Trade Date</label>

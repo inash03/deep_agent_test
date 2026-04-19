@@ -64,7 +64,6 @@ export async function resumeBoTriage(tradeId: string, runId: string, approved: b
 }
 
 export interface TradeCreateRequest {
-  trade_id: string
   trade_date: string   // YYYY-MM-DD
   value_date: string   // YYYY-MM-DD
   counterparty_lei: string

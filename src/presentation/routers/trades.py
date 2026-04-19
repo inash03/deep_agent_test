@@ -6,7 +6,8 @@ import logging
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.infrastructure.db.models import TradeModel
@@ -64,39 +65,59 @@ def list_trades(
 
 @router.post("", response_model=TradeOut, status_code=201)
 def create_trade(body: TradeCreateRequest, db: Session = Depends(get_db)) -> TradeOut:
-    """Create a new trade and trigger FoCheck workflow."""
-    repo = TradeRepository(db)
-    if repo.get_by_trade_id(body.trade_id) is not None:
-        raise HTTPException(status_code=409, detail=f"Trade '{body.trade_id}' already exists.")
+    """Create a new trade and trigger FoCheck workflow.
 
-    row = TradeModel(
-        id=uuid.uuid4(),
-        trade_id=body.trade_id,
-        version=1,
-        workflow_status="Initial",
-        is_current=True,
-        counterparty_lei=body.counterparty_lei,
-        instrument_id=body.instrument_id,
-        currency=body.currency,
-        amount=body.amount,
-        value_date=body.value_date,
-        trade_date=body.trade_date,
-        settlement_currency=body.currency,
-        stp_status="NEW",
-        sendback_count=0,
-    )
-    db.add(row)
-    db.commit()
+    ``trade_id`` is assigned by the server at insert time (TRD-001 style sequence).
+    """
+    repo = TradeRepository(db)
+    assigned_id: str | None = None
+    for _ in range(32):
+        trade_id = repo.allocate_next_trade_id()
+        row = TradeModel(
+            id=uuid.uuid4(),
+            trade_id=trade_id,
+            version=1,
+            workflow_status="Initial",
+            is_current=True,
+            counterparty_lei=body.counterparty_lei,
+            instrument_id=body.instrument_id,
+            currency=body.currency,
+            amount=body.amount,
+            value_date=body.value_date,
+            trade_date=body.trade_date,
+            settlement_currency=body.currency,
+            stp_status="NEW",
+            sendback_count=0,
+        )
+        db.add(row)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            continue
+        assigned_id = trade_id
+        break
+
+    if assigned_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not allocate a unique trade id; please retry.",
+        )
 
     try:
-        maybe_run_fo_check(body.trade_id, db)
+        maybe_run_fo_check(assigned_id, db)
     except Exception as exc:  # noqa: BLE001
         _logger.warning(
             "fo_check auto-trigger failed after trade creation",
-            extra={"trade_id": body.trade_id, "error": str(exc)},
+            extra={"trade_id": assigned_id, "error": str(exc)},
         )
 
-    row = repo.get_by_trade_id(body.trade_id)
+    row = repo.get_by_trade_id(assigned_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Trade was created but could not be reloaded.",
+        )
     return _to_out(row)
 
 
