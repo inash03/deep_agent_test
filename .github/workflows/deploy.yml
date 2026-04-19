@@ -13,6 +13,8 @@ on:
       - 'pyproject.toml'
       - 'scripts/**'
       - '.github/workflows/**'
+  # Actions タブから手動実行（ブランチは UI で選択可能）
+  workflow_dispatch:
 
 concurrency:
   group: deploy
