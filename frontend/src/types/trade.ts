@@ -54,11 +54,11 @@ export const TRADE_STATUS_COLORS: Record<string, React.CSSProperties> = {
 export const WORKFLOW_STATUS_LABELS: Record<string, string> = {
   Initial: 'Initial',
   FoCheck: 'FO Check',
-  FoAgentToCheck: 'FO Agent',
+  FoAgentToCheck: 'FO Agent Check',
   FoUserToValidate: 'FO Review',
   FoValidated: 'FO Validated',
   BoCheck: 'BO Check',
-  BoAgentToCheck: 'BO Agent',
+  BoAgentToCheck: 'BO Agent Check',
   BoUserToValidate: 'BO Review',
   BoValidated: 'BO Validated',
   Done: 'Done',

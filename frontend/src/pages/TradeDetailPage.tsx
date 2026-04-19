@@ -164,10 +164,20 @@ export function TradeDetailPage() {
   const wrap = async (key: string, fn: () => Promise<void>) => {
     setRunning(key)
     setError('')
-    try { await fn() } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? String(e)
-      setError(msg)
-    } finally { setRunning(null) }
+    try {
+      await fn()
+    } catch (e: unknown) {
+      const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
+      if (typeof detail === 'string') {
+        setError(detail)
+      } else if (Array.isArray(detail)) {
+        setError(detail.map((d: unknown) => (d as { msg?: string })?.msg ?? JSON.stringify(d)).join('; '))
+      } else {
+        setError(String(e))
+      }
+    } finally {
+      setRunning(null)
+    }
   }
 
   const handleRunFoCheck = () => wrap('fo-check', async () => {

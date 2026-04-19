@@ -19,8 +19,7 @@ from src.domain.entities import TriageResult
 class TriageRequest(BaseModel):
     trade_id: str = Field(..., min_length=1, examples=["TRD-001"])
     error_message: str = Field(
-        ...,
-        min_length=1,
+        default="",
         examples=["SETT FAIL - SSI not found for counterparty LEI 213800QILIUD4ROSUO03"],
     )
 
