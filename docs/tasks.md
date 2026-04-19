@@ -8,21 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-#### Phase 27 — 取引入力機能 + maybe_run_fo_check チェーン修正
-
-**目的:** 画面から新規取引を入力できるフォームを追加し、FoCheck→BoCheck の自動チェーンを修正する。
-
-**Backend:**
-- `src/presentation/schemas.py` — `TradeCreateRequest` スキーマ追加
-- `src/presentation/routers/trades.py` — `POST /api/v1/trades` エンドポイント追加 + fo-check チェーン修正
-- `src/infrastructure/rule_engine.py` — `maybe_run_fo_check` が FoValidated 時に `maybe_run_bo_check` を呼ぶよう修正
-
-**Frontend:**
-- `frontend/src/api/trades.ts` — `createTrade()` 追加
-- `frontend/src/pages/TradeInputPage.tsx` — 新規作成（取引入力フォーム）
-- `frontend/src/pages/TradeListPage.tsx` — "New Trade" ボタン追加
-- `frontend/src/App.tsx` — `/trades/new` ルート追加
-- `frontend/src/version.ts` — `0.1.8 → 0.2.0`
+（なし）
 
 ---
 
@@ -345,6 +331,7 @@ push to main
 
 ## Done
 
+- Phase 27: 取引入力機能 + maybe_run_fo_check チェーン修正 — TradeCreateRequest スキーマ追加、POST /api/v1/trades エンドポイント追加、maybe_run_fo_check が FoValidated 時に maybe_run_bo_check を自動チェーン、fo-check エンドポイントも同様に修正、TradeInputPage（日付カレンダー + マスタデータ選択）、TradeListPage に "New Trade" ボタン、フロントエンドバージョン 0.1.8 → 0.2.0
 - Development rules setup (CLAUDE.md, progress.md, requirements.md, tasks.md)
 - Use case definition: STP Exception Triage Agent
 - Phase 1: Project scaffolding (pyproject.toml, src/ structure, .env.example, tests/)
