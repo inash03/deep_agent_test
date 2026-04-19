@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { listTrades } from '../api/trades'
 import { PageLayout } from '../components/PageLayout'
 import { Pagination } from '../components/Pagination'
-import { CARD, COLOR, INPUT, TABLE, TD, TH } from '../styles/theme'
+import { BTN_PRIMARY, CARD, COLOR, INPUT, TABLE, TD, TH } from '../styles/theme'
 import type { Trade } from '../types/trade'
 import { TRADE_STATUS_COLORS, TRADE_STATUS_LABELS, WORKFLOW_STATUS_COLORS, WORKFLOW_STATUS_LABELS } from '../types/trade'
 
@@ -68,7 +68,12 @@ export function TradeListPage() {
   }
 
   return (
-    <PageLayout title="Trades">
+    <PageLayout
+      title="Trades"
+      action={
+        <button style={BTN_PRIMARY} onClick={() => navigate('/trades/new')}>+ New Trade</button>
+      }
+    >
       {/* Search bar */}
       <div style={{ ...CARD, marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ flex: '1 1 140px' }}>

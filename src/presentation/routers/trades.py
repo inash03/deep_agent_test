@@ -1,23 +1,28 @@
-"""Trade list and check endpoints."""
+"""Trade list, creation and check endpoints."""
 
 from __future__ import annotations
 
+import logging
+import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from src.infrastructure.db.models import TradeModel
 from src.infrastructure.db.session import get_db
 from src.infrastructure.db.trade_repository import TradeRepository
-from src.infrastructure.rule_engine import run_bo_check, run_fo_check
+from src.infrastructure.rule_engine import maybe_run_bo_check, maybe_run_fo_check, run_bo_check, run_fo_check
 from src.presentation.schemas import (
     CheckResultOut,
     CheckResultsResponse,
+    TradeCreateRequest,
     TradeListResponse,
     TradeOut,
 )
 
 router = APIRouter(prefix="/api/v1/trades", tags=["trades"])
+_logger = logging.getLogger("stp_triage.trades")
 
 
 def _to_out(row) -> TradeOut:
@@ -57,6 +62,44 @@ def list_trades(
     return TradeListResponse(items=[_to_out(r) for r in items], total=total)
 
 
+@router.post("", response_model=TradeOut, status_code=201)
+def create_trade(body: TradeCreateRequest, db: Session = Depends(get_db)) -> TradeOut:
+    """Create a new trade and trigger FoCheck workflow."""
+    repo = TradeRepository(db)
+    if repo.get_by_trade_id(body.trade_id) is not None:
+        raise HTTPException(status_code=409, detail=f"Trade '{body.trade_id}' already exists.")
+
+    row = TradeModel(
+        id=uuid.uuid4(),
+        trade_id=body.trade_id,
+        version=1,
+        workflow_status="Initial",
+        is_current=True,
+        counterparty_lei=body.counterparty_lei,
+        instrument_id=body.instrument_id,
+        currency=body.currency,
+        amount=body.amount,
+        value_date=body.value_date,
+        trade_date=body.trade_date,
+        settlement_currency=body.currency,
+        stp_status="NEW",
+        sendback_count=0,
+    )
+    db.add(row)
+    db.commit()
+
+    try:
+        maybe_run_fo_check(body.trade_id, db)
+    except Exception as exc:  # noqa: BLE001
+        _logger.warning(
+            "fo_check auto-trigger failed after trade creation",
+            extra={"trade_id": body.trade_id, "error": str(exc)},
+        )
+
+    row = repo.get_by_trade_id(body.trade_id)
+    return _to_out(row)
+
+
 @router.get("/{trade_id}", response_model=TradeOut)
 def get_trade(trade_id: str, db: Session = Depends(get_db)) -> TradeOut:
     row = TradeRepository(db).get_by_trade_id(trade_id)
@@ -72,6 +115,16 @@ def fo_check(trade_id: str, db: Session = Depends(get_db)) -> CheckResultsRespon
         results, new_status = run_fo_check(trade_id, db)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+    if new_status == "FoValidated":
+        try:
+            maybe_run_bo_check(trade_id, db)
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning(
+                "bo_check auto-trigger failed after fo_check",
+                extra={"trade_id": trade_id, "error": str(exc)},
+            )
+
     return CheckResultsResponse(
         trade_id=trade_id,
         workflow_status=new_status,

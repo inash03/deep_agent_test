@@ -8,7 +8,21 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-（なし）
+#### Phase 27 — 取引入力機能 + maybe_run_fo_check チェーン修正
+
+**目的:** 画面から新規取引を入力できるフォームを追加し、FoCheck→BoCheck の自動チェーンを修正する。
+
+**Backend:**
+- `src/presentation/schemas.py` — `TradeCreateRequest` スキーマ追加
+- `src/presentation/routers/trades.py` — `POST /api/v1/trades` エンドポイント追加 + fo-check チェーン修正
+- `src/infrastructure/rule_engine.py` — `maybe_run_fo_check` が FoValidated 時に `maybe_run_bo_check` を呼ぶよう修正
+
+**Frontend:**
+- `frontend/src/api/trades.ts` — `createTrade()` 追加
+- `frontend/src/pages/TradeInputPage.tsx` — 新規作成（取引入力フォーム）
+- `frontend/src/pages/TradeListPage.tsx` — "New Trade" ボタン追加
+- `frontend/src/App.tsx` — `/trades/new` ルート追加
+- `frontend/src/version.ts` — `0.1.8 → 0.2.0`
 
 ---
 

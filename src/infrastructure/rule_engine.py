@@ -163,13 +163,17 @@ def maybe_run_fo_check(trade_id: str, db: Session) -> tuple[list[CheckResult], s
     """Trigger the FoCheck workflow for a trade.
 
     - auto mode: run rules immediately → FoAgentToCheck or FoValidated.
+      When FoValidated, also chains into maybe_run_bo_check automatically.
     - manual mode: set status to FoCheck (awaiting user-triggered run).
 
     Returns (results, new_status) when auto ran, None when manual.
     """
     setting = AppSettingRepository(db).get("fo_check_trigger")
     if setting and setting.value == "auto":
-        return run_fo_check(trade_id, db)
+        results, new_status = run_fo_check(trade_id, db)
+        if new_status == "FoValidated":
+            maybe_run_bo_check(trade_id, db)
+        return results, new_status
     TradeRepository(db).update_workflow_status(trade_id, "FoCheck")
     db.commit()
     return None
