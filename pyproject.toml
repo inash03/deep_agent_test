@@ -13,6 +13,7 @@ description = "STP Exception Triage Agent — LangGraph learning project"
 requires-python = ">=3.12"
 dependencies = [
     "langgraph==1.1.6",
+    "langgraph-checkpoint-postgres==3.0.5",
     "langchain-anthropic==1.4.0",
     "fastapi==0.135.3",
     "uvicorn==0.43.0",
@@ -21,6 +22,7 @@ dependencies = [
     "sqlalchemy==2.0.36",
     "alembic==1.13.3",
     "psycopg2-binary==2.9.9",
+    "psycopg[binary]==3.3.3",
 ]
 
 [project.optional-dependencies]

@@ -31,7 +31,7 @@ from typing import Annotated, Any, Literal
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
-from langgraph.checkpoint.memory import MemorySaver
+
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
@@ -246,7 +246,8 @@ def build_bo_graph() -> Any:
     for node_name in hitl_node_names:
         builder.add_edge(node_name, "agent")
 
+    from src.infrastructure.db.checkpointer import get_checkpointer
     return builder.compile(
-        checkpointer=MemorySaver(),
+        checkpointer=get_checkpointer(),
         interrupt_before=hitl_node_names,
     )
