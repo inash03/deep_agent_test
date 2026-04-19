@@ -24,6 +24,21 @@ LangGraph の ReAct エージェントが証券 STP（Straight-Through Processin
 - **汎化 HITL**: 書き込み操作（4 種）はすべてオペレーター承認を経由（`_HITL_TOOL_TO_NODE` で管理）
 - **Clean Architecture**: Presentation / Domain / Infrastructure の 3 層分離
 
+### コアコンセプト: チェック → 自動トリアージによる人間確認の削減
+
+FoCheck / BoCheck で失敗したルールは、**失敗チェック名 + エラーメッセージをそのまま FoAgent / BoAgent の入力として渡し、必ずエージェントがトリアージする**。エージェントが自動解決できるケースは人間の確認なしに完結し、判断が必要なケースのみ HITL（Human-in-the-Loop）でオペレーター承認を求める。
+
+```
+FoCheck
+  → 失敗なし       → FoValidated（人間確認ゼロ）
+  → 失敗あり       → FoAgent トリアージ（失敗チェックを error_message として渡す）
+                        → 自動解決   → FoValidated
+                        → HITL 承認  → FoValidated
+                        → 判断困難   → FoUserToValidate
+```
+
+> **実装ルール**: FoTriage / BoTriage の `error_message` は空文字禁止（バリデーションエラー）。UI では FoCheck/BoCheck に失敗がない状態でトリアージ開始ボタンを非活性にする。
+
 ---
 
 ## 前提条件
