@@ -117,13 +117,12 @@ function TriagePanel({
 // Main page
 // ---------------------------------------------------------------------------
 
-type Tab = 'fo-check' | 'bo-check' | 'events' | 'triage'
+type Tab = 'fo-check' | 'bo-check' | 'events'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'fo-check', label: 'FoCheck' },
   { id: 'bo-check', label: 'BoCheck' },
   { id: 'events', label: 'Events' },
-  { id: 'triage', label: 'Triage' },
 ]
 
 export function TradeDetailPage() {
@@ -317,33 +316,117 @@ export function TradeDetailPage() {
 
       {/* ─── FoCheck tab ─── */}
       {activeTab === 'fo-check' && (
-        <div style={CARD}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
-            <h3 style={{ margin: 0, fontSize: '1rem' }}>FoCheck Results</h3>
-            <button style={BTN_PRIMARY} disabled={running === 'fo-check'} onClick={handleRunFoCheck}>
-              {running === 'fo-check' ? 'Running…' : 'Run FoCheck'}
-            </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={CARD}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>FoCheck Results</h3>
+              <button style={BTN_PRIMARY} disabled={running === 'fo-check'} onClick={handleRunFoCheck}>
+                {running === 'fo-check' ? 'Running…' : 'Run FoCheck'}
+              </button>
+            </div>
+            {trade.fo_check_results?.length
+              ? <CheckResultsTable results={trade.fo_check_results} />
+              : <p style={{ color: COLOR.textMuted, fontSize: '0.875rem' }}>FoCheck has not been run yet. Click "Run FoCheck" to execute.</p>
+            }
           </div>
-          {trade.fo_check_results?.length
-            ? <CheckResultsTable results={trade.fo_check_results} />
-            : <p style={{ color: COLOR.textMuted, fontSize: '0.875rem' }}>FoCheck has not been run yet. Click "Run FoCheck" to execute.</p>
-          }
+
+          {/* FO Triage */}
+          <div style={CARD}>
+            <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', color: '#1d4ed8' }}>FO Triage</h3>
+            {!foTriage || foTriage.status === 'COMPLETED' ? (() => {
+              const foFails = (trade.fo_check_results ?? []).filter(r => !r.passed)
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {foFails.length > 0 ? (
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#4b5563' }}>
+                      <strong>{foFails.length} FoCheck failure(s)</strong> will be passed as agent input:{' '}
+                      <span style={{ fontFamily: 'monospace' }}>{foFails.map(r => r.rule_name).join(', ')}</span>
+                    </p>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#dc2626' }}>
+                      No FoCheck failures found. Run FoCheck first.
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 300px' }}>
+                      <label style={LABEL}>Additional context (optional)</label>
+                      <input style={INPUT} value={foTriageMsg} onChange={e => setFoTriageMsg(e.target.value)} placeholder="Extra context for the agent" />
+                    </div>
+                    <button style={BTN_PRIMARY} disabled={running === 'fo-triage' || foFails.length === 0} onClick={handleStartFoTriage}>
+                      {running === 'fo-triage' ? 'Investigating…' : 'Start FO Triage'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })() : null}
+            {foTriage && (
+              <TriagePanel
+                label="FO Triage"
+                result={foTriage}
+                onApprove={() => handleFoHitl(true)}
+                onReject={() => handleFoHitl(false)}
+                running={running?.startsWith('fo-hitl') ?? false}
+              />
+            )}
+          </div>
         </div>
       )}
 
       {/* ─── BoCheck tab ─── */}
       {activeTab === 'bo-check' && (
-        <div style={CARD}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
-            <h3 style={{ margin: 0, fontSize: '1rem' }}>BoCheck Results</h3>
-            <button style={{ ...BTN_PRIMARY, backgroundColor: '#15803d' }} disabled={running === 'bo-check'} onClick={handleRunBoCheck}>
-              {running === 'bo-check' ? 'Running…' : 'Run BoCheck'}
-            </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={CARD}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>BoCheck Results</h3>
+              <button style={{ ...BTN_PRIMARY, backgroundColor: '#15803d' }} disabled={running === 'bo-check'} onClick={handleRunBoCheck}>
+                {running === 'bo-check' ? 'Running…' : 'Run BoCheck'}
+              </button>
+            </div>
+            {trade.bo_check_results?.length
+              ? <CheckResultsTable results={trade.bo_check_results} />
+              : <p style={{ color: COLOR.textMuted, fontSize: '0.875rem' }}>BoCheck has not been run yet. Click "Run BoCheck" to execute.</p>
+            }
           </div>
-          {trade.bo_check_results?.length
-            ? <CheckResultsTable results={trade.bo_check_results} />
-            : <p style={{ color: COLOR.textMuted, fontSize: '0.875rem' }}>BoCheck has not been run yet. Click "Run BoCheck" to execute.</p>
-          }
+
+          {/* BO Triage */}
+          <div style={CARD}>
+            <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', color: '#065f46' }}>BO Triage</h3>
+            {!boTriage || boTriage.status === 'COMPLETED' ? (() => {
+              const boFails = (trade.bo_check_results ?? []).filter(r => !r.passed)
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {boFails.length > 0 ? (
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#4b5563' }}>
+                      <strong>{boFails.length} BoCheck failure(s)</strong> will be passed as agent input:{' '}
+                      <span style={{ fontFamily: 'monospace' }}>{boFails.map(r => r.rule_name).join(', ')}</span>
+                    </p>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#dc2626' }}>
+                      No BoCheck failures found. Run BoCheck first.
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 300px' }}>
+                      <label style={LABEL}>Additional context (optional)</label>
+                      <input style={INPUT} value={boTriageMsg} onChange={e => setBoTriageMsg(e.target.value)} placeholder="Extra context for the agent" />
+                    </div>
+                    <button style={{ ...BTN_PRIMARY, backgroundColor: '#15803d' }} disabled={running === 'bo-triage' || boFails.length === 0} onClick={handleStartBoTriage}>
+                      {running === 'bo-triage' ? 'Investigating…' : 'Start BO Triage'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })() : null}
+            {boTriage && (
+              <TriagePanel
+                label="BO Triage"
+                result={boTriage}
+                onApprove={() => handleBoHitl(true)}
+                onReject={() => handleBoHitl(false)}
+                running={running?.startsWith('bo-hitl') ?? false}
+              />
+            )}
+          </div>
         </div>
       )}
 
@@ -459,90 +542,6 @@ export function TradeDetailPage() {
         </div>
       )}
 
-      {/* ─── Triage tab ─── */}
-      {activeTab === 'triage' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* FO Triage */}
-          <div style={CARD}>
-            <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', color: '#1d4ed8' }}>FO Triage</h3>
-            {!foTriage || foTriage.status === 'COMPLETED' ? (() => {
-              const foFails = (trade.fo_check_results ?? []).filter(r => !r.passed)
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {foFails.length > 0 ? (
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#4b5563' }}>
-                      <strong>{foFails.length} FoCheck failure(s)</strong> will be passed as agent input:{' '}
-                      <span style={{ fontFamily: 'monospace' }}>{foFails.map(r => r.rule_name).join(', ')}</span>
-                    </p>
-                  ) : (
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#dc2626' }}>
-                      No FoCheck failures found. Run FoCheck first.
-                    </p>
-                  )}
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                    <div style={{ flex: '1 1 300px' }}>
-                      <label style={LABEL}>Additional context (optional)</label>
-                      <input style={INPUT} value={foTriageMsg} onChange={e => setFoTriageMsg(e.target.value)} placeholder="Extra context for the agent" />
-                    </div>
-                    <button style={BTN_PRIMARY} disabled={running === 'fo-triage' || foFails.length === 0} onClick={handleStartFoTriage}>
-                      {running === 'fo-triage' ? 'Investigating…' : 'Start FO Triage'}
-                    </button>
-                  </div>
-                </div>
-              )
-            })() : null}
-            {foTriage && (
-              <TriagePanel
-                label="FO Triage"
-                result={foTriage}
-                onApprove={() => handleFoHitl(true)}
-                onReject={() => handleFoHitl(false)}
-                running={running?.startsWith('fo-hitl') ?? false}
-              />
-            )}
-          </div>
-
-          {/* BO Triage */}
-          <div style={CARD}>
-            <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', color: '#065f46' }}>BO Triage</h3>
-            {!boTriage || boTriage.status === 'COMPLETED' ? (() => {
-              const boFails = (trade.bo_check_results ?? []).filter(r => !r.passed)
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {boFails.length > 0 ? (
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#4b5563' }}>
-                      <strong>{boFails.length} BoCheck failure(s)</strong> will be passed as agent input:{' '}
-                      <span style={{ fontFamily: 'monospace' }}>{boFails.map(r => r.rule_name).join(', ')}</span>
-                    </p>
-                  ) : (
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#dc2626' }}>
-                      No BoCheck failures found. Run BoCheck first.
-                    </p>
-                  )}
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                    <div style={{ flex: '1 1 300px' }}>
-                      <label style={LABEL}>Additional context (optional)</label>
-                      <input style={INPUT} value={boTriageMsg} onChange={e => setBoTriageMsg(e.target.value)} placeholder="Extra context for the agent" />
-                    </div>
-                    <button style={{ ...BTN_PRIMARY, backgroundColor: '#15803d' }} disabled={running === 'bo-triage' || boFails.length === 0} onClick={handleStartBoTriage}>
-                      {running === 'bo-triage' ? 'Investigating…' : 'Start BO Triage'}
-                    </button>
-                  </div>
-                </div>
-              )
-            })() : null}
-            {boTriage && (
-              <TriagePanel
-                label="BO Triage"
-                result={boTriage}
-                onApprove={() => handleBoHitl(true)}
-                onReject={() => handleBoHitl(false)}
-                running={running?.startsWith('bo-hitl') ?? false}
-              />
-            )}
-          </div>
-        </div>
-      )}
     </PageLayout>
   )
 }

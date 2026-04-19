@@ -4,9 +4,7 @@ import { refreshData } from '../api/admin'
 import { VERSION } from '../version'
 
 const LINKS = [
-  { to: '/', label: 'Triage', end: true },
-  { to: '/history', label: 'History', end: false },
-  { to: '/trades', label: 'Trades', end: false },
+  { to: '/trades', label: 'Trades', end: true },
   { to: '/stp-exceptions', label: 'STP Exceptions', end: false },
   { to: '/counterparties', label: 'Counterparties', end: false },
   { to: '/ssis', label: 'SSIs', end: false },

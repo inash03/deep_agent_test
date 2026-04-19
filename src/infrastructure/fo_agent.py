@@ -143,6 +143,10 @@ def _route_after_agent(state: FoAgentState) -> str:
     last = state["messages"][-1]
     if not isinstance(last, AIMessage) or not last.tool_calls:
         return END
+    # Once a HITL action has been approved and executed, prevent re-entering
+    # any HITL node (LLM may try to call the same tool again after approval).
+    if state.get("action_taken", False):
+        return END
     for tc in last.tool_calls:
         if tc["name"] in _FO_HITL_TOOL_TO_NODE:
             return _FO_HITL_TOOL_TO_NODE[tc["name"]]
