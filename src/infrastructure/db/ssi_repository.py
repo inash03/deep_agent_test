@@ -15,6 +15,22 @@ class SsiRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
 
+    def list(
+        self,
+        lei: str | None = None,
+        is_external: bool | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[SettlementInstructionModel], int]:
+        q = self._db.query(SettlementInstructionModel)
+        if lei:
+            q = q.filter(SettlementInstructionModel.lei.ilike(f"%{lei}%"))
+        if is_external is not None:
+            q = q.filter(SettlementInstructionModel.is_external == is_external)
+        total = q.count()
+        items = q.order_by(SettlementInstructionModel.lei, SettlementInstructionModel.currency).offset(offset).limit(limit).all()
+        return items, total
+
     def get(self, lei: str, currency: str, is_external: bool = False) -> SettlementInstructionModel | None:
         return (
             self._db.query(SettlementInstructionModel)

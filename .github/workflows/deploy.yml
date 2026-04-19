@@ -1,4 +1,4 @@
-name: Deploy to VM
+name: Deploy to GCP # Phase 25: Basic Auth + API key protection
 
 on:
   push:
@@ -11,27 +11,91 @@ on:
       - 'Dockerfile'
       - 'alembic/**'
       - 'pyproject.toml'
+      - 'scripts/**'
+      - '.github/workflows/**'
 
 concurrency:
-  group: deploy-vm
+  group: deploy
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  deploy-backend:
     runs-on: ubuntu-latest
     environment: GCP_VM
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      REGION: us-central1
+      SERVICE_NAME: stp-agent-backend
+      IMAGE: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/stp-agent/backend
     steps:
-      - name: Deploy to VM via SSH
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Build and push image
+        run: |
+          docker build \
+            --target production \
+            -t $IMAGE:${{ github.sha }} \
+            -t $IMAGE:latest \
+            .
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE }}:${{ github.sha }}
+          flags: --min-instances=1 --memory=1Gi --allow-unauthenticated --port=8000
+          secrets: |
+            ANTHROPIC_API_KEY=anthropic-api-key:latest
+            DATABASE_URL=database-url:latest
+            API_KEY=api-key:latest
+          env_vars: |
+            SECRET_BACKEND=env
+            CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    environment: GCP_VM
+    needs: deploy-backend
+    steps:
+      - name: Deploy frontend to VM via SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          CLOUD_RUN_URL: ${{ needs.deploy-backend.outputs.url }}
+          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+          APP_USERNAME: ${{ secrets.APP_USERNAME }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           command_timeout: 10m
+          envs: CLOUD_RUN_URL,VITE_API_KEY,APP_USERNAME,APP_PASSWORD
           script: |
             set -e
             cd ~/deep_agent_test
             git fetch origin
             git reset --hard origin/claude/setup-langgraph-project-oXB7j
+            # .env に必要な値を更新
+            for var in VITE_API_URL VITE_API_KEY APP_USERNAME APP_PASSWORD; do
+              eval "val=\$$( [ $var = VITE_API_URL ] && echo CLOUD_RUN_URL || echo $var )"
+              if grep -q "^${var}=" .env; then
+                sed -i "s|^${var}=.*|${var}=$val|" .env
+              else
+                echo "${var}=$val" >> .env
+              fi
+            done
             docker compose up --build -d
             docker compose ps

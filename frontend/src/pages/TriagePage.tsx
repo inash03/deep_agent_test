@@ -4,7 +4,7 @@ import { PageLayout } from '../components/PageLayout'
 import { StatusBadge } from '../components/StatusBadge'
 import { StepList } from '../components/StepList'
 import { BTN_BASE, CARD, COLOR } from '../styles/theme'
-import type { TriageResponse } from '../types/triage'
+import type { PendingActionType, TriageResponse } from '../types/triage'
 
 type UIState =
   | { phase: 'input' }
@@ -12,6 +12,45 @@ type UIState =
   | { phase: 'pending'; result: TriageResponse }
   | { phase: 'completed'; result: TriageResponse }
   | { phase: 'error'; message: string }
+
+const HITL_CONFIG: Record<
+  PendingActionType,
+  { title: string; color: string; bg: string; border: string; approveLabel: string; rejectLabel: string | null; warning?: string }
+> = {
+  register_ssi: {
+    title: 'SSI Registration Approval',
+    color: '#9a3412', bg: '#fff7ed', border: '#fed7aa',
+    approveLabel: 'Approve Registration',
+    rejectLabel: 'Reject',
+  },
+  reactivate_counterparty: {
+    title: 'Counterparty Reactivation Approval',
+    color: '#1e40af', bg: '#eff6ff', border: '#bfdbfe',
+    approveLabel: 'Approve Reactivation',
+    rejectLabel: 'Reject',
+    warning: 'Reactivating a counterparty allows them to trade again. Ensure compliance review is complete before approving.',
+  },
+  update_ssi: {
+    title: 'SSI Update Approval',
+    color: '#6b21a8', bg: '#faf5ff', border: '#e9d5ff',
+    approveLabel: 'Approve Update',
+    rejectLabel: 'Reject',
+  },
+  escalate: {
+    title: 'Escalation to Senior Operator',
+    color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+    approveLabel: 'Acknowledge & Escalate',
+    rejectLabel: 'Override — Resolve Automatically',
+    warning: 'The agent could not determine a resolution. Acknowledging will escalate this case to a senior operator.',
+  },
+}
+
+const ACTION_TAKEN_LABELS: Record<PendingActionType | string, string> = {
+  register_ssi: 'Yes (SSI registered)',
+  reactivate_counterparty: 'Yes (counterparty reactivated)',
+  update_ssi: 'Yes (SSI updated)',
+  escalate: 'Yes (escalated to senior operator)',
+}
 
 export function TriagePage() {
   const [tradeId, setTradeId] = useState('')
@@ -35,12 +74,19 @@ export function TriagePage() {
 
   const handleResume = async (approved: boolean) => {
     if (uiState.phase !== 'pending') return
-    const { run_id } = uiState.result
+    const { run_id, pending_action_type } = uiState.result
     if (!run_id) return
-    setUiState({ phase: 'loading', message: approved ? 'Approving SSI registration...' : 'Rejecting SSI registration...' })
+    const actionLabel = pending_action_type
+      ? (approved ? HITL_CONFIG[pending_action_type].approveLabel : (HITL_CONFIG[pending_action_type].rejectLabel ?? 'Reject'))
+      : (approved ? 'Approving...' : 'Rejecting...')
+    setUiState({ phase: 'loading', message: `${actionLabel}...` })
     try {
       const result = await resumeTriage(run_id, { approved })
-      setUiState({ phase: 'completed', result })
+      if (result.status === 'PENDING_APPROVAL') {
+        setUiState({ phase: 'pending', result })
+      } else {
+        setUiState({ phase: 'completed', result })
+      }
     } catch (err) {
       setUiState({ phase: 'error', message: String(err) })
     }
@@ -73,14 +119,7 @@ export function TriagePage() {
                 onChange={e => setTradeId(e.target.value)}
                 placeholder="TRD-001"
                 required
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  fontSize: '0.95rem',
-                  boxSizing: 'border-box',
-                }}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.95rem', boxSizing: 'border-box' }}
               />
             </div>
             <div>
@@ -93,24 +132,13 @@ export function TriagePage() {
                 placeholder="SETT FAIL - SSI not found for counterparty LEI..."
                 required
                 rows={3}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  fontSize: '0.95rem',
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                }}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.95rem', resize: 'vertical', boxSizing: 'border-box' }}
               />
             </div>
             {uiState.phase === 'error' && (
               <p style={{ color: '#dc2626', fontSize: '0.875rem' }}>Error: {uiState.message}</p>
             )}
-            <button
-              type="submit"
-              style={{ ...BTN_BASE, backgroundColor: COLOR.primary, color: '#fff', alignSelf: 'flex-start' }}
-            >
+            <button type="submit" style={{ ...BTN_BASE, backgroundColor: COLOR.primary, color: '#fff', alignSelf: 'flex-start' }}>
               Start Triage
             </button>
           </form>
@@ -128,45 +156,7 @@ export function TriagePage() {
 
       {/* HITL Approval Panel */}
       {uiState.phase === 'pending' && (
-        <div style={{ ...CARD, borderColor: '#fed7aa', backgroundColor: '#fff7ed', maxWidth: 700 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '1.5rem' }}>⚠️</span>
-            <div>
-              <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Operator Approval Required</h2>
-              <p style={{ fontSize: '0.85rem', color: '#9a3412', margin: '0.25rem 0 0' }}>
-                Trade: {uiState.result.trade_id} &nbsp;|&nbsp; Run ID: {uiState.result.run_id}
-              </p>
-            </div>
-          </div>
-          <div
-            style={{
-              background: '#fff',
-              border: '1px solid #fed7aa',
-              borderRadius: '6px',
-              padding: '1rem',
-              marginBottom: '1rem',
-              fontSize: '0.9rem',
-            }}
-          >
-            <p style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Proposed Action:</p>
-            <p style={{ margin: 0 }}>{uiState.result.pending_action_description}</p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
-              onClick={() => handleResume(true)}
-              style={{ ...BTN_BASE, backgroundColor: '#16a34a', color: '#fff' }}
-            >
-              Approve
-            </button>
-            <button
-              onClick={() => handleResume(false)}
-              style={{ ...BTN_BASE, backgroundColor: '#dc2626', color: '#fff' }}
-            >
-              Reject
-            </button>
-          </div>
-          <StepList steps={uiState.result.steps} />
-        </div>
+        <HitlPanel result={uiState.result} onDecide={handleResume} />
       )}
 
       {/* Completed Result */}
@@ -182,10 +172,7 @@ export function TriagePage() {
                 Trade: {uiState.result.trade_id} &nbsp;|&nbsp; Run ID: {uiState.result.run_id}
               </p>
             </div>
-            <button
-              onClick={handleReset}
-              style={{ ...BTN_BASE, backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.85rem' }}
-            >
+            <button onClick={handleReset} style={{ ...BTN_BASE, backgroundColor: '#f3f4f6', color: '#374151', fontSize: '0.85rem' }}>
               New Triage
             </button>
           </div>
@@ -195,7 +182,14 @@ export function TriagePage() {
               <Row label="Root Cause" value={uiState.result.root_cause ?? '—'} highlight />
               <Row label="Diagnosis" value={uiState.result.diagnosis ?? '—'} />
               <Row label="Recommended Action" value={uiState.result.recommended_action ?? '—'} />
-              <Row label="Action Taken" value={uiState.result.action_taken ? 'Yes (SSI registered)' : 'No'} />
+              <Row
+                label="Action Taken"
+                value={
+                  uiState.result.action_taken
+                    ? (ACTION_TAKEN_LABELS[uiState.result.root_cause ?? ''] ?? 'Yes')
+                    : 'No'
+                }
+              />
             </tbody>
           </table>
 
@@ -203,6 +197,49 @@ export function TriagePage() {
         </div>
       )}
     </PageLayout>
+  )
+}
+
+function HitlPanel({ result, onDecide }: { result: TriageResponse; onDecide: (approved: boolean) => void }) {
+  const actionType = result.pending_action_type
+  const cfg = actionType ? HITL_CONFIG[actionType] : HITL_CONFIG.register_ssi
+
+  return (
+    <div style={{ ...CARD, borderColor: cfg.border, backgroundColor: cfg.bg, maxWidth: 700 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+        <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+        <div>
+          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>{cfg.title}</h2>
+          <p style={{ fontSize: '0.85rem', color: cfg.color, margin: '0.25rem 0 0' }}>
+            Trade: {result.trade_id} &nbsp;|&nbsp; Run ID: {result.run_id}
+          </p>
+        </div>
+      </div>
+
+      {cfg.warning && (
+        <div style={{ background: '#fff', border: `1px solid ${cfg.border}`, borderRadius: '6px', padding: '0.75rem 1rem', marginBottom: '0.75rem', fontSize: '0.85rem', color: cfg.color }}>
+          {cfg.warning}
+        </div>
+      )}
+
+      <div style={{ background: '#fff', border: `1px solid ${cfg.border}`, borderRadius: '6px', padding: '1rem', marginBottom: '1rem', fontSize: '0.9rem' }}>
+        <p style={{ fontWeight: 600, marginBottom: '0.25rem', color: '#374151' }}>Proposed Action:</p>
+        <p style={{ margin: 0, color: '#111827' }}>{result.pending_action_description}</p>
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <button onClick={() => onDecide(true)} style={{ ...BTN_BASE, backgroundColor: '#16a34a', color: '#fff' }}>
+          {cfg.approveLabel}
+        </button>
+        {cfg.rejectLabel && (
+          <button onClick={() => onDecide(false)} style={{ ...BTN_BASE, backgroundColor: '#dc2626', color: '#fff' }}>
+            {cfg.rejectLabel}
+          </button>
+        )}
+      </div>
+
+      <StepList steps={result.steps} />
+    </div>
   )
 }
 

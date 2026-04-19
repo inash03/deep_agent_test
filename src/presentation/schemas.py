@@ -45,6 +45,7 @@ class TriageResponse(BaseModel):
 
     # Set when status == PENDING_APPROVAL
     run_id: str | None = None
+    pending_action_type: str | None = None
     pending_action_description: str | None = None
 
     # Set when status == COMPLETED
@@ -61,6 +62,7 @@ class TriageResponse(BaseModel):
             trade_id=result.trade_id,
             status=result.status.value,
             run_id=result.run_id,
+            pending_action_type=result.pending_action_type,
             pending_action_description=result.pending_action_description,
             diagnosis=result.diagnosis,
             root_cause=result.root_cause.value if result.root_cause else None,
@@ -92,6 +94,9 @@ class TriageHistoryResponse(BaseModel):
 
 class TradeOut(BaseModel):
     trade_id: str
+    version: int
+    workflow_status: str
+    is_current: bool
     counterparty_lei: str
     instrument_id: str
     currency: str
@@ -100,6 +105,8 @@ class TradeOut(BaseModel):
     trade_date: date
     settlement_currency: str
     stp_status: str
+    fo_check_results: list[dict] | None = None
+    bo_check_results: list[dict] | None = None
 
 
 class TradeListResponse(BaseModel):
@@ -157,3 +164,139 @@ class StpExceptionCreateRequest(BaseModel):
 
 class StpExceptionStatusUpdateRequest(BaseModel):
     status: str = Field(..., examples=["IN_PROGRESS"])
+
+
+# ---------------------------------------------------------------------------
+# SSI schemas
+# ---------------------------------------------------------------------------
+
+
+class SsiOut(BaseModel):
+    id: uuid.UUID
+    lei: str
+    currency: str
+    bic: str
+    account: str
+    iban: str | None = None
+    is_external: bool
+    updated_at: datetime
+
+
+class SsiListResponse(BaseModel):
+    items: list[SsiOut]
+    total: int
+
+
+class SsiUpdateRequest(BaseModel):
+    bic: str | None = None
+    account: str | None = None
+    iban: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Reference Data schemas
+# ---------------------------------------------------------------------------
+
+
+class ReferenceDataOut(BaseModel):
+    instrument_id: str
+    description: str
+    asset_class: str
+    is_active: bool
+
+
+class ReferenceDataListResponse(BaseModel):
+    items: list[ReferenceDataOut]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Check result schemas (FoCheck / BoCheck)
+# ---------------------------------------------------------------------------
+
+
+class CheckResultOut(BaseModel):
+    rule_name: str
+    passed: bool
+    severity: str
+    message: str
+
+
+class CheckResultsResponse(BaseModel):
+    trade_id: str
+    workflow_status: str
+    results: list[CheckResultOut]
+
+
+# ---------------------------------------------------------------------------
+# App settings schemas
+# ---------------------------------------------------------------------------
+
+
+class AppSettingOut(BaseModel):
+    key: str
+    value: str
+    description: str | None = None
+
+
+class AppSettingListResponse(BaseModel):
+    items: list[AppSettingOut]
+
+
+class AppSettingUpdateRequest(BaseModel):
+    value: str = Field(..., examples=["auto"])
+
+
+# ---------------------------------------------------------------------------
+# Trade Event schemas (Phase 26-E)
+# ---------------------------------------------------------------------------
+
+
+class TradeVersionOut(BaseModel):
+    """A specific version of a trade (used in event responses)."""
+    trade_id: str
+    version: int
+    workflow_status: str
+    is_current: bool
+    counterparty_lei: str
+    instrument_id: str
+    currency: str
+    amount: str
+    value_date: date
+    trade_date: date
+    settlement_currency: str
+
+
+class TradeEventOut(BaseModel):
+    id: uuid.UUID
+    trade_id: str
+    from_version: int
+    to_version: int
+    event_type: str        # AMEND | CANCEL
+    workflow_status: str   # FoUserToValidate | FoValidated | Done | Cancelled
+    requested_by: str
+    reason: str | None = None
+    amended_fields: dict | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TradeEventListResponse(BaseModel):
+    items: list[TradeEventOut]
+    total: int
+
+
+class TradeEventCreateRequest(BaseModel):
+    event_type: str = Field(..., examples=["AMEND"], description="AMEND or CANCEL")
+    reason: str = Field(..., min_length=1)
+    requested_by: str = Field(..., min_length=1, examples=["fo_user_01"])
+    amended_fields: dict | None = Field(
+        default=None,
+        description="Required for AMEND. Keys: value_date, trade_date, amount, currency, settlement_currency, instrument_id.",
+        examples=[{"value_date": "2026-05-01"}],
+    )
+
+
+class EventApproveRequest(BaseModel):
+    approved: bool
+    comment: str | None = None

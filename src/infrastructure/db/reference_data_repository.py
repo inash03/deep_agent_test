@@ -12,6 +12,13 @@ class ReferenceDataRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
 
+    def list(self) -> list[ReferenceDataModel]:
+        return (
+            self._db.query(ReferenceDataModel)
+            .order_by(ReferenceDataModel.asset_class, ReferenceDataModel.instrument_id)
+            .all()
+        )
+
     def get_by_instrument_id(self, instrument_id: str) -> ReferenceDataModel | None:
         return (
             self._db.query(ReferenceDataModel)

@@ -21,6 +21,35 @@ class TradeStatus(str, Enum):
     SETTLED = "SETTLED"
 
 
+class TradeWorkflowStatus(str, Enum):
+    INITIAL = "Initial"
+    FO_CHECK = "FoCheck"
+    FO_AGENT_TO_CHECK = "FoAgentToCheck"
+    FO_USER_TO_VALIDATE = "FoUserToValidate"
+    FO_VALIDATED = "FoValidated"
+    BO_CHECK = "BoCheck"
+    BO_AGENT_TO_CHECK = "BoAgentToCheck"
+    BO_USER_TO_VALIDATE = "BoUserToValidate"
+    BO_VALIDATED = "BoValidated"
+    DONE = "Done"
+    CANCELLED = "Cancelled"
+    EVENT_PENDING = "EventPending"
+
+
+class EventType(str, Enum):
+    AMEND = "AMEND"
+    CANCEL = "CANCEL"
+
+
+class EventWorkflowStatus(str, Enum):
+    FO_USER_TO_VALIDATE = "FoUserToValidate"
+    FO_VALIDATED = "FoValidated"
+    BO_USER_TO_VALIDATE = "BoUserToValidate"
+    BO_VALIDATED = "BoValidated"
+    DONE = "Done"
+    CANCELLED = "Cancelled"
+
+
 class StpExceptionStatus(str, Enum):
     OPEN = "OPEN"
     IN_PROGRESS = "IN_PROGRESS"
@@ -34,6 +63,10 @@ class RootCause(str, Enum):
     INVALID_VALUE_DATE = "INVALID_VALUE_DATE"
     INSTRUMENT_NOT_FOUND = "INSTRUMENT_NOT_FOUND"
     COUNTERPARTY_NOT_FOUND = "COUNTERPARTY_NOT_FOUND"
+    SWIFT_AC01 = "SWIFT_AC01"
+    SWIFT_AG01 = "SWIFT_AG01"
+    IBAN_FORMAT_ERROR = "IBAN_FORMAT_ERROR"
+    COMPOUND_FAILURE = "COMPOUND_FAILURE"
     UNKNOWN = "UNKNOWN"
 
 
@@ -127,6 +160,7 @@ class TriageResult(BaseModel):
 
     # Populated when status == PENDING_APPROVAL
     run_id: str | None = None
+    pending_action_type: str | None = None
     pending_action_description: str | None = None
 
     # Populated when status == COMPLETED
@@ -137,6 +171,37 @@ class TriageResult(BaseModel):
 
     # Always populated
     steps: list[Step] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Rule check result
+# ---------------------------------------------------------------------------
+
+
+class CheckResult(BaseModel):
+    rule_name: str
+    passed: bool
+    severity: str = "error"  # "error" | "warning"
+    message: str
+
+
+# ---------------------------------------------------------------------------
+# Trade event (Amend / Cancel)
+# ---------------------------------------------------------------------------
+
+
+class TradeEvent(BaseModel):
+    id: uuid.UUID
+    trade_id: str
+    from_version: int
+    to_version: int
+    event_type: EventType
+    workflow_status: EventWorkflowStatus
+    requested_by: str
+    reason: str | None = None
+    amended_fields: dict[str, Any] | None = None
+    created_at: datetime
+    updated_at: datetime
 
 
 # ---------------------------------------------------------------------------

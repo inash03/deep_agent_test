@@ -8,11 +8,161 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-*(none)*
+（なし — Phase 26 全フェーズ完結）
 
 ---
 
 ## Backlog
+
+#### Phase 26-F — フロントエンド ✅ 完了
+
+**目的:** 新しいワークフロー全体を UI で操作・確認できるようにする。
+
+**Frontend:**
+- `frontend/src/pages/TradeDetailPage.tsx` 新規（`/trades/:id`）
+  - バージョン履歴タブ（バージョン一覧・各バージョンの workflow_status）
+  - FoCheck/BoCheck 結果パネル（ルール名・pass/fail・メッセージ）
+  - イベント一覧（Amend/Cancel）と FO/BO 承認ボタン
+  - FoTriage / BoTriage 起動ボタン + HITL パネル（既存コンポーネント流用）
+  - チェック実行ボタン（manual モード時のみ表示）
+- `frontend/src/pages/SettingsPage.tsx` 新規（`/settings`）
+  - FoCheck トリガー: auto / manual トグル
+  - BoCheck トリガー: auto / manual トグル
+- `frontend/src/pages/TradeListPage.tsx` 更新
+  - `workflow_status` 列を追加
+  - `workflow_status` フィルタ追加
+  - バッジ色設計: FO系=青、BO系=緑、Done=グレー、Cancelled=赤、EventPending=オレンジ
+  - 行クリックで TradeDetailPage に遷移
+- `frontend/src/components/NavBar.tsx` 更新
+  - `/settings` リンク追加
+- `frontend/src/App.tsx` 更新
+  - `/trades/:id` ルート追加
+  - `/settings` ルート追加
+- 新規 API クライアント: `src/api/tradeEvents.ts`, `src/api/settings.ts`
+- 新規型定義: `src/types/tradeEvent.ts`, `src/types/settings.ts`
+
+---
+
+## Backlog
+
+### Phase 26 — FO/BO ワークフロー全面実装
+
+> 取引の精算ライフサイクルを FO/BO 分離ワークフローで管理する。  
+> ルールベース機械チェック → エージェントトリアージ → ユーザ承認 の 3 段構成により、  
+> 人間が確認すべき案件を絞り込む。  
+> 詳細設計は `docs/requirements.md` の Phase 26 セクションを参照。
+
+---
+
+#### Phase 26-A — DB Foundation + エンティティ拡張
+
+**目的:** バージョン管理・ワークフローステータス・イベント・設定を支えるスキーマを追加する。
+
+**Backend:**
+- `src/domain/entities.py`
+  - `TradeWorkflowStatus` enum 追加（11 値: Initial / FoCheck / FoAgentToCheck / FoUserToValidate / FoValidated / BoCheck / BoAgentToCheck / BoUserToValidate / BoValidated / Done / Cancelled / EventPending）
+  - `EventType` enum 追加（AMEND / CANCEL）
+  - `EventWorkflowStatus` enum 追加（FoUserToValidate / FoValidated / BoUserToValidate / BoValidated / Done / Cancelled）
+  - `CheckResult` dataclass 追加（rule_name, passed, message）
+  - `TradeEvent` entity 追加
+- `src/infrastructure/db/models.py`
+  - `TradeModel` を更新:
+    - PK を UUID `id` に変更（現: `trade_id` が PK）
+    - `(trade_id, version)` に UNIQUE 制約追加
+    - カラム追加: `version INT DEFAULT 1`, `workflow_status VARCHAR(30)`, `is_current BOOL DEFAULT TRUE`
+    - カラム追加: `sendback_count INT DEFAULT 0`, `fo_check_results JSONB`, `bo_check_results JSONB`
+    - カラム追加: `bo_sendback_reason TEXT`, `fo_explanation TEXT`
+  - `TradeEventModel` 新規追加（id, trade_id, from_version, to_version, event_type, workflow_status, requested_by, reason, amended_fields JSONB）
+  - `AppSettingModel` 新規追加（key VARCHAR PK, value VARCHAR, description, updated_at）
+- `alembic/versions/0003_add_workflow_schema.py` 作成
+- `src/infrastructure/seed.py` 更新
+  - STP_FAILED 取引（TRD-001〜005, TRD-008〜012）の `workflow_status` = `FoAgentToCheck`
+  - NEW 取引（TRD-006〜007）の `workflow_status` = `Initial`
+  - `app_settings` シードデータ: `fo_check_trigger=manual`, `bo_check_trigger=manual`
+- `src/infrastructure/db/trade_repository.py` 更新
+  - `get_current(trade_id)`: `is_current=True` の最新バージョンを返す
+  - `list()`: `is_current=True` のみ返す（バージョン履歴は `list_versions(trade_id)` で取得）
+  - `create_next_version(trade_id, event_type, amended_fields)`: バージョンインクリメント + EventPending 行追加
+  - `activate_version(trade_id, version)`: `is_current` の切り替え
+  - `update_workflow_status(trade_id, status, **kwargs)`: workflow_status + 付随フィールド更新
+- `src/infrastructure/db/trade_event_repository.py` 新規
+- `src/infrastructure/db/app_setting_repository.py` 新規
+
+---
+
+#### Phase 26-D — FoAgent 新規実装
+
+**目的:** FoCheck 結果を調査し、Amend/Cancel イベントの提案やBoAgent 差し戻し対応を行う FoAgent を実装する。
+
+**Backend:**
+- `src/infrastructure/tools.py` 更新
+  - `get_fo_check_results(trade_id)` 新規追加（read）
+  - `get_bo_sendback_reason(trade_id)` 新規追加（read）
+  - `create_amend_event(trade_id, reason, amended_fields)` 新規追加（HITL write）
+  - `create_cancel_event(trade_id, reason)` 新規追加（HITL write）
+  - `provide_explanation(trade_id, explanation)` 新規追加（write: FoValidated に遷移）
+  - `escalate_to_fo_user(trade_id, reason)` 新規追加（write: FoUserToValidate に遷移）
+- `src/infrastructure/fo_agent.py` 新規
+  - `FoAgentState` TypedDict
+  - `FO_SYSTEM_PROMPT`: FoCheck 結果調査 → 修正提案/説明付与/エスカレーション
+  - `_FO_HITL_TOOL_TO_NODE`: create_amend_event, create_cancel_event
+  - `build_fo_graph()` → LangGraph StateGraph
+- `src/infrastructure/fo_triage_use_case.py` 新規
+  - `FoTriageUseCase`: start(trade_id) / resume(run_id, approved)
+- `src/presentation/routers/trades.py` 更新
+  - `POST /api/v1/trades/{trade_id}/fo-triage`
+  - `POST /api/v1/trades/{trade_id}/fo-triage/{run_id}/resume`
+
+---
+
+#### Phase 26-E — トレードイベント API
+
+**目的:** Amend/Cancel イベントの作成・承認・バージョン管理を API で操作できるようにする。
+
+**Backend:**
+- `src/presentation/routers/trade_events.py` 新規
+  - `GET /api/v1/trades/{trade_id}/events`: イベント一覧（バージョン履歴含む）
+  - `POST /api/v1/trades/{trade_id}/events`: イベント作成（FoUser から手動）
+  - `PATCH /api/v1/trade-events/{event_id}/fo-approve`: FO 承認/却下
+  - `PATCH /api/v1/trade-events/{event_id}/bo-approve`: BO 承認/却下
+- バージョン管理ロジック（`trade_repository.py`）
+  - イベント作成時: `create_next_version()` で EventPending 行生成
+  - BO 承認完了時: `activate_version()` + 旧バージョン `is_current=False` 化
+  - Amend Done: 新バージョン `workflow_status=Initial`（FoCheck から再スタート）
+  - Cancel Done: 新バージョン `workflow_status=Cancelled`
+- `src/presentation/schemas.py` 更新
+  - `TradeEventOut`, `TradeEventCreateRequest`, `TradeVersionOut` 追加
+
+---
+
+#### Phase 26-F — フロントエンド
+
+**目的:** 新しいワークフロー全体を UI で操作・確認できるようにする。
+
+**Frontend:**
+- `frontend/src/pages/TradeDetailPage.tsx` 新規（`/trades/:id`）
+  - バージョン履歴タブ（バージョン一覧・各バージョンの workflow_status）
+  - FoCheck/BoCheck 結果パネル（ルール名・pass/fail・メッセージ）
+  - イベント一覧（Amend/Cancel）と FO/BO 承認ボタン
+  - FoTriage / BoTriage 起動ボタン + HITL パネル（既存コンポーネント流用）
+  - チェック実行ボタン（manual モード時のみ表示）
+- `frontend/src/pages/SettingsPage.tsx` 新規（`/settings`）
+  - FoCheck トリガー: auto / manual トグル
+  - BoCheck トリガー: auto / manual トグル
+- `frontend/src/pages/TradeListPage.tsx` 更新
+  - `workflow_status` 列を追加
+  - `workflow_status` フィルタ追加
+  - バッジ色設計: FO系=青、BO系=緑、Done=グレー、Cancelled=赤、EventPending=オレンジ
+  - 行クリックで TradeDetailPage に遷移
+- `frontend/src/components/NavBar.tsx` 更新
+  - `/settings` リンク追加
+- `frontend/src/App.tsx` 更新
+  - `/trades/:id` ルート追加
+  - `/settings` ルート追加
+- 新規 API クライアント: `src/api/tradeEvents.ts`, `src/api/settings.ts`
+- 新規型定義: `src/types/tradeEvent.ts`, `src/types/settings.ts`
+
+
 
 ### Phase 25 — アクセス制御（Basic Auth）
 
@@ -30,48 +180,47 @@ Cloud Run 移行後の発展:
 
 ### Phase 24 — エージェント機能増強
 
-#### 24-A: ツールの追加
+#### 24-A: ツールの追加 ✅ 完了
 
-現在のツール: `get_trade_detail`, `get_settlement_instructions`, `get_reference_data`,
-`get_counterparty`, `lookup_external_ssi`, `register_ssi`
+追加済みツール（tools.py / agent.py / triage_use_case.py）:
+- `get_triage_history(trade_id)` — 同一取引の過去トリアージ結果（read-only）
+- `get_counterparty_exception_history(lei)` — 直近30日の STP 失敗件数（3件以上で警告付き、read-only）
+- `reactivate_counterparty(lei)` — `is_active=True` に更新（HITL承認対象）
+- `update_ssi(lei, currency, ...)` — 既存 SSI の BIC/口座番号等を修正（HITL承認対象）
+- `escalate(trade_id, reason)` — 担当者エスカレーション（HITL確認対象）
 
-追加するツール:
-- `reactivate_counterparty(lei)` — `is_active=False` のカウンターパーティを再有効化（HITL 承認対象）
-- `update_ssi(lei, currency, **fields)` — 既存 SSI の BIC/口座番号等を修正
-- `get_triage_history(trade_id)` — 同一取引の過去トリアージ結果を参照
-- `get_counterparty_exception_history(lei)` — 同一カウンターパーティの直近 N 件の STP 失敗件数・傾向
-- `escalate(trade_id, reason)` — 自動解決不能と判断した場合に担当者エスカレーション（新 HITL タイプ）
+agent.py に `_HITL_TOOL_TO_NODE` dict と `_make_hitl_node` ファクトリを追加。
+triage_use_case.py の HITL 判定を `register_ssi` ハードコードから汎化。
 
-#### 24-B: 複雑・曖昧なシナリオの追加
+#### 24-B: 複雑・曖昧なシナリオの追加 ✅ 完了
 
-> 「明確すぎず、非現実的でもない」レベルに設定する。
-> SWIFT 拒否コードや複合障害など、調査しないと原因が特定できないケース。
+追加済みシナリオ（TRD-008〜012）:
 
-追加シナリオ（seed データにも反映）:
+| Trade ID | エラーメッセージ | 真の原因 | root_cause |
+|---------|-----------------|---------|------------|
+| TRD-008 | `MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.` | SSI の口座番号が古い | SWIFT_AC01 |
+| TRD-009 | `MT103 rejected by SWIFT. Reason code: AG01. Counterparty LEI: 213800XYZINACTIVE001.` | カウンターパーティ非アクティブ | SWIFT_AG01 |
+| TRD-010 | `Pre-settlement validation failed for TRD-010. Multiple checks not passed.` | SSI 未登録 かつ CP 非アクティブ | COMPOUND_FAILURE |
+| TRD-011 | `Custodian HSBC rejected settlement instruction for TRD-011. No further details provided.` | SSI の IBAN フォーマット誤り | IBAN_FORMAT_ERROR |
+| TRD-012 | `Settlement confirmation not received within SLA window for TRD-012. Status unknown.` | BIC が失効（調査困難） | UNKNOWN |
 
-| シナリオ | エラーメッセージ例 | 真の原因 |
-|---------|-----------------|---------|
-| SWIFT 拒否コード | `MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.` | BIC は正しいが SSI の口座番号が古い |
-| SWIFT 拒否コード | `MT103 rejected. Code: AG01. Counterparty: LEI 213800XYZ.` | カウンターパーティが取引禁止フラグ（is_active=false） |
-| 複合障害 | `Pre-settlement validation failed for TRD-008. Multiple checks not passed.` | SSI 未登録 かつ カウンターパーティ非アクティブの両方 |
-| カストディアン拒否 | `Custodian HSBC rejected settlement instruction for TRD-009. No further details provided.` | SSI の IBAN フォーマット誤り |
-| タイムアウト/不明 | `Settlement confirmation not received within SLA window for TRD-010. Status unknown.` | SSI は存在するが BIC が失効（調査しても確定できないため escalate 推奨） |
+システムプロンプトに SWIFT コード知識（AC01/AG01/AM04/BE01）、is_active チェック、IBAN/BIC 検証ガイダンスを追加済み。
 
-SWIFT コードの知識はエージェントのシステムプロンプトに追加する（AC01=口座番号不正、AG01=取引禁止、AM04=残高不足 など）。
+#### 24-C: アクション多様化（HITL の拡張）✅ 完了
 
-#### 24-C: アクション多様化（HITL の拡張）
+追加済み HITL パターン（TriagePage.tsx の HitlPanel コンポーネント）:
+- `register_ssi`: Approve Registration / Reject（オレンジ）
+- `reactivate_counterparty`: Approve Reactivation / Reject + コンプライアンス警告（ブルー）
+- `update_ssi`: Approve Update / Reject（パープル）
+- `escalate`: Acknowledge & Escalate / Override（レッド + オペレーター警告）
 
-現在の HITL: SSI 登録の承認/却下（1種類）
+Backend に `pending_action_type` フィールドを追加し、フロントエンドがアクション種別に応じた UI を表示。
 
-追加する HITL パターン:
-- カウンターパーティ再アクティブ化の承認
-- 複数の修正案を提示して人間が選択（例:「A: SSI を更新する / B: エスカレーションする」）
-- エスカレーション通知の確認
+#### 24-D: パターン分析 ✅ 完了
 
-#### 24-D: パターン分析
-
-- `get_counterparty_exception_history` の結果を使い、同一カウンターパーティで直近 30 日間に 3 件以上の失敗があれば警告メッセージを diagnosis に含める
-- 過去に同じ root_cause で解決済みのトリアージがあれば、その解決策を推奨アクションに反映する
+システムプロンプトに調査手順 3・4 を追加:
+- ステップ 3: `get_counterparty_exception_history` — 30 日間に 3 件以上の失敗で警告を diagnosis に含める
+- ステップ 4: `get_triage_history` — 同一 root_cause の解決済みトリアージがあれば "Previously resolved by: ..." を recommended_action に反映
 
 ### Ops — GCP 静的外部 IP の予約（人間作業）
 
@@ -132,14 +281,17 @@ push to main
   - GitHub Actions に `WORKLOAD_IDENTITY_PROVIDER` と `SERVICE_ACCOUNT` の secrets を登録
 - フロントエンド（静的ファイル）は将来的に Cloud Storage + Cloud CDN に移行することで VM も不要にできる
 
-### Phase 21 — GCP read-only IAM ロールと MCP 連携
+### Phase 21 — GCP read-only IAM ロールと MCP 連携（低優先度・保留）
 
-- GCP サービスアカウント `claude-reader` を作成
+> **保留理由**: Web版 Claude Code は Anthropic の VM 上で動作するため、GCP サービスアカウントキーを
+> そこに置くことはセキュリティ上好ましくない（read-only でもクラウドリソース情報が露出するリスク）。
+> デスクトップ版 Claude Code を使う環境が整ったタイミングで再検討する。
+> GCP MCP サーバーが公式に成熟した場合も再検討対象。
+
+- GCP サービスアカウント `claude-reader` 作成済み（`claude-reader@<project>.iam.gserviceaccount.com`）
   - 付与ロール: `roles/compute.viewer`, `roles/logging.viewer`, `roles/monitoring.viewer`, `roles/run.viewer`
-- サービスアカウントキー（JSON）を生成・保管
-- `~/.claude/settings.json` に `GOOGLE_APPLICATION_CREDENTIALS` 環境変数を設定
-- 動作確認: Claude Code から `gcloud compute instances list` などが実行できること
-- （将来）GCP 用 MCP サーバが成熟したら移行を検討
+- サービスアカウントキー（JSON）生成済み・VM に保管済み
+- 残り作業: `~/.claude/settings.json` に `GOOGLE_APPLICATION_CREDENTIALS` を設定（デスクトップ版環境で実施）
 
 ### Phase 11 — Frontend (partial)
 
@@ -199,3 +351,11 @@ push to main
 - Phase 17+18: Frontend routing + all CRUD pages — NavBar, PageLayout, Pagination, TradeListPage, CounterpartyListPage/EditPage, StpExceptionListPage/CreatePage, theme.ts
 - Phase 19: DB を Neon PostgreSQL に移行 — postgres コンテナ削除、DATABASE_URL を外部化
 - Phase 22 前半: VM への自動デプロイ — GitHub Actions + SSH、environment: GCP_VM、concurrency で多重実行防止
+- Phase 20: バックエンドを Cloud Run に移行 — entrypoint.sh、Artifact Registry、2ジョブ workflow（Cloud Run + VM SSH）
+- Phase 25: アクセス制御 — Nginx Basic Auth（フロント）+ API キー（バックエンド LLM エンドポイント）
+- Phase 26-A: DB Foundation — TradeWorkflowStatus/EventType/CheckResult エンティティ追加、TradeModel PK→UUID + version/workflow_status/is_current 等カラム追加、TradeEventModel/AppSettingModel 新規、Alembic 0003 マイグレーション、seed.py 更新（workflow_status, app_settings）、trade_repository.py 拡張、trade_event_repository.py / app_setting_repository.py 新規
+- Phase 26-B: ルールエンジン — CheckResult に severity 追加、check_rules.py（FoRule/BoRule + FoCheck 7 ルール + BoCheck 7 ルール）、rule_engine.py（run_fo_check/run_bo_check/maybe_* auto-trigger）、POST /api/v1/trades/{id}/fo-check・bo-check エンドポイント、settings.py ルーター（GET /api/v1/settings + PATCH /api/v1/settings/{key}）
+- Phase 26-C: BoAgent リネーム + 拡張 — tools.py に get_bo_check_results/get_fo_explanation/send_back_to_fo/escalate_to_bo_user 追加、bo_agent.py（BoAgentState + build_bo_graph() + 4 HITL ノード + BO_SYSTEM_PROMPT）、bo_triage_use_case.py（BoTriageUseCase）、routers/bo_triage.py（POST /api/v1/trades/{id}/bo-triage + resume）、test_entities.py の RootCause 期待値更新
+- Phase 26-D: FoAgent 新規実装 — tools.py に get_fo_check_results/get_bo_sendback_reason/create_amend_event/create_cancel_event/provide_explanation/escalate_to_fo_user 追加 + FO_*_TOOLS エクスポート、fo_agent.py（FoAgentState + build_fo_graph() + 2 HITL ノード + FO_SYSTEM_PROMPT）、fo_triage_use_case.py（FoTriageUseCase）、routers/fo_triage.py（POST /api/v1/trades/{id}/fo-triage + resume）
+- Phase 26-E: トレードイベント API — schemas.py に TradeVersionOut/TradeEventOut/TradeEventListResponse/TradeEventCreateRequest/EventApproveRequest 追加、routers/trade_events.py（GET list / POST create / PATCH fo-approve / PATCH bo-approve、状態機械: FoUserToValidate→FoValidated→Done、AMEND承認で activate_version()+Initial 遷移、CANCEL承認で Cancelled 遷移）
+- Phase 26-F: フロントエンド — TradeOut に check results 追加、TradeDetailPage（4タブ: FoCheck/BoCheck/Events/Triage）、SettingsPage、TradeListPage 更新（workflow_status列/フィルタ/クリックナビ）、NavBar+App.tsx 更新

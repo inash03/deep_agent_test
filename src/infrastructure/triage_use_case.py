@@ -2,14 +2,15 @@
 
 Two-phase execution:
   Phase 1 — start():
-    Launches the ReAct loop. If the agent decides to call register_ssi,
+    Launches the ReAct loop. If the agent decides to call a write tool
+    (register_ssi, reactivate_counterparty, update_ssi, escalate),
     the graph pauses (interrupt_before). Returns PENDING_APPROVAL with run_id.
     Otherwise returns COMPLETED with the full diagnosis.
 
   Phase 2 — resume():
     Resumes a paused run after the operator approves or rejects.
-    Approval  → graph executes register_ssi_node, then continues to diagnosis.
-    Rejection → injects a ToolMessage saying "rejected", graph continues to diagnosis.
+    Approval  → graph executes the HITL node, then continues to diagnosis.
+    Rejection → injects a rejection ToolMessage, graph continues to diagnosis.
 """
 
 from __future__ import annotations
@@ -22,7 +23,10 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 
 from src.domain.entities import RootCause, Step, TriageResult, TriageStatus
 from src.domain.interfaces import ITriageUseCase, STPFailure
-from src.infrastructure.agent import build_graph
+from src.infrastructure.agent import _HITL_TOOL_TO_NODE, build_graph
+
+_HITL_TOOL_NAMES: frozenset[str] = frozenset(_HITL_TOOL_TO_NODE.keys())
+_HITL_NODE_NAMES: frozenset[str] = frozenset(_HITL_TOOL_TO_NODE.values())
 
 _logger = logging.getLogger("stp_triage.use_case")
 
@@ -78,20 +82,19 @@ class TriageSTPFailureUseCase(ITriageUseCase):
             state_snapshot = self._graph.get_state(config)
             last_msg = state_snapshot.values["messages"][-1]
             tool_call = next(
-                tc for tc in last_msg.tool_calls if tc["name"] == "register_ssi"
+                tc for tc in last_msg.tool_calls if tc["name"] in _HITL_TOOL_NAMES
             )
             rejection_msg = ToolMessage(
                 content=(
-                    "SSI registration was rejected by the operator. "
-                    "Proceed to produce the final diagnosis without registering."
+                    f"Action '{tool_call['name']}' was rejected by the operator. "
+                    "Proceed to produce the final diagnosis without executing this action."
                 ),
                 tool_call_id=tool_call["id"],
             )
-            # Inject the message as if register_ssi_node had returned it
             self._graph.update_state(
                 config,
                 {"messages": [rejection_msg]},
-                as_node="register_ssi_node",
+                as_node=_HITL_TOOL_TO_NODE[tool_call["name"]],
             )
 
         self._graph.invoke(None, config)
@@ -112,7 +115,7 @@ class TriageSTPFailureUseCase(ITriageUseCase):
         next_nodes = snapshot.next
 
         # Still waiting for HITL approval
-        if "register_ssi_node" in (next_nodes or ()):
+        if any(n in _HITL_NODE_NAMES for n in (next_nodes or ())):
             return self._pending_result(run_id, state)
 
         # Completed — parse the LLM's final JSON message
@@ -130,16 +133,16 @@ class TriageSTPFailureUseCase(ITriageUseCase):
             extra={"run_id": run_id, "trade_id": state.get("trade_id")},
         )
         tool_call = next(
-            (tc for tc in last_msg.tool_calls if tc["name"] == "register_ssi"),
+            (tc for tc in last_msg.tool_calls if tc["name"] in _HITL_TOOL_NAMES),
             None,
         )
-        description = (
-            _format_ssi_action(tool_call["args"]) if tool_call else "Pending SSI registration"
-        )
+        action_type = tool_call["name"] if tool_call else None
+        description = _format_hitl_action(tool_call) if tool_call else "Pending operator action"
         return TriageResult(
             trade_id=state["trade_id"],
             status=TriageStatus.PENDING_APPROVAL,
             run_id=run_id,
+            pending_action_type=action_type,
             pending_action_description=description,
             steps=_extract_steps(state["messages"]),
         )
@@ -196,6 +199,11 @@ def _parse_llm_output(
             content = content.split("```")[1]
             if content.startswith("json"):
                 content = content[4:]
+            content = content.strip()
+        # Skip any prose that precedes the JSON object (LLM sometimes adds reasoning text)
+        brace_pos = content.find('{')
+        if brace_pos > 0:
+            content = content[brace_pos:]
         data = json.loads(content)
         diagnosis = str(data["diagnosis"])
         root_cause = RootCause(data["root_cause"])
@@ -231,7 +239,7 @@ def _extract_steps(messages: list[BaseMessage]) -> list[Step]:
                 except json.JSONDecodeError:
                     output = {"raw": raw_output}
 
-            is_hitl = tc["name"] == "register_ssi"
+            is_hitl = tc["name"] in _HITL_TOOL_NAMES
             steps.append(
                 Step(
                     step_type="hitl_prompt" if is_hitl else "tool_call",
@@ -244,8 +252,25 @@ def _extract_steps(messages: list[BaseMessage]) -> list[Step]:
     return steps
 
 
-def _format_ssi_action(args: dict) -> str:
-    return (
-        f"Register SSI for LEI '{args.get('lei')}' / currency '{args.get('currency')}': "
-        f"BIC={args.get('bic')}, account={args.get('account')}"
-    )
+def _format_hitl_action(tool_call: dict) -> str:
+    name = tool_call["name"]
+    args = tool_call.get("args", {})
+    if name == "register_ssi":
+        return (
+            f"Register SSI for LEI '{args.get('lei')}' / currency '{args.get('currency')}': "
+            f"BIC={args.get('bic')}, account={args.get('account')}"
+        )
+    if name == "reactivate_counterparty":
+        return f"Reactivate counterparty LEI '{args.get('lei')}' (set is_active = True)"
+    if name == "update_ssi":
+        parts = [f"LEI '{args.get('lei')}' / currency '{args.get('currency')}'"]
+        if args.get("bic"):
+            parts.append(f"BIC={args['bic']}")
+        if args.get("account"):
+            parts.append(f"account={args['account']}")
+        if args.get("iban"):
+            parts.append(f"iban={args['iban']}")
+        return "Update SSI — " + ", ".join(parts)
+    if name == "escalate":
+        return f"Escalate trade '{args.get('trade_id')}': {args.get('reason', '')}"
+    return f"Pending action: {name}"

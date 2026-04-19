@@ -5,13 +5,145 @@
 ## Current Status
 
 **Branch:** `claude/setup-langgraph-project-oXB7j`
-**Last updated:** 2026-04-15
-**In Progress:** *(none)*
-**Next:** VM に `git pull && docker compose up --build -d` して全機能を確認 / Phase 12 (MCP外部化) or Phase 13 (deepagents)
+**Last updated:** 2026-04-19
+**In Progress:** —
+**Next:** 動作確認後に次フェーズ検討
 
 ---
 
 ## Step Log
+
+### Step 33 — Fix: ロギング KeyError + STP Exception 画面再設計 (2026-04-19)
+
+Files: `src/infrastructure/fo_agent.py`, `src/infrastructure/bo_agent.py`, `src/infrastructure/agent.py`,
+       `frontend/src/pages/StpExceptionListPage.tsx`, `frontend/src/version.ts`
+
+- ロギング: `_make_hitl_node` の `extra={"args": ...}` を `"tool_args"` にリネーム（Python LogRecord の予約キー衝突を修正）
+- STP Exception 画面: "Error Message" 列を削除（旧 STP エラーテキストで FO/BO ルール違反とは別物）
+- 旧 "Triage" ボタンを削除（旧 `TriageUseCase`/`agent.py` を呼ぶ旧来 API — 新 FO/BO トリアージとは無関係）
+- "View Violations" ボタン追加 → モーダルが `GET /api/v1/trades/{id}` を取得し、FO/BO 各チェックの失敗ルールを全件表示
+- "Open Trade" ボタン追加 → 取引詳細ページ（FO/BO トリアージ実行場所）へ遷移
+- フロントエンドバージョン `0.1.5 → 0.1.6`
+
+---
+
+### Step 32 — Fix: /resume 500 エラー（CORSヘッダー欠落・型ミスマッチ） (2026-04-19)
+
+Files: `src/main.py`, `src/infrastructure/tools.py`,
+       `src/infrastructure/fo_agent.py`, `src/infrastructure/bo_agent.py`,
+       `frontend/src/version.ts`
+
+- `main.py`: グローバル例外ハンドラ追加 — FastAPI の CORSMiddleware はハンドルされない 500 例外のレスポンスに CORS ヘッダーを付与しないため、`@app.exception_handler(Exception)` で手動付与する
+- `tools.py`: `create_amend_event` の `amended_fields` が LLM から dict で渡された場合に `TypeError` が発生していた → `isinstance(amended_fields, dict)` チェックを追加し、`JSONDecodeError` と `TypeError` の両方を捕捉
+- `fo_agent.py` / `bo_agent.py`: `_make_hitl_node` の `tool_fn.invoke()` を try/except で囲み、ツール実行エラーをグラフクラッシュではなく `ToolMessage(success=False)` として返すよう修正
+- フロントエンドバージョン `0.1.4 → 0.1.5`（パッチバンプ）
+
+### Step 31 — Fix: unused useNavigate import (TS6133) (2026-04-19)
+
+Files: `frontend/src/components/NavBar.tsx`, `frontend/src/version.ts`
+
+- Removed unused `useNavigate` import from `NavBar.tsx` that caused CI `error TS6133`
+- Bumped version `0.1.0 → 0.1.1` (patch: bug fix)
+
+---
+
+### Step 30 — Phase 26-F: フロントエンド (2026-04-18)
+
+Files: `src/presentation/schemas.py`, `src/presentation/routers/trades.py`,
+       `frontend/src/types/trade.ts` (更新), `frontend/src/types/tradeEvent.ts` (新規),
+       `frontend/src/types/settings.ts` (新規),
+       `frontend/src/api/trades.ts` (更新), `frontend/src/api/tradeEvents.ts` (新規),
+       `frontend/src/api/settings.ts` (新規),
+       `frontend/src/pages/SettingsPage.tsx` (新規),
+       `frontend/src/pages/TradeDetailPage.tsx` (新規),
+       `frontend/src/pages/TradeListPage.tsx` (更新),
+       `frontend/src/components/NavBar.tsx` (更新), `frontend/src/App.tsx` (更新)
+
+- `schemas.py` / `trades.py`: `TradeOut` に `fo_check_results`・`bo_check_results`（list[dict]|None）追加、`_to_out()` で返却
+- `types/trade.ts`: `CheckResult`・`CheckResultsResponse` 追加。`Trade` に `version`/`workflow_status`/`is_current`/check results 追加。`WORKFLOW_STATUS_LABELS`・`WORKFLOW_STATUS_COLORS`（12値）追加
+- `types/tradeEvent.ts`: `TradeEvent`・`EVENT_STATUS_LABELS`/`COLORS` 定義（新規）
+- `types/settings.ts`: `AppSetting` 定義（新規）
+- `api/trades.ts`: `workflow_status` パラメータ追加。`runFoCheck`/`runBoCheck`/`startFoTriage`/`resumeFoTriage`/`startBoTriage`/`resumeBoTriage` 追加
+- `api/tradeEvents.ts`: `listTradeEvents`/`createTradeEvent`/`foApproveEvent`/`boApproveEvent`（新規）
+- `api/settings.ts`: `listSettings`/`updateSetting`（新規）
+- `pages/SettingsPage.tsx`: fo/bo_check_trigger auto/manual トグル UI（新規）
+- `pages/TradeDetailPage.tsx`: 4 タブ（FoCheck・BoCheck・Events・Triage）。FoCheck/BoCheck 結果テーブル + Run ボタン、Events 一覧 + 作成フォーム + FO/BO 承認ボタン、FO/BO Triage HITL パネル（新規）
+- `pages/TradeListPage.tsx`: workflow_status 列・フィルタ追加、行クリック → TradeDetailPage 遷移
+- `NavBar.tsx`: Settings リンク追加
+- `App.tsx`: `/trades/:trade_id` + `/settings` ルート追加
+- TypeScript エラーなし、バックエンド 34 テスト通過
+
+### Step 29 — Phase 26-E: トレードイベント API (2026-04-18)
+
+Files: `src/presentation/schemas.py`, `src/presentation/routers/trade_events.py` (新規),
+       `src/main.py`
+
+- `schemas.py`: `TradeVersionOut`（バージョン詳細）、`TradeEventOut`（イベント詳細）、`TradeEventListResponse`、`TradeEventCreateRequest`（event_type/reason/requested_by/amended_fields）、`EventApproveRequest`（approved/comment）を追加
+- `routers/trade_events.py`:
+  - `GET /api/v1/trades/{trade_id}/events` — TradeEventRepository.list_for_trade() 返却
+  - `POST /api/v1/trades/{trade_id}/events` — AMEND: create_next_version() + trade EventPending 遷移 + TradeEvent 作成。CANCEL: TradeEvent のみ作成。重複イベントは 409 で弾く
+  - `PATCH /api/v1/trade-events/{id}/fo-approve` — 承認: FoValidated 遷移。却下: Cancelled + AMEND の場合は pending version を削除し trade を FoAgentToCheck に戻す
+  - `PATCH /api/v1/trade-events/{id}/bo-approve` — 承認+AMEND: activate_version() + 新バージョン workflow_status=Initial（FoCheck 再スタート）。承認+CANCEL: trade workflow_status=Cancelled。却下: Cancelled + pending version 削除
+- `main.py`: `trade_events_router` を登録
+- 全 34 ユニットテスト通過
+
+### Step 28 — Phase 26-D: FoAgent 新規実装 (2026-04-18)
+
+Files: `src/infrastructure/tools.py`, `src/infrastructure/fo_agent.py` (新規),
+       `src/infrastructure/fo_triage_use_case.py` (新規),
+       `src/presentation/routers/fo_triage.py` (新規), `src/main.py`
+
+- `tools.py`: `get_fo_check_results(trade_id)` — fo_check_results JSONB + workflow_status + sendback_count 返却。`get_bo_sendback_reason(trade_id)` — bo_sendback_reason フィールド取得。`create_amend_event(trade_id, reason, amended_fields)` — HITL: create_next_version() + 現バージョン EventPending 遷移。`create_cancel_event(trade_id, reason)` — HITL: Cancelled 遷移。`provide_explanation(trade_id, explanation)` — 非HITL: FoValidated 遷移 + fo_explanation 保存。`escalate_to_fo_user(trade_id, reason)` — 非HITL: FoUserToValidate 遷移。`FO_READ_ONLY_TOOLS`（7ツール）・`FO_HITL_TOOLS`（2ツール）・`FO_ALL_TOOLS`（9ツール）エクスポート追加
+- `fo_agent.py`: `_FO_HITL_TOOL_TO_NODE`（create_amend_event/create_cancel_event → 各 node）。`FoAgentState` TypedDict。`FO_SYSTEM_PROMPT`（調査手順4ステップ + 是正アクション A〜D）。`build_fo_graph()` — 2 HITL ノード + read_tools_node + agent_node、`interrupt_before=["create_amend_event_node", "create_cancel_event_node"]`
+- `fo_triage_use_case.py`: `FoTriageUseCase.start(trade_id, error_context)` / `.resume(run_id, approved)` — bo_triage_use_case.py と同構造、FO グラフ用に実装
+- `routers/fo_triage.py`: `POST /api/v1/trades/{trade_id}/fo-triage` + `POST /api/v1/trades/{trade_id}/fo-triage/{run_id}/resume`
+- `main.py`: `fo_triage_router` を登録
+- 全 34 ユニットテスト通過
+
+### Step 27 — Phase 26-C: BoAgent リネーム + 拡張 (2026-04-18)
+
+Files: `src/infrastructure/tools.py`, `src/infrastructure/bo_agent.py` (新規),
+       `src/infrastructure/bo_triage_use_case.py` (新規),
+       `src/presentation/routers/bo_triage.py` (新規), `src/main.py`,
+       `tests/unit/test_entities.py`
+
+- `tools.py`: `get_bo_check_results(trade_id)` — JSONB + sendback_count + workflow_status 返却。`get_fo_explanation(trade_id)` — FoAgent の説明取得。`send_back_to_fo(trade_id, reason)` — HITL: FoAgentToCheck 遷移 + sendback_count インクリメント + bo_sendback_reason 保存。`escalate_to_bo_user(trade_id, reason)` — 非HITL: BoUserToValidate 遷移。`BO_READ_ONLY_TOOLS`・`BO_HITL_TOOLS`・`BO_ALL_TOOLS` エクスポート追加
+- `bo_agent.py`: `_BO_HITL_TOOL_TO_NODE`（register_ssi/reactivate_counterparty/update_ssi/send_back_to_fo → 各 node）。`BoAgentState` TypedDict。`BO_SYSTEM_PROMPT`（調査手順5ステップ + 是正アクション A〜E + sendback_count ガード + SWIFT コード）。`build_bo_graph()` — 4 HITL ノード + read_tools_node + agent_node、`interrupt_before=hitl_node_names`
+- `bo_triage_use_case.py`: `BoTriageUseCase.start(trade_id, error_context)` / `.resume(run_id, approved)` — triage_use_case.py と同構造、BO グラフ用に移植
+- `routers/bo_triage.py`: `POST /api/v1/trades/{trade_id}/bo-triage` + `POST /api/v1/trades/{trade_id}/bo-triage/{run_id}/resume`
+- `main.py`: `bo_triage_router` を登録
+- `test_entities.py`: `RootCause` 期待値に IBAN_FORMAT_ERROR / SWIFT_AC01 / SWIFT_AG01 / COMPOUND_FAILURE を追加（全 34 ユニットテスト通過）
+
+### Step 26 — Phase 26-B: ルールエンジン実装 (2026-04-18)
+
+Files: `src/domain/entities.py` (severity追加), `src/domain/check_rules.py` (新規),
+       `src/infrastructure/rule_engine.py` (新規),
+       `src/presentation/schemas.py`, `src/presentation/routers/trades.py`,
+       `src/presentation/routers/settings.py` (新規), `src/main.py`
+
+- `entities.py`: `CheckResult` に `severity: str = "error"` フィールド追加
+- `check_rules.py`: `FoRule`・`BoRule` dataclass 定義。FoCheck 7 ルール実装（trade_date_not_future/not_weekend, value_date_after_trade_date/not_past/settlement_cycle[警告], amount_positive, settlement_currency_consistency）。BoCheck 7 ルール実装（counterparty_exists/active, ssi_exists, bic_format_valid, iban_format_valid, risk_limit_check[スタブ], compliance_check[スタブ]）
+- `rule_engine.py`: `run_fo_check(trade_id, db)` — ERROR 失敗あり→FoAgentToCheck / なし→FoValidated。`run_bo_check(trade_id, db)` — 失敗あり→BoAgentToCheck / なし→BoValidated。`maybe_run_fo_check`・`maybe_run_bo_check` — app_settings の auto/manual を参照する auto-trigger ヘルパー
+- `trades.py` ルーター: `POST /api/v1/trades/{id}/fo-check`・`POST /api/v1/trades/{id}/bo-check` エンドポイント追加（CheckResultsResponse 返却）
+- `settings.py` ルーター（新規）: `GET /api/v1/settings` + `PATCH /api/v1/settings/{key}`
+- `main.py`: settings_router を登録
+
+### Step 25 — Phase 26-A: DB Foundation + エンティティ拡張 (2026-04-18)
+
+Files: `src/domain/entities.py`, `src/infrastructure/db/models.py`,
+       `alembic/versions/0003_add_workflow_schema.py`,
+       `src/infrastructure/seed.py`,
+       `src/infrastructure/db/trade_repository.py`,
+       `src/infrastructure/db/trade_event_repository.py` (新規),
+       `src/infrastructure/db/app_setting_repository.py` (新規),
+       `src/presentation/schemas.py`, `src/presentation/routers/trades.py`
+
+- `entities.py`: `TradeWorkflowStatus`（12値）、`EventType`（AMEND/CANCEL）、`EventWorkflowStatus`（6値）、`CheckResult`、`TradeEvent` を追加
+- `models.py`: `TradeModel` の PK を UUID `id` に変更、`(trade_id, version)` UNIQUE 追加、`workflow_status`/`version`/`is_current`/`sendback_count`/`fo_check_results`/`bo_check_results`/`bo_sendback_reason`/`fo_explanation` カラム追加。`TradeEventModel`・`AppSettingModel` 新規追加
+- Alembic 0003: 既存行への `gen_random_uuid()` 付与、STP_FAILED → `FoAgentToCheck` 一括更新、`trade_events`・`app_settings` テーブル作成、デフォルト設定（fo/bo_check_trigger=manual）挿入
+- `seed.py`: 全 Trade にv`ersion=1`/`is_current=True`/`workflow_status` を付与、`AppSettingModel` の upsert 追加
+- `trade_repository.py`: `list()` に `is_current=True` フィルタ追加、`get_current()`・`list_versions()`・`create_next_version()`・`activate_version()`・`update_workflow_status()` 追加
+- `schemas.py`/`routers/trades.py`: `TradeOut` に `version`/`workflow_status`/`is_current` 追加、`workflow_status` フィルタパラメータ追加
 
 ### Step 18 — Phase 17+18: Frontend routing + all CRUD pages (2026-04-15)
 

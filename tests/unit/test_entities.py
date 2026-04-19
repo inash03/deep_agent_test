@@ -20,6 +20,10 @@ class TestRootCause:
             "INVALID_VALUE_DATE",
             "INSTRUMENT_NOT_FOUND",
             "COUNTERPARTY_NOT_FOUND",
+            "IBAN_FORMAT_ERROR",
+            "SWIFT_AC01",
+            "SWIFT_AG01",
+            "COMPOUND_FAILURE",
             "UNKNOWN",
         }
         assert {e.value for e in RootCause} == expected

@@ -5,6 +5,15 @@ Read this file before starting any task.
 
 ---
 
+## Session Start Protocol
+
+At the start of every session:
+1. Read `docs/tasks.md` to find "In Progress" task
+2. Read `docs/progress.md` (last 2 steps only) for context
+3. Read only the files directly relevant to that task
+
+---
+
 ## Development Process
 
 - Work **step by step**; never implement everything at once
@@ -156,6 +165,33 @@ deep_agent_test/
 - Use `pyproject.toml` with pinned versions
 - Prefer `uv` for package management; fall back to `pip` + `requirements.txt` if needed
 - Do not upgrade dependencies without explicit instruction
+
+---
+
+## Frontend Versioning
+
+The frontend has a single source of truth for its version: `frontend/src/version.ts`.
+
+```ts
+export const VERSION = '0.1.0'
+```
+
+### Semantic Versioning Policy (semver)
+
+Follow **major.minor.patch** rules:
+
+| Increment | When |
+|-----------|------|
+| `patch`   | Bug fixes, style tweaks, copy changes — no new functionality |
+| `minor`   | New features, new pages, new UI components — backward compatible |
+| `major`   | Breaking changes, full redesigns, incompatible API changes |
+
+### Rules
+
+- **Every frontend change** that is committed must bump the version in `frontend/src/version.ts`.
+- The version is displayed next to the logo in the top bar so users can confirm which build is deployed.
+- Update the version **before** committing (include the bump in the same commit as the change).
+- Do **not** bump the version for backend-only changes.
 
 ---
 

@@ -12,6 +12,7 @@ from src.infrastructure.db.repository import TriageResultRepository
 from src.infrastructure.db.session import get_db
 from src.infrastructure.db.stp_exception_repository import StpExceptionRepository
 from src.infrastructure.db.trade_repository import TradeRepository
+from src.presentation.dependencies import verify_api_key
 from src.presentation.router import get_use_case
 from src.presentation.schemas import (
     StpExceptionCreateRequest,
@@ -93,6 +94,7 @@ def start_triage_for_exception(
     id: uuid.UUID,
     db: Session = Depends(get_db),
     use_case=Depends(get_use_case),
+    _: None = Depends(verify_api_key),
 ) -> TriageResponse:
     exc_repo = StpExceptionRepository(db)
     exc = exc_repo.get_by_id(id)
