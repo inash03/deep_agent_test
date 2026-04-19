@@ -5,6 +5,15 @@ Read this file before starting any task.
 
 ---
 
+## Session Start Protocol
+
+At the start of every session:
+1. Read `docs/tasks.md` to find "In Progress" task
+2. Read `docs/progress.md` (last 2 steps only) for context
+3. Read only the files directly relevant to that task
+
+---
+
 ## Development Process
 
 - Work **step by step**; never implement everything at once
