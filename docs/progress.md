@@ -7,11 +7,22 @@
 **Branch:** `claude/setup-langgraph-project-oXB7j`
 **Last updated:** 2026-04-19
 **In Progress:** —
-**Next:** Phase 25（アクセス制御）or Phase 27（次フェーズ検討）
+**Next:** 動作確認後に次フェーズ検討
 
 ---
 
 ## Step Log
+
+### Step 32 — Fix: /resume 500 エラー（CORSヘッダー欠落・型ミスマッチ） (2026-04-19)
+
+Files: `src/main.py`, `src/infrastructure/tools.py`,
+       `src/infrastructure/fo_agent.py`, `src/infrastructure/bo_agent.py`,
+       `frontend/src/version.ts`
+
+- `main.py`: グローバル例外ハンドラ追加 — FastAPI の CORSMiddleware はハンドルされない 500 例外のレスポンスに CORS ヘッダーを付与しないため、`@app.exception_handler(Exception)` で手動付与する
+- `tools.py`: `create_amend_event` の `amended_fields` が LLM から dict で渡された場合に `TypeError` が発生していた → `isinstance(amended_fields, dict)` チェックを追加し、`JSONDecodeError` と `TypeError` の両方を捕捉
+- `fo_agent.py` / `bo_agent.py`: `_make_hitl_node` の `tool_fn.invoke()` を try/except で囲み、ツール実行エラーをグラフクラッシュではなく `ToolMessage(success=False)` として返すよう修正
+- フロントエンドバージョン `0.1.4 → 0.1.5`（パッチバンプ）
 
 ### Step 31 — Fix: unused useNavigate import (TS6133) (2026-04-19)
 
