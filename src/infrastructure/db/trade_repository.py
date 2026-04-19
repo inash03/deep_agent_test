@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date, datetime, timezone
 from typing import Any
@@ -11,10 +12,26 @@ from sqlalchemy.orm import Session
 from src.domain.entities import TradeDetail, TradeStatus
 from src.infrastructure.db.models import TradeModel
 
+_TRD_NUMERIC_ID = re.compile(r"^TRD-(\d+)$", re.IGNORECASE)
+
 
 class TradeRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
+
+    def allocate_next_trade_id(self) -> str:
+        """Next TRD-001 style id from all current trade rows (matches seed data)."""
+        rows = (
+            self._db.query(TradeModel.trade_id)
+            .filter(TradeModel.is_current.is_(True))
+            .all()
+        )
+        max_n = 0
+        for (tid,) in rows:
+            m = _TRD_NUMERIC_ID.match(tid)
+            if m:
+                max_n = max(max_n, int(m.group(1)))
+        return f"TRD-{max_n + 1:03d}"
 
     def list(
         self,

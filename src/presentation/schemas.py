@@ -11,7 +11,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.domain.entities import TriageResult
 
@@ -115,7 +115,10 @@ class TradeListResponse(BaseModel):
 
 
 class TradeCreateRequest(BaseModel):
-    trade_id: str = Field(..., min_length=1, examples=["TRD-020"])
+    """trade_id はサーバが INSERT 時に連番採番する（クライアントからは送らない）。"""
+
+    model_config = ConfigDict(extra="ignore")
+
     trade_date: date
     value_date: date
     counterparty_lei: str = Field(..., min_length=1)
