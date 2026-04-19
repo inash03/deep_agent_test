@@ -331,6 +331,7 @@ push to main
 
 ## Done
 
+- Phase 27: 取引入力機能 + maybe_run_fo_check チェーン修正 — TradeCreateRequest スキーマ追加、POST /api/v1/trades エンドポイント追加、maybe_run_fo_check が FoValidated 時に maybe_run_bo_check を自動チェーン、fo-check エンドポイントも同様に修正、TradeInputPage（日付カレンダー + マスタデータ選択）、TradeListPage に "New Trade" ボタン、フロントエンドバージョン 0.1.8 → 0.2.0
 - Development rules setup (CLAUDE.md, progress.md, requirements.md, tasks.md)
 - Use case definition: STP Exception Triage Agent
 - Phase 1: Project scaffolding (pyproject.toml, src/ structure, .env.example, tests/)

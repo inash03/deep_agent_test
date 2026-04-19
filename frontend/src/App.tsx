@@ -9,6 +9,7 @@ import { SsiListPage } from './pages/SsiListPage'
 import { StpExceptionCreatePage } from './pages/StpExceptionCreatePage'
 import { StpExceptionListPage } from './pages/StpExceptionListPage'
 import { TradeDetailPage } from './pages/TradeDetailPage'
+import { TradeInputPage } from './pages/TradeInputPage'
 import { TradeListPage } from './pages/TradeListPage'
 import { TriageHistoryPage } from './pages/TriageHistoryPage'
 import { TriagePage } from './pages/TriagePage'
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/" element={<TriagePage />} />
           <Route path="/history" element={<TriageHistoryPage />} />
           <Route path="/trades" element={<TradeListPage />} />
+          <Route path="/trades/new" element={<TradeInputPage />} />
           <Route path="/trades/:trade_id" element={<TradeDetailPage />} />
           <Route path="/stp-exceptions" element={<StpExceptionListPage />} />
           <Route path="/stp-exceptions/new" element={<StpExceptionCreatePage />} />

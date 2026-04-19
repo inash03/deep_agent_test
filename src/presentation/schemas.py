@@ -114,6 +114,16 @@ class TradeListResponse(BaseModel):
     total: int
 
 
+class TradeCreateRequest(BaseModel):
+    trade_id: str = Field(..., min_length=1, examples=["TRD-020"])
+    trade_date: date
+    value_date: date
+    counterparty_lei: str = Field(..., min_length=1)
+    instrument_id: str = Field(..., min_length=1)
+    currency: str = Field(..., min_length=3, max_length=10)
+    amount: Decimal = Field(..., gt=Decimal("0"))
+
+
 # ---------------------------------------------------------------------------
 # Counterparty schemas
 # ---------------------------------------------------------------------------

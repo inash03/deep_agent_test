@@ -62,3 +62,18 @@ export async function resumeBoTriage(tradeId: string, runId: string, approved: b
   )
   return data
 }
+
+export interface TradeCreateRequest {
+  trade_id: string
+  trade_date: string   // YYYY-MM-DD
+  value_date: string   // YYYY-MM-DD
+  counterparty_lei: string
+  instrument_id: string
+  currency: string
+  amount: number
+}
+
+export async function createTrade(body: TradeCreateRequest): Promise<Trade> {
+  const { data } = await apiClient.post<Trade>('/api/v1/trades', body)
+  return data
+}

@@ -4,7 +4,7 @@
 
 ## Current Status
 
-**Branch:** `claude/automate-focheck-execution-Y3fMo`
+**Branch:** `claude/add-trade-input-feature-C9j2v`
 **Last updated:** 2026-04-19
 **In Progress:** —
 **Next:** 動作確認後に次フェーズ検討
@@ -12,6 +12,24 @@
 ---
 
 ## Step Log
+
+### Step 35 — feat: 取引入力機能 + FoCheck→BoCheck 自動チェーン修正 (2026-04-19)
+
+Files: `src/presentation/schemas.py`, `src/presentation/routers/trades.py`,
+       `src/infrastructure/rule_engine.py`,
+       `frontend/src/api/trades.ts`, `frontend/src/pages/TradeInputPage.tsx`,
+       `frontend/src/pages/TradeListPage.tsx`, `frontend/src/App.tsx`,
+       `frontend/src/version.ts`, `docs/tasks.md`
+
+- **schemas.py**: `TradeCreateRequest` スキーマ追加（trade_id, trade_date, value_date, counterparty_lei, instrument_id, currency, amount）
+- **trades.py**: `POST /api/v1/trades` エンドポイント追加 — 取引作成後に `maybe_run_fo_check` を自動実行。`POST /{id}/fo-check` が FoValidated を返した場合に `maybe_run_bo_check` を自動チェーン
+- **rule_engine.py**: `maybe_run_fo_check` が auto モードで FoValidated になった場合、`maybe_run_bo_check` を続けて呼び出すよう修正（定義されていたが呼び出し元がなかった問題を解消）
+- **TradeInputPage.tsx**: 新規フォームページ — TradeDate/ValueDate は `<input type="date">` カレンダー、Counterparty/Instrument はマスタデータから取得したドロップダウン、Currency は選択 Instrument の ID（6文字）から前後3文字を派生、Amount は数値入力。作成成功後は取引詳細ページへ遷移
+- **TradeListPage.tsx**: "New Trade" ボタンを PageLayout action に追加（`/trades/new` へ遷移）
+- **App.tsx**: `/trades/new` ルートを `/trades/:trade_id` より前に登録（ルートシャドウ防止）
+- **version.ts**: `0.1.8 → 0.2.0`
+
+---
 
 ### Step 34 — Fix: FoCheck 自動実行 + 初期ステータス修正 (2026-04-19)
 
