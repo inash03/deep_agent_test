@@ -79,17 +79,18 @@ jobs:
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
           APP_USERNAME: ${{ secrets.APP_USERNAME }}
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          DEPLOY_REF: ${{ github.sha }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           command_timeout: 10m
-          envs: CLOUD_RUN_URL,VITE_API_KEY,APP_USERNAME,APP_PASSWORD
+          envs: CLOUD_RUN_URL,VITE_API_KEY,APP_USERNAME,APP_PASSWORD,DEPLOY_REF
           script: |
             set -e
             cd ~/deep_agent_test
-            git fetch origin
-            git reset --hard origin/claude/setup-langgraph-project-oXB7j
+            git fetch origin "$DEPLOY_REF"
+            git reset --hard "$DEPLOY_REF"
             # .env に必要な値を更新
             for var in VITE_API_URL VITE_API_KEY APP_USERNAME APP_PASSWORD; do
               eval "val=\$$( [ $var = VITE_API_URL ] && echo CLOUD_RUN_URL || echo $var )"
