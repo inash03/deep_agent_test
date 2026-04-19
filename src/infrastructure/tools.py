@@ -554,17 +554,34 @@ def create_amend_event(trade_id: str, reason: str, amended_fields: str) -> str:
         if db is None:
             return json.dumps({"success": False, "error": "Database not available."})
         from src.infrastructure.db.trade_repository import TradeRepository
+        from src.infrastructure.db.trade_event_repository import TradeEventRepository
         repo = TradeRepository(db)
         try:
+            current = repo.get_current(trade_id)
+            if current is None:
+                return json.dumps({"success": False, "error": f"Trade '{trade_id}' not found."})
             new_row = repo.create_next_version(trade_id, "AMEND", fields)
             repo.update_workflow_status(trade_id, "EventPending")
+            event = TradeEventRepository(db).create(
+                trade_id=trade_id,
+                from_version=current.version,
+                to_version=new_row.version,
+                event_type="AMEND",
+                requested_by="fo_agent",
+                reason=reason,
+                amended_fields=fields,
+            )
             db.commit()
             return json.dumps({
                 "success": True,
                 "trade_id": trade_id,
                 "new_version": new_row.version,
+                "event_id": str(event.id),
                 "amended_fields": fields,
-                "message": f"Amendment proposed for trade '{trade_id}' (version {new_row.version}). Reason: {reason}",
+                "message": (
+                    f"Amendment proposed for trade '{trade_id}' (version {new_row.version}). "
+                    "Awaiting FO/BO operator approval. Reason: " + reason
+                ),
             })
         except ValueError as exc:
             return json.dumps({"success": False, "error": str(exc)})
@@ -585,16 +602,30 @@ def create_cancel_event(trade_id: str, reason: str) -> str:
         if db is None:
             return json.dumps({"success": False, "error": "Database not available."})
         from src.infrastructure.db.trade_repository import TradeRepository
+        from src.infrastructure.db.trade_event_repository import TradeEventRepository
         repo = TradeRepository(db)
-        row = repo.update_workflow_status(trade_id, "Cancelled")
-        if row is None:
+        current = repo.get_current(trade_id)
+        if current is None:
             return json.dumps({"success": False, "error": f"Trade '{trade_id}' not found."})
+        repo.update_workflow_status(trade_id, "EventPending")
+        event = TradeEventRepository(db).create(
+            trade_id=trade_id,
+            from_version=current.version,
+            to_version=current.version,
+            event_type="CANCEL",
+            requested_by="fo_agent",
+            reason=reason,
+            amended_fields=None,
+        )
         db.commit()
         return json.dumps({
             "success": True,
             "trade_id": trade_id,
-            "new_status": "Cancelled",
-            "message": f"Trade '{trade_id}' cancelled. Reason: {reason}",
+            "event_id": str(event.id),
+            "message": (
+                f"Cancellation proposed for trade '{trade_id}'. "
+                "Awaiting FO/BO operator approval. Reason: " + reason
+            ),
         })
 
 

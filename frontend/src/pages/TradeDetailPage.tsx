@@ -457,8 +457,10 @@ export function TradeDetailPage() {
                     </div>
                   </div>
                   <div>
-                    <label style={LABEL}>Reason</label>
-                    <input style={INPUT} value={evtReason} onChange={e => setEvtReason(e.target.value)} placeholder="Reason for amendment/cancellation" />
+                    <label style={LABEL}>
+                      Reason <span style={{ color: '#dc2626', fontWeight: 700 }}>*</span>
+                    </label>
+                    <input style={INPUT} value={evtReason} onChange={e => setEvtReason(e.target.value)} placeholder="Reason for amendment/cancellation (required)" />
                   </div>
                   <div>
                     <label style={LABEL}>Requested By</label>
