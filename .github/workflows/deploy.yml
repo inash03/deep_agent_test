@@ -3,7 +3,7 @@ name: Deploy to GCP # Phase 25: Basic Auth + API key protection
 on:
   push:
     branches:
-      - 'claude/setup-langgraph-project-oXB7j'
+      - 'main'
     paths:
       - 'src/**'
       - 'frontend/**'
