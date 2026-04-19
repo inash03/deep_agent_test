@@ -13,6 +13,20 @@
 
 ## Step Log
 
+### Step 33 — Fix: ロギング KeyError + STP Exception 画面再設計 (2026-04-19)
+
+Files: `src/infrastructure/fo_agent.py`, `src/infrastructure/bo_agent.py`, `src/infrastructure/agent.py`,
+       `frontend/src/pages/StpExceptionListPage.tsx`, `frontend/src/version.ts`
+
+- ロギング: `_make_hitl_node` の `extra={"args": ...}` を `"tool_args"` にリネーム（Python LogRecord の予約キー衝突を修正）
+- STP Exception 画面: "Error Message" 列を削除（旧 STP エラーテキストで FO/BO ルール違反とは別物）
+- 旧 "Triage" ボタンを削除（旧 `TriageUseCase`/`agent.py` を呼ぶ旧来 API — 新 FO/BO トリアージとは無関係）
+- "View Violations" ボタン追加 → モーダルが `GET /api/v1/trades/{id}` を取得し、FO/BO 各チェックの失敗ルールを全件表示
+- "Open Trade" ボタン追加 → 取引詳細ページ（FO/BO トリアージ実行場所）へ遷移
+- フロントエンドバージョン `0.1.5 → 0.1.6`
+
+---
+
 ### Step 32 — Fix: /resume 500 エラー（CORSヘッダー欠落・型ミスマッチ） (2026-04-19)
 
 Files: `src/main.py`, `src/infrastructure/tools.py`,
