@@ -14,6 +14,33 @@ Max 1 task in In Progress at a time.
 
 ## Backlog
 
+#### Phase 29 — stp_status カラム削除（技術的負債解消）
+
+**背景:** Phase 26 で `workflow_status`（12 状態）が導入され、`trades.stp_status`（NEW / STP_PASSED / STP_FAILED / SETTLED）は実質的に冗長になった。`workflow_status` は `stp_status` が表現していた全状態を包含するため、削除しても情報欠損なし。
+
+**削除前に必要な対応:**
+
+- `src/presentation/routers/stp_exceptions.py`
+  - 例外作成検証 `trade.stp_status != "NEW"` を `trade.workflow_status != "Initial"` に書き換え
+- `src/infrastructure/db/models.py`
+  - `TradeModel.stp_status` カラム定義を削除
+- `src/infrastructure/db/trade_repository.py`
+  - `list()` の `stp_status` フィルタパラメータを削除
+- `src/infrastructure/seed.py`
+  - シードデータから `stp_status=` 指定を削除
+- `src/presentation/schemas.py`
+  - `TradeOut.stp_status` フィールドを削除
+- `src/domain/entities.py`
+  - `TradeStatus` enum を削除（`TradeWorkflowStatus` に統一）
+- `alembic/versions/` に新規マイグレーションを追加（`stp_status` カラム DROP）
+- **Frontend:**
+  - `frontend/src/types/trade.ts` — `TradeStatus` 型・`TRADE_STATUS_LABELS`・`TRADE_STATUS_COLORS` を削除
+  - `frontend/src/api/trades.ts` — `TradeListParams.stp_status` を削除
+  - `frontend/src/pages/TradeListPage.tsx` — stp_status フィルタ・列表示を削除
+  - `frontend/src/pages/TradeDetailPage.tsx` — stp_status プロパティ表示を削除
+
+---
+
 #### Phase 28 — 取引入力画面：Counterparty 検索モーダル
 
 **目的:** 取引入力フォームの Counterparty 選択をプルダウンからモーダル検索に変更する。
