@@ -8,9 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-#### ドキュメント更新 — README.md / docs/architecture.md / docs/requirements.md を最新コードに同期
-
-Phase 26（FO/BO ワークフロー全面実装）・Phase 27（取引入力）完了後の変更を 3 ドキュメントに反映する。
+（なし）
 
 ---
 
@@ -375,6 +373,7 @@ push to main
 
 ## Done
 
+- ドキュメント更新 — README.md / docs/architecture.md / docs/requirements.md / docs/Skills.md を Phase 26-27 の実装内容に同期
 - Phase 27: 取引入力機能 + maybe_run_fo_check チェーン修正 — TradeCreateRequest スキーマ追加、POST /api/v1/trades エンドポイント追加、maybe_run_fo_check が FoValidated 時に maybe_run_bo_check を自動チェーン、fo-check エンドポイントも同様に修正、TradeInputPage（日付カレンダー + マスタデータ選択）、TradeListPage に "New Trade" ボタン、フロントエンドバージョン 0.1.8 → 0.2.0
 - Development rules setup (CLAUDE.md, progress.md, requirements.md, tasks.md)
 - Use case definition: STP Exception Triage Agent

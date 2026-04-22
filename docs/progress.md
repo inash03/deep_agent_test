@@ -4,14 +4,27 @@
 
 ## Current Status
 
-**Branch:** `claude/add-trade-input-feature-C9j2v`
-**Last updated:** 2026-04-19
+**Branch:** `claude/update-documentation-PRK0f`
+**Last updated:** 2026-04-22
 **In Progress:** —
-**Next:** 動作確認後に次フェーズ検討
+**Next:** 次フェーズ（Phase 28 Counterparty 検索モーダル or Phase 29 stp_status 削除）の着手
 
 ---
 
 ## Step Log
+
+### Step 36 — docs: README / architecture / requirements / Skills.md を Phase 26-27 に同期 (2026-04-22)
+
+Files: `README.md`, `docs/architecture.md`, `docs/requirements.md`, `docs/Skills.md`, `docs/tasks.md`
+
+- **README.md**: FoAgent/BoAgent をアーキテクチャ概要に追記。API リファレンスに取引作成・FoCheck/BoCheck・FO/BO トリアージ・トレードイベント・設定の各エンドポイントを追加。HITL フローセクションに FoAgent（2 アクション）と BoAgent（4 アクション）の HITL フローを追加。プロジェクト構成に新ファイル（fo_agent.py 等）・新フロントエンドページ（TradeDetailPage 等）・新マイグレーション（0003/0004）を追加
+- **docs/architecture.md**: エージェント構成表を追加（Legacy/FoAgent/BoAgent）。FoAgent（2 HITL ノード）/ BoAgent（4 HITL ノード）の StateGraph Mermaid 図を追加。Clean Architecture 図を更新（新ルーター・新インフラ・DB リポジトリ）。DB ER 図を更新（trades UUID PK/workflow 拡張、trade_events/app_settings 追加）。ツール一覧を3エージェント別テーブルに分割。フロントエンド画面一覧に TradeInputPage/TradeDetailPage/SettingsPage を追加
+- **docs/requirements.md**: Phase 26 の FR-15〜FR-25 を実装済みセクションに移動（`Done` に変更）。Phase 27 の FR-26/FR-27 を追加。セクションタイトルを「Phase 1〜27」に更新
+- **docs/Skills.md**: 新規作成 — `update-docs` スキルを定義（ストリームタイムアウト回避のための並列エージェントパターン）
+
+**タイムアウト対策:** 大ファイルの一括更新によるストリームアイドルタイムアウトを回避するため、3 ファイルを独立したサブエージェントに並列委譲するパターンを採用・文書化
+
+---
 
 ### Step 35 — feat: 取引入力機能 + FoCheck→BoCheck 自動チェーン修正 (2026-04-19)
 
