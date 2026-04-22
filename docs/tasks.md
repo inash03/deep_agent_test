@@ -8,7 +8,9 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-（なし）
+#### ドキュメント更新 — README.md / docs/architecture.md / docs/requirements.md を最新コードに同期
+
+Phase 26（FO/BO ワークフロー全面実装）・Phase 27（取引入力）完了後の変更を 3 ドキュメントに反映する。
 
 ---
 

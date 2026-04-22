@@ -14,13 +14,14 @@ LangGraph の ReAct エージェントが証券 STP（Straight-Through Processin
 |---------|------|
 | Backend | Python 3.12 / FastAPI / LangGraph / LangChain-Anthropic |
 | Frontend | React 18 / TypeScript / Vite / React Router v6 |
-| Database | Neon PostgreSQL（外部マネージド） + SQLAlchemy 2.0 / Alembic |
+| Database | Neon PostgreSQL（外部マネージド）+ SQLAlchemy 2.0 / Alembic |
 | AI モデル | Claude claude-sonnet-4-6 |
 | Hosting | Cloud Run（バックエンド）+ GCP VM / Nginx（フロントエンド） |
 | CI/CD | GitHub Actions（Cloud Run デプロイ + VM SSH） |
 
 **設計の特徴:**
-- **ReAct パターン**: LLM が 11 個のツールを動的に選択しながら診断ループを実行
+- **マルチエージェント**: FoAgent（FO トリアージ）/ BoAgent（BO トリアージ）の役割分担と LangGraph StateGraph による協調
+- **ReAct パターン**: LLM が多数のツールを動的に選択しながら診断ループを実行（FoAgent: 9 ツール、BoAgent: 13 ツール、Legacy: 11 ツール）
 - **汎化 HITL**: 書き込み操作（4 種）はすべてオペレーター承認を経由（`_HITL_TOOL_TO_NODE` で管理）
 - **Clean Architecture**: Presentation / Domain / Infrastructure の 3 層分離
 
@@ -167,8 +168,31 @@ pytest -m integration
 
 | メソッド | パス | 説明 |
 |---------|------|------|
-| `GET` | `/api/v1/trades` | 一覧（trade_id/stp_status/trade_date フィルタ） |
+| `POST` | `/api/v1/trades` | 取引作成（作成後 FoCheck を自動トリガー） |
+| `GET` | `/api/v1/trades` | 一覧（trade_id/workflow_status/trade_date フィルタ） |
 | `GET` | `/api/v1/trades/{trade_id}` | 単件取得 |
+| `POST` | `/api/v1/trades/{trade_id}/fo-check` | FoCheck ルール実行 |
+| `POST` | `/api/v1/trades/{trade_id}/bo-check` | BoCheck ルール実行 |
+| `POST` | `/api/v1/trades/{trade_id}/fo-triage` | FoAgent トリアージ開始 |
+| `POST` | `/api/v1/trades/{trade_id}/fo-triage/{run_id}/resume` | FoAgent HITL 承認/拒否 |
+| `POST` | `/api/v1/trades/{trade_id}/bo-triage` | BoAgent トリアージ開始 |
+| `POST` | `/api/v1/trades/{trade_id}/bo-triage/{run_id}/resume` | BoAgent HITL 承認/拒否 |
+
+### トレードイベント
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| `GET` | `/api/v1/trades/{trade_id}/events` | イベント一覧（バージョン履歴含む） |
+| `POST` | `/api/v1/trades/{trade_id}/events` | Amend/Cancel イベント作成 |
+| `PATCH` | `/api/v1/trade-events/{event_id}/fo-approve` | FO 承認/却下 |
+| `PATCH` | `/api/v1/trade-events/{event_id}/bo-approve` | BO 承認/却下 |
+
+### 設定
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| `GET` | `/api/v1/settings` | 設定一覧（fo/bo_check_trigger） |
+| `PATCH` | `/api/v1/settings/{key}` | 設定値更新 |
 
 ### カウンターパーティ
 
@@ -251,6 +275,50 @@ POST /api/v1/triage/{run_id}/resume
 
 ---
 
+### FoAgent HITL フロー
+
+```
+POST /api/v1/trades/{trade_id}/fo-triage {error_message}
+  → FoAgent が FoCheck 失敗を調査（ReAct ループ）
+    → 自動解決できる場合 → 200 COMPLETED
+    → Amend/Cancel が必要な場合 → 200 PENDING_APPROVAL
+        → オペレーターが UI で承認 or 拒否
+POST /api/v1/trades/{trade_id}/fo-triage/{run_id}/resume
+  → Amend/Cancel イベント作成 or キャンセル
+```
+
+2 種の FoAgent HITL アクション:
+
+| アクション | 説明 |
+|-----------|------|
+| `create_amend_event` | 取引修正イベント作成（Amend） |
+| `create_cancel_event` | 取引キャンセルイベント作成（Cancel） |
+
+---
+
+### BoAgent HITL フロー
+
+```
+POST /api/v1/trades/{trade_id}/bo-triage {error_message}
+  → BoAgent が BoCheck 失敗を調査（ReAct ループ）
+    → 自動解決できる場合 → 200 COMPLETED
+    → マスタ修正が必要な場合 → 200 PENDING_APPROVAL
+        → オペレーターが UI で承認 or 拒否
+POST /api/v1/trades/{trade_id}/bo-triage/{run_id}/resume
+  → SSI 登録/更新・CP 再有効化・FO 差し戻し or キャンセル
+```
+
+4 種の BoAgent HITL アクション:
+
+| アクション | 説明 |
+|-----------|------|
+| `register_ssi` | 新規 SSI 登録 |
+| `update_ssi` | 既存 SSI の BIC / 口座番号 / IBAN を修正 |
+| `reactivate_counterparty` | 非アクティブ CP を再有効化 |
+| `send_back_to_fo` | FoAgent に差し戻し（1 回のみ） |
+
+---
+
 ## プロジェクト構成
 
 ```
@@ -260,9 +328,15 @@ deep_agent_test/
     domain/
       entities.py              # ドメインエンティティ・enum
       interfaces.py            # ITriageUseCase 抽象インターフェース
+      check_rules.py           # FoRule / BoRule 定義（各 7 ルール）
     infrastructure/
       agent.py                 # LangGraph ReAct エージェント（HITL ノード × 4）
       tools.py                 # @tool 定義（11 ツール: 7 read + 4 write/HITL）
+      fo_agent.py              # FoAgent LangGraph（2 HITL ノード）
+      bo_agent.py              # BoAgent LangGraph（4 HITL ノード）
+      fo_triage_use_case.py    # FoTriageUseCase
+      bo_triage_use_case.py    # BoTriageUseCase
+      rule_engine.py           # FoCheck / BoCheck 実行エンジン
       mock_store.py            # ユニットテスト用モックストア
       triage_use_case.py       # ITriageUseCase 実装
       logging_config.py        # 構造化 JSON ロギング
@@ -277,6 +351,9 @@ deep_agent_test/
         ssi_repository.py
         stp_exception_repository.py
         reference_data_repository.py
+        trade_event_repository.py
+        app_setting_repository.py
+        checkpointer.py        # LangGraph PostgreSQL checkpointer
     presentation/
       router.py                # トリアージ用ルーター
       schemas.py               # Pydantic スキーマ
@@ -287,12 +364,19 @@ deep_agent_test/
         stp_exceptions.py
         reference_data.py
         seed.py                # admin/seed + admin/refresh
+        fo_triage.py
+        bo_triage.py
+        trade_events.py
+        settings.py
   frontend/
     src/
       pages/
         TriagePage.tsx          # メインのトリアージ画面（HITL UI 含む）
         TriageHistoryPage.tsx   # トリアージ履歴
         TradeListPage.tsx
+        TradeInputPage.tsx      # 取引入力フォーム（/trades/new）
+        TradeDetailPage.tsx     # 取引詳細（4 タブ: FoCheck / BoCheck / Events / Triage）
+        SettingsPage.tsx        # FoCheck/BoCheck トリガー設定（/settings）
         StpExceptionListPage.tsx
         StpExceptionCreatePage.tsx
         CounterpartyListPage.tsx
@@ -313,8 +397,10 @@ deep_agent_test/
     integration/               # インテグレーションテスト
   alembic/
     versions/
-      0001_initial_schema.py   # triage_runs + triage_steps
-      0002_add_domain_tables.py # trades / counterparties / ssis / ref_data / stp_exceptions
+      0001_initial_schema.py         # triage_runs + triage_steps
+      0002_add_domain_tables.py      # trades / counterparties / ssis / ref_data / stp_exceptions
+      0003_add_workflow_schema.py    # trades テーブル拡張・trade_events・app_settings
+      0004_fix_focheck_initial_status.py  # FoCheck 初期ステータス修正
   docs/
     architecture.md
     requirements.md

@@ -222,7 +222,7 @@ trade_id=TRD-001, version=1, workflow_status=FoValidated, is_current=True
 
 ## Functional Requirements
 
-### 実装済み（Phase 1〜25）
+### 実装済み（Phase 1〜27）
 
 | ID | 機能 | 状態 |
 |----|------|------|
@@ -240,22 +240,19 @@ trade_id=TRD-001, version=1, workflow_status=FoValidated, is_current=True
 | FR-12 | 取引・カウンターパーティ・SSI・Ref Data 管理画面 | Done |
 | FR-13 | アクセス制御（Nginx Basic Auth + API Key） | Done |
 | FR-14 | CI/CD（GitHub Actions → Cloud Run + VM） | Done |
-
-### 新規（Phase 26）
-
-| ID | 機能 | 優先度 |
-|----|------|--------|
-| FR-15 | 取引 WorkflowStatus 管理（11 ステータス遷移） | Must |
-| FR-16 | 取引バージョン管理（Amend/Cancel ごとにインクリメント） | Must |
-| FR-17 | FoCheck ルールエンジン（7 ルール） | Must |
-| FR-18 | BoCheck ルールエンジン（7 ルール、うち 2 はスタブ） | Must |
-| FR-19 | FoAgent 実装（FoCheck 結果トリアージ + 差し戻し対応） | Must |
-| FR-20 | BoAgent 実装（BoCheck 結果トリアージ + 差し戻し機能） | Must |
-| FR-21 | BoAgent → FoAgent 差し戻し（最大 1 回、2 回目は BoUser にエスカレーション） | Must |
-| FR-22 | トレードイベント（Amend / Cancel）の作成・承認 | Must |
-| FR-23 | FoAgent による Amend/Cancel イベント作成（HITL） | Must |
-| FR-24 | チェックトリガー設定（auto / manual）の管理画面 | Should |
-| FR-25 | 取引詳細画面（バージョン履歴・チェック結果・イベント・トリアージボタン） | Must |
+| FR-15 | 取引 WorkflowStatus 管理（12 ステータス遷移） | Done |
+| FR-16 | 取引バージョン管理（Amend/Cancel ごとにインクリメント） | Done |
+| FR-17 | FoCheck ルールエンジン（7 ルール） | Done |
+| FR-18 | BoCheck ルールエンジン（7 ルール、うち 2 はスタブ） | Done |
+| FR-19 | FoAgent 実装（FoCheck 結果トリアージ + 差し戻し対応） | Done |
+| FR-20 | BoAgent 実装（BoCheck 結果トリアージ + 差し戻し機能） | Done |
+| FR-21 | BoAgent → FoAgent 差し戻し（最大 1 回、2 回目は BoUser にエスカレーション） | Done |
+| FR-22 | トレードイベント（Amend / Cancel）の作成・承認 | Done |
+| FR-23 | FoAgent による Amend/Cancel イベント作成（HITL） | Done |
+| FR-24 | チェックトリガー設定（auto / manual）の管理画面 | Done |
+| FR-25 | 取引詳細画面（バージョン履歴・チェック結果・イベント・トリアージボタン） | Done |
+| FR-26 | 取引作成エンドポイント（POST /api/v1/trades）+ FoCheck 自動チェーン | Done |
+| FR-27 | 取引入力 UI（TradeInputPage: カレンダー・マスタ選択・自動遷移） | Done |
 
 ---
 
