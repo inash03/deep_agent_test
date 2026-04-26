@@ -57,6 +57,10 @@ class BoTriageUseCase:
             "trade_id": trade_id,
             "error_message": error_context,
             "action_taken": False,
+            "cost_log": [],
+            "total_cost_usd": 0.0,
+            "task_type": "complex",
+            "selected_model": "",
         }
 
         self._graph.invoke(initial_state, config)

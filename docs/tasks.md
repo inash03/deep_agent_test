@@ -8,7 +8,14 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-（なし）
+#### Phase 30 — コスト計測・モデル選択機能の追加
+
+- `src/infrastructure/utils/cost_tracker.py` 新規作成（価格テーブル、calc_cost、build_cost_log、select_model、call_with_cost_tracking）
+- `FoAgentState` / `BoAgentState` に `cost_log`・`total_cost_usd`・`task_type`・`selected_model` 追加
+- `model_router_node` を fo_agent / bo_agent の先頭に挿入（task_type + $0.10閾値でモデル選択）
+- 既存 `agent_node` の LLM 呼び出しを `call_with_cost_tracking()` でラップ
+- use_case の `initial_state` に cost 関連フィールドを追加
+- `tests/unit/test_cost_tracker.py` 追加
 
 ---
 

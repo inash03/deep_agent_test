@@ -5,6 +5,9 @@ Graph topology:
   START
     │
     ▼
+  [model_router_node]
+    │
+    ▼
   [agent_node] ◄─────────────────────────────────────┐
     │                                                 │
     │ _route_after_agent                              │
@@ -27,8 +30,10 @@ from __future__ import annotations
 
 import json
 import logging
+import operator
 import os
-from typing import Annotated, Any, Literal
+from datetime import datetime, timezone
+from typing import Annotated, Any
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
@@ -45,6 +50,11 @@ from src.infrastructure.tools import (
     register_ssi,
     send_back_to_fo,
     update_ssi,
+)
+from src.infrastructure.utils.cost_tracker import (
+    MODEL_SONNET,
+    call_with_cost_tracking,
+    select_model,
 )
 
 # Maps each HITL tool name → the graph node that executes it
@@ -144,6 +154,10 @@ class BoAgentState(TypedDict):
     trade_id: str
     error_message: str
     action_taken: bool
+    cost_log: Annotated[list[dict], operator.add]
+    total_cost_usd: Annotated[float, operator.add]
+    task_type: str
+    selected_model: str
 
 
 # ---------------------------------------------------------------------------
@@ -176,22 +190,52 @@ def build_bo_graph() -> Any:
     Returns a compiled StateGraph with MemorySaver checkpointer and
     interrupt_before on all HITL nodes.
     """
-    llm = ChatAnthropic(
-        model="claude-sonnet-4-6",
-        api_key=os.environ["ANTHROPIC_API_KEY"],
-    ).bind_tools(BO_ALL_TOOLS)
+    api_key = os.environ["ANTHROPIC_API_KEY"]
+    _llm_by_model = {
+        MODEL_SONNET: ChatAnthropic(model=MODEL_SONNET, api_key=api_key).bind_tools(BO_ALL_TOOLS),
+        "claude-haiku-4-5-20251001": ChatAnthropic(
+            model="claude-haiku-4-5-20251001", api_key=api_key
+        ).bind_tools(BO_ALL_TOOLS),
+    }
 
     read_tools_node = ToolNode(BO_READ_ONLY_TOOLS)
 
+    def model_router_node(state: BoAgentState) -> dict[str, Any]:
+        task_type = state.get("task_type") or "complex"
+        total_cost = state.get("total_cost_usd") or 0.0
+        model, reason = select_model(task_type, total_cost)
+        log_entry = {
+            "node": "model_router",
+            "model": model,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "cost_usd": 0.0,
+            "reason": reason,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        _logger.info(
+            "bo_model_router: model selected",
+            extra={"model": model, "reason": reason, "trade_id": state.get("trade_id")},
+        )
+        return {"selected_model": model, "cost_log": [log_entry]}
+
     def agent_node(state: BoAgentState) -> dict[str, Any]:
+        model = state.get("selected_model") or MODEL_SONNET
+        llm = _llm_by_model.get(model, _llm_by_model[MODEL_SONNET])
         messages = list(state["messages"])
         if not messages or not isinstance(messages[0], SystemMessage):
             messages = [SystemMessage(content=BO_SYSTEM_PROMPT)] + messages
         _logger.info(
             "bo_agent_node: invoking LLM",
-            extra={"node": "agent", "trade_id": state.get("trade_id"), "message_count": len(messages)},
+            extra={
+                "node": "agent",
+                "trade_id": state.get("trade_id"),
+                "message_count": len(messages),
+                "model": model,
+            },
         )
-        response = llm.invoke(messages)
+        reason = f"selected_model={model}, task_type={state.get('task_type', 'complex')}"
+        response, log_entry, cost = call_with_cost_tracking(llm, messages, "agent", model, reason)
         if response.tool_calls:
             for tc in response.tool_calls:
                 _logger.info(
@@ -203,7 +247,7 @@ def build_bo_graph() -> Any:
                 "bo_agent_node: final response",
                 extra={"node": "agent", "trade_id": state.get("trade_id")},
             )
-        return {"messages": [response]}
+        return {"messages": [response], "cost_log": [log_entry], "total_cost_usd": cost}
 
     def _make_hitl_node(tool_name: str, tool_fn: Any) -> Any:
         def node(state: BoAgentState) -> dict[str, Any]:
@@ -234,6 +278,7 @@ def build_bo_graph() -> Any:
 
     builder = StateGraph(BoAgentState)
 
+    builder.add_node("model_router", model_router_node)
     builder.add_node("agent", agent_node)
     builder.add_node("read_tools", read_tools_node)
     builder.add_node("register_ssi_node", register_ssi_node)
@@ -243,7 +288,8 @@ def build_bo_graph() -> Any:
 
     hitl_node_names = list(_BO_HITL_TOOL_TO_NODE.values())
 
-    builder.add_edge(START, "agent")
+    builder.add_edge(START, "model_router")
+    builder.add_edge("model_router", "agent")
     builder.add_conditional_edges(
         "agent",
         _route_after_agent,
