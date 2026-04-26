@@ -4,14 +4,30 @@
 
 ## Current Status
 
-**Branch:** `claude/add-trade-input-feature-C9j2v`
-**Last updated:** 2026-04-19
+**Branch:** `claude/add-cost-tracking-model-selection-3n2XJ`
+**Last updated:** 2026-04-26
 **In Progress:** —
-**Next:** 動作確認後に次フェーズ検討
+**Next:** 動作確認後、次フェーズ（Phase 28 Counterparty検索モーダル等）へ
 
 ---
 
 ## Step Log
+
+### Step 36 — feat: コスト計測・モデル選択機能の追加 (2026-04-26)
+
+Files: `src/infrastructure/utils/__init__.py` (新規),
+       `src/infrastructure/utils/cost_tracker.py` (新規),
+       `src/infrastructure/fo_agent.py`, `src/infrastructure/bo_agent.py`,
+       `src/infrastructure/fo_triage_use_case.py`, `src/infrastructure/bo_triage_use_case.py`,
+       `tests/unit/test_cost_tracker.py` (新規), `docs/tasks.md`
+
+- **cost_tracker.py**: `_PRICE_TABLE`（Haiku: $0.80/$4.00、Sonnet: $3.00/$15.00 per 1M tokens）。`calc_cost(model, usage_metadata)` — トークン数から USD コストを計算。`build_cost_log(node, model, response, reason)` — 監査証跡用ログエントリ生成（node/model/tokens/cost/reason/timestamp）。`select_model(task_type, total_cost_usd)` — "simple"→Haiku、"complex"/"critical"→Sonnet、$0.10超過→Haiku強制。`call_with_cost_tracking(llm, messages, ...)` — LLM呼び出し + コスト取得を1関数でラップ
+- **FoAgentState / BoAgentState**: `cost_log: Annotated[list[dict], operator.add]`、`total_cost_usd: Annotated[float, operator.add]`、`task_type: str`、`selected_model: str` を追加（既存フィールド変更なし）
+- **fo_agent.py / bo_agent.py**: `model_router_node` を START → agent の間に挿入。`_llm_by_model` dict で Haiku/Sonnet を事前構築。`agent_node` を `call_with_cost_tracking()` でラップし、cost_log・total_cost_usd を state に返却
+- **use_case**: `initial_state` に `cost_log=[]`、`total_cost_usd=0.0`、`task_type="complex"`、`selected_model=""` を追加
+- **test_cost_tracker.py**: 24テスト追加（既存34件と合わせ計58件全通過）
+
+---
 
 ### Step 35 — feat: 取引入力機能 + FoCheck→BoCheck 自動チェーン修正 (2026-04-19)
 
