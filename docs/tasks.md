@@ -8,14 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-#### Phase 30 — コスト計測・モデル選択機能の追加
-
-- `src/infrastructure/utils/cost_tracker.py` 新規作成（価格テーブル、calc_cost、build_cost_log、select_model、call_with_cost_tracking）
-- `FoAgentState` / `BoAgentState` に `cost_log`・`total_cost_usd`・`task_type`・`selected_model` 追加
-- `model_router_node` を fo_agent / bo_agent の先頭に挿入（task_type + $0.10閾値でモデル選択）
-- 既存 `agent_node` の LLM 呼び出しを `call_with_cost_tracking()` でラップ
-- use_case の `initial_state` に cost 関連フィールドを追加
-- `tests/unit/test_cost_tracker.py` 追加
+（なし）
 
 ---
 
@@ -380,6 +373,7 @@ push to main
 
 ## Done
 
+- Phase 30: コスト計測・モデル選択機能 — utils/cost_tracker.py（価格テーブル/calc_cost/build_cost_log/select_model/call_with_cost_tracking）、FoAgentState/BoAgentState に cost_log・total_cost_usd・task_type・selected_model 追加、model_router_node を fo/bo_agent 先頭に挿入（task_type と $0.10 閾値でモデル選択 + 監査ログ）、agent_node を call_with_cost_tracking() でラップ、use_case initial_state 更新、test_cost_tracker.py 追加（24テスト、計58件通過）
 - Phase 27: 取引入力機能 + maybe_run_fo_check チェーン修正 — TradeCreateRequest スキーマ追加、POST /api/v1/trades エンドポイント追加、maybe_run_fo_check が FoValidated 時に maybe_run_bo_check を自動チェーン、fo-check エンドポイントも同様に修正、TradeInputPage（日付カレンダー + マスタデータ選択）、TradeListPage に "New Trade" ボタン、フロントエンドバージョン 0.1.8 → 0.2.0
 - Development rules setup (CLAUDE.md, progress.md, requirements.md, tasks.md)
 - Use case definition: STP Exception Triage Agent
