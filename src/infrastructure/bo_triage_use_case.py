@@ -22,10 +22,18 @@ import uuid
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 
 from src.domain.entities import RootCause, Step, TriageResult, TriageStatus
-from src.infrastructure.bo_agent import _BO_HITL_TOOL_TO_NODE, build_bo_graph
+from src.infrastructure.bo_agent import (
+    _BO_ALL_HITL_NODE_NAMES,
+    _BO_HITL_TOOL_TO_NODE,
+    build_bo_graph,
+)
 
 _BO_HITL_TOOL_NAMES: frozenset[str] = frozenset(_BO_HITL_TOOL_TO_NODE.keys())
-_BO_HITL_NODE_NAMES: frozenset[str] = frozenset(_BO_HITL_TOOL_TO_NODE.values())
+# Include all HITL tool names (both deterministic and deep-investigation variants)
+_BO_HITL_TOOL_NAMES_ALL: frozenset[str] = frozenset(
+    list(_BO_HITL_TOOL_TO_NODE.keys()) +
+    ["reactivate_counterparty", "register_ssi", "send_back_to_fo"]
+)
 
 _logger = logging.getLogger("stp_triage.bo_use_case")
 
@@ -81,7 +89,7 @@ class BoTriageUseCase:
         if not approved:
             last_msg = state_snapshot.values["messages"][-1]
             tool_call = next(
-                tc for tc in last_msg.tool_calls if tc["name"] in _BO_HITL_TOOL_NAMES
+                tc for tc in last_msg.tool_calls if tc["name"] in _BO_HITL_TOOL_NAMES_ALL
             )
             rejection_msg = ToolMessage(
                 content=(
@@ -90,10 +98,12 @@ class BoTriageUseCase:
                 ),
                 tool_call_id=tool_call["id"],
             )
+            # Use snapshot.next[0] directly so both deterministic and deep-investigation
+            # HITL node variants are handled correctly without a separate lookup dict.
             self._graph.update_state(
                 config,
                 {"messages": [rejection_msg]},
-                as_node=_BO_HITL_TOOL_TO_NODE[tool_call["name"]],
+                as_node=state_snapshot.next[0],
             )
 
         self._graph.invoke(None, config)
@@ -115,7 +125,7 @@ class BoTriageUseCase:
         state = snapshot.values
         next_nodes = snapshot.next
 
-        if any(n in _BO_HITL_NODE_NAMES for n in (next_nodes or ())):
+        if any(n in _BO_ALL_HITL_NODE_NAMES for n in (next_nodes or ())):
             return self._pending_result(run_id, state, trade_id=trade_id)
 
         action_taken = (
@@ -132,7 +142,7 @@ class BoTriageUseCase:
             extra={"run_id": run_id, "trade_id": trade_id},
         )
         tool_call = next(
-            (tc for tc in last_msg.tool_calls if tc["name"] in _BO_HITL_TOOL_NAMES),
+            (tc for tc in last_msg.tool_calls if tc["name"] in _BO_HITL_TOOL_NAMES_ALL),
             None,
         )
         action_type = tool_call["name"] if tool_call else None
@@ -230,7 +240,7 @@ def _extract_steps(messages: list[BaseMessage]) -> list[Step]:
                 except json.JSONDecodeError:
                     output = {"raw": raw_output}
 
-            is_hitl = tc["name"] in _BO_HITL_TOOL_NAMES
+            is_hitl = tc["name"] in _BO_HITL_TOOL_NAMES_ALL
             steps.append(
                 Step(
                     step_type="hitl_prompt" if is_hitl else "tool_call",

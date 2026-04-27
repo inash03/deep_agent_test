@@ -8,7 +8,13 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-（なし）
+#### Phase 31 — BoAgent / FoAgent ハイブリッド構造リファクタリング
+
+**目的:** 決定論的ワークフローと自律的エージェント推論を組み合わせた「ハイブリッド構造」に刷新する。
+
+- `bo_agent.py`: `gather_context_node`（決定論的データ収集）+ SWIFT コード別ハンドラノード（AG01/BE01/AM04/MISSING_SSI）を追加。UNKNOWN/COMPOUND のみ `deep_investigation_node`（LLM 自律調査）へ。HITL ノードを決定論的パス用・ディープ調査用に二重登録。`BO_SYSTEM_PROMPT` から INVESTIGATION STEPS を削除し軽量化。
+- `bo_triage_use_case.py`: `_BO_ALL_HITL_NODE_NAMES` に差し替え、`resume()` の `as_node` を `snapshot.next[0]` に変更。
+- `fo_agent.py`: `gather_context_node` 追加（`get_fo_check_results` + `get_trade_detail` を決定論的に呼出）、`FO_SYSTEM_PROMPT` の INVESTIGATION STEPS を削除。
 
 ---
 
