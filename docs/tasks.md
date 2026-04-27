@@ -373,6 +373,7 @@ push to main
 
 ## Done
 
+- Phase 31: BO/FO エージェント ハイブリッド構造リファクタリング — gather_context_node（決定論的データ収集）、AG01/BE01/AM04/MISSING_SSI 別ハンドラノード、HITL ノード二重登録（決定論的パス用 + deep_investigation 用）、_determine_triage_path 純粋関数、BO_SYSTEM_PROMPT / FO_SYSTEM_PROMPT から INVESTIGATION STEPS 削除（~40 行削減）、bo_triage_use_case.py の _BO_ALL_HITL_NODE_NAMES 対応 + resume() as_node 修正
 - Phase 30: コスト計測・モデル選択機能 — utils/cost_tracker.py（価格テーブル/calc_cost/build_cost_log/select_model/call_with_cost_tracking）、FoAgentState/BoAgentState に cost_log・total_cost_usd・task_type・selected_model 追加、model_router_node を fo/bo_agent 先頭に挿入（task_type と $0.10 閾値でモデル選択 + 監査ログ）、agent_node を call_with_cost_tracking() でラップ、use_case initial_state 更新、test_cost_tracker.py 追加（24テスト、計58件通過）
 - Phase 27: 取引入力機能 + maybe_run_fo_check チェーン修正 — TradeCreateRequest スキーマ追加、POST /api/v1/trades エンドポイント追加、maybe_run_fo_check が FoValidated 時に maybe_run_bo_check を自動チェーン、fo-check エンドポイントも同様に修正、TradeInputPage（日付カレンダー + マスタデータ選択）、TradeListPage に "New Trade" ボタン、フロントエンドバージョン 0.1.8 → 0.2.0
 - Development rules setup (CLAUDE.md, progress.md, requirements.md, tasks.md)

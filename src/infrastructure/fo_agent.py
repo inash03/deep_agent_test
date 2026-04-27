@@ -34,7 +34,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
@@ -45,6 +45,9 @@ from src.infrastructure.tools import (
     FO_READ_ONLY_TOOLS,
     create_amend_event,
     create_cancel_event,
+    get_bo_sendback_reason,
+    get_fo_check_results,
+    get_trade_detail,
 )
 from src.infrastructure.utils.cost_tracker import (
     MODEL_SONNET,
@@ -69,38 +72,7 @@ You are a Front-Office (FO) STP exception triage agent at a securities firm.
 Your job is to investigate FoCheck failures for a trade, correct trade data
 errors where possible, and handle BO-sent-back trades by amending, cancelling,
 providing an explanation, or escalating to a FO User.
-
-=== INVESTIGATION STEPS (follow in order) ===
-
-1. Call get_fo_check_results(trade_id) to retrieve FoCheck rule results.
-   - Note: the response includes workflow_status and sendback_count.
-   - If sendback_count >= 1, the trade was sent back by BoAgent.
-     Call get_bo_sendback_reason(trade_id) to read BO's concern before deciding.
-
-2. Call get_trade_detail(trade_id) for full trade context
-   (value_date, trade_date, instrument, amount, currencies).
-
-3. For each FAILED FoCheck rule, investigate:
-   - trade_date_not_future:
-     → Trade date is in the future — likely a data entry error.
-   - trade_date_not_weekend:
-     → Trade was booked on a weekend — needs date correction.
-   - value_date_after_trade_date:
-     → Value date is before trade date — FO input error.
-   - value_date_not_past:
-     → Value date is in the past — missed settlement window; may need cancel.
-   - value_date_settlement_cycle (WARNING only):
-     → Value date may not satisfy T+2 convention.
-       This is sometimes legitimate (special settlement). Investigate.
-   - amount_positive:
-     → Amount is zero or negative — FO data entry error; needs amendment.
-   - settlement_currency_consistency:
-     → Settlement currency differs from instrument currency — needs correction.
-
-4. For BO sendback (sendback_count >= 1):
-   - Read bo_sendback_reason carefully.
-   - Determine if the issue is genuinely FO-side (requires amendment/cancel)
-     or BO-side (SSI/counterparty problem that FO can explain away).
+Context has already been gathered and is available in the conversation.
 
 === CORRECTIVE ACTIONS (call tools — do not just recommend) ===
 
@@ -146,6 +118,10 @@ class FoAgentState(TypedDict):
     total_cost_usd: Annotated[float, operator.add]
     task_type: str
     selected_model: str
+    # Deterministic routing fields (populated by gather_context_node)
+    triage_path: str        # "SENDBACK" | "FO_ERROR" | "UNKNOWN"
+    sendback_count: int
+    failed_rules: list[str]
 
 
 # ---------------------------------------------------------------------------
@@ -187,6 +163,59 @@ def build_fo_graph() -> Any:
     }
 
     read_tools_node = ToolNode(FO_READ_ONLY_TOOLS)
+
+    # ------------------------------------------------------------------
+    # Context gathering (deterministic, no LLM call)
+    # ------------------------------------------------------------------
+
+    def gather_context_node(state: FoAgentState) -> dict[str, Any]:
+        trade_id = state["trade_id"]
+
+        fo_raw = get_fo_check_results.invoke({"trade_id": trade_id})
+        trade_raw = get_trade_detail.invoke({"trade_id": trade_id})
+        fo_check = json.loads(fo_raw)
+        trade = json.loads(trade_raw)
+
+        # Fallback when DB is unavailable (test/mock environment)
+        if "error" in fo_check:
+            _logger.warning(
+                "fo_gather_context_node: DB unavailable, passing through to agent",
+                extra={"trade_id": trade_id},
+            )
+            return {"triage_path": "UNKNOWN", "sendback_count": 0, "failed_rules": []}
+
+        failed_rules = [
+            r["rule_name"]
+            for r in fo_check.get("results", [])
+            if not r.get("passed", True)
+        ]
+        sendback_count = fo_check.get("sendback_count", 0)
+        triage_path = "SENDBACK" if sendback_count >= 1 else (
+            "FO_ERROR" if failed_rules else "UNKNOWN"
+        )
+
+        context_parts = [
+            f"[Context pre-loaded] Trade: {trade_id} | Sendback: {sendback_count} | "
+            f"Failed rules: {failed_rules} | Triage path: {triage_path}"
+        ]
+
+        # Fetch BO sendback reason when available
+        if sendback_count >= 1:
+            sb_raw = get_bo_sendback_reason.invoke({"trade_id": trade_id})
+            context_parts.append(f"BO sendback reason: {sb_raw}")
+
+        context_msg = HumanMessage(content="\n".join(context_parts))
+        _logger.info(
+            "fo_gather_context_node: triage_path=%s failed_rules=%s",
+            triage_path, failed_rules,
+            extra={"trade_id": trade_id, "triage_path": triage_path},
+        )
+        return {
+            "messages": [context_msg],
+            "triage_path": triage_path,
+            "sendback_count": sendback_count,
+            "failed_rules": failed_rules,
+        }
 
     def model_router_node(state: FoAgentState) -> dict[str, Any]:
         task_type = state.get("task_type") or "complex"
@@ -266,14 +295,16 @@ def build_fo_graph() -> Any:
 
     builder = StateGraph(FoAgentState)
 
-    builder.add_node("model_router", model_router_node)
-    builder.add_node("agent", agent_node)
-    builder.add_node("read_tools", read_tools_node)
-    builder.add_node("create_amend_event_node", create_amend_event_node)
+    builder.add_node("model_router",           model_router_node)
+    builder.add_node("gather_context",         gather_context_node)
+    builder.add_node("agent",                  agent_node)
+    builder.add_node("read_tools",             read_tools_node)
+    builder.add_node("create_amend_event_node",  create_amend_event_node)
     builder.add_node("create_cancel_event_node", create_cancel_event_node)
 
     builder.add_edge(START, "model_router")
-    builder.add_edge("model_router", "agent")
+    builder.add_edge("model_router", "gather_context")
+    builder.add_edge("gather_context", "agent")
     builder.add_conditional_edges(
         "agent",
         _route_after_agent,
