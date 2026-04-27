@@ -4,14 +4,38 @@
 
 ## Current Status
 
-**Branch:** `claude/add-cost-tracking-model-selection-3n2XJ`
-**Last updated:** 2026-04-26
+**Branch:** `claude/hybrid-agent-refactor-nj2Nw`
+**Last updated:** 2026-04-27
 **In Progress:** —
-**Next:** 動作確認後、次フェーズ（Phase 28 Counterparty検索モーダル等）へ
+**Next:** 統合テスト（ANTHROPIC_API_KEY 環境で AG01/UNKNOWN 各パスの動作確認）後、次フェーズへ
 
 ---
 
 ## Step Log
+
+### Step 37 — refactor: BO/FO エージェント ハイブリッド構造リファクタリング (2026-04-27)
+
+Files: `src/infrastructure/bo_agent.py`, `src/infrastructure/bo_triage_use_case.py`,
+       `src/infrastructure/fo_agent.py`, `docs/tasks.md`
+
+- **bo_agent.py**: `gather_context_node` 新設（`get_bo_check_results` + `get_trade_detail` を LLM 呼び出しなしで実行。triage_path / sendback_count / failed_rules / counterparty_lei / currency を state にセット）。`_determine_triage_path()` 純粋関数（SWIFT コード + 失敗ルール名から AG01 / MISSING_SSI / BE01 / AM04 / COMPOUND / UNKNOWN を判定）。決定論的ハンドラノード 6 種追加（ag01_handler: 合成 AIMessage で reactivate HITL をトリガー、lookup_ssi: lookup_external_ssi 直呼び + SSI 有無で分岐、prepare_register_ssi: register_ssi HITL 準備、ssi_not_found_escalate: 直接エスカレーション、be01_handler: 直接エスカレーション、fo_side_handler: sendback_count で send_back or escalate 分岐）。HITL ノードを 2 セット登録（決定論的パス用 3 本→ "agent"、deep_investigation パス用 4 本→ "deep_investigation"）。agent_node をサマリー専用に、deep_investigation_node を UNKNOWN/COMPOUND 自律調査専用に分離。`BO_SYSTEM_PROMPT` から INVESTIGATION STEPS セクション削除（~40 行削減、約 58% 軽量化）
+- **bo_triage_use_case.py**: `_BO_ALL_HITL_NODE_NAMES`（7 ノード）を bo_agent から import。`_build_result` の HITL 検出を `_BO_ALL_HITL_NODE_NAMES` に変更。`resume()` の `as_node` を `snapshot.next[0]` 直接参照に変更（辞書ルックアップ不要）
+- **fo_agent.py**: `gather_context_node` 新設（`get_fo_check_results` + `get_trade_detail` 直呼び、sendback_count >= 1 時は `get_bo_sendback_reason` も取得）。`FoAgentState` に triage_path / sendback_count / failed_rules 追加。グラフを model_router → gather_context → agent に更新。`FO_SYSTEM_PROMPT` から INVESTIGATION STEPS 削除
+- **テスト**: 既存 58 件全通過
+
+**決定論的パス vs 自律的パス:**
+
+| エラー種別 | パス | LLM 呼び出し |
+|-----------|------|-------------|
+| AG01 / counterparty_inactive | 決定論的 | summary 1 回のみ（~74% コスト削減） |
+| MISSING_SSI (SSI あり) | 決定論的 | summary 1 回のみ（~77% 削減） |
+| MISSING_SSI (SSI なし) | 決定論的 | summary 1 回のみ（~74% 削減） |
+| BE01 / format error | 決定論的 | summary 1 回のみ（~74% 削減） |
+| AM04 + sendback==0 | 決定論的 | summary 1 回のみ（~72% 削減） |
+| AM04 + sendback>=1 | 決定論的 | summary 1 回のみ（~72% 削減） |
+| UNKNOWN / COMPOUND | 自律的 | ReAct ループ 2 回以上 |
+
+---
 
 ### Step 36 — feat: コスト計測・モデル選択機能の追加 (2026-04-26)
 

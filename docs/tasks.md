@@ -8,13 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-#### Phase 31 — BoAgent / FoAgent ハイブリッド構造リファクタリング
-
-**目的:** 決定論的ワークフローと自律的エージェント推論を組み合わせた「ハイブリッド構造」に刷新する。
-
-- `bo_agent.py`: `gather_context_node`（決定論的データ収集）+ SWIFT コード別ハンドラノード（AG01/BE01/AM04/MISSING_SSI）を追加。UNKNOWN/COMPOUND のみ `deep_investigation_node`（LLM 自律調査）へ。HITL ノードを決定論的パス用・ディープ調査用に二重登録。`BO_SYSTEM_PROMPT` から INVESTIGATION STEPS を削除し軽量化。
-- `bo_triage_use_case.py`: `_BO_ALL_HITL_NODE_NAMES` に差し替え、`resume()` の `as_node` を `snapshot.next[0]` に変更。
-- `fo_agent.py`: `gather_context_node` 追加（`get_fo_check_results` + `get_trade_detail` を決定論的に呼出）、`FO_SYSTEM_PROMPT` の INVESTIGATION STEPS を削除。
+（なし）
 
 ---
 
@@ -379,6 +373,7 @@ push to main
 
 ## Done
 
+- Phase 31: BO/FO エージェント ハイブリッド構造リファクタリング — gather_context_node（決定論的データ収集）、AG01/BE01/AM04/MISSING_SSI 別ハンドラノード、HITL ノード二重登録（決定論的パス用 + deep_investigation 用）、_determine_triage_path 純粋関数、BO_SYSTEM_PROMPT / FO_SYSTEM_PROMPT から INVESTIGATION STEPS 削除（~40 行削減）、bo_triage_use_case.py の _BO_ALL_HITL_NODE_NAMES 対応 + resume() as_node 修正
 - Phase 30: コスト計測・モデル選択機能 — utils/cost_tracker.py（価格テーブル/calc_cost/build_cost_log/select_model/call_with_cost_tracking）、FoAgentState/BoAgentState に cost_log・total_cost_usd・task_type・selected_model 追加、model_router_node を fo/bo_agent 先頭に挿入（task_type と $0.10 閾値でモデル選択 + 監査ログ）、agent_node を call_with_cost_tracking() でラップ、use_case initial_state 更新、test_cost_tracker.py 追加（24テスト、計58件通過）
 - Phase 27: 取引入力機能 + maybe_run_fo_check チェーン修正 — TradeCreateRequest スキーマ追加、POST /api/v1/trades エンドポイント追加、maybe_run_fo_check が FoValidated 時に maybe_run_bo_check を自動チェーン、fo-check エンドポイントも同様に修正、TradeInputPage（日付カレンダー + マスタデータ選択）、TradeListPage に "New Trade" ボタン、フロントエンドバージョン 0.1.8 → 0.2.0
 - Development rules setup (CLAUDE.md, progress.md, requirements.md, tasks.md)
