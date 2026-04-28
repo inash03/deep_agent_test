@@ -232,6 +232,42 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
                 created_at=_now(), updated_at=_now(),
             ))
 
+    # Phase 32: TRD-013 — AM04 demo trade, seeded directly in BoAgentToCheck
+    # Counterparty (9695005MSX1OYEMGDF46) and SSI are valid; root cause is FO-side liquidity.
+    # bo_check_results pre-populated (all BO rules pass) so BoAgent can run immediately.
+    _TRD_013_ID = "TRD-013"
+    _TRD_013_ERR = (
+        "MT103 rejected by SWIFT. Reason code: AM04. "
+        "Insufficient funds at correspondent bank. FO liquidity shortfall."
+    )
+    _TRD_013_BO_RESULTS = [
+        {"rule_name": "counterparty_exists",  "passed": True, "severity": "error", "message": ""},
+        {"rule_name": "counterparty_active",  "passed": True, "severity": "error", "message": ""},
+        {"rule_name": "ssi_exists",           "passed": True, "severity": "error", "message": ""},
+        {"rule_name": "bic_format_valid",     "passed": True, "severity": "error", "message": ""},
+        {"rule_name": "iban_format_valid",    "passed": True, "severity": "warning", "message": ""},
+        {"rule_name": "value_date_valid",     "passed": True, "severity": "error", "message": ""},
+        {"rule_name": "instrument_exists",    "passed": True, "severity": "error", "message": ""},
+    ]
+    if _TRD_013_ID not in existing_trades:
+        db.add(TradeModel(
+            trade_id=_TRD_013_ID, version=1, is_current=True,
+            workflow_status="BoAgentToCheck",
+            counterparty_lei="9695005MSX1OYEMGDF46", instrument_id="USDJPY",
+            currency="USD", amount=Decimal("2000000.00"),
+            value_date=date(2026, 5, 1), trade_date=_TRADE_DATE,
+            settlement_currency="USD", stp_status="STP_FAILED",
+            sendback_count=0,
+            bo_check_results=_TRD_013_BO_RESULTS,
+            created_at=_now(), updated_at=_now(),
+        ))
+    if _TRD_013_ID not in existing_exc_trades:
+        db.add(StpExceptionModel(
+            id=uuid.uuid4(), trade_id=_TRD_013_ID, error_message=_TRD_013_ERR,
+            status="OPEN", triage_run_id=None,
+            created_at=_now(), updated_at=_now(),
+        ))
+
 
 # ---------------------------------------------------------------------------
 # Auto-trigger helper

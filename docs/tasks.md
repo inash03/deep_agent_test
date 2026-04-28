@@ -8,7 +8,129 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-（なし）
+<!-- (empty) -->
+
+---
+
+## Done
+
+- Phase 32: ハイブリッドエージェント デモ準備 — test_determine_triage_path.py（24テスト）、test_gather_context_routing.py（11テスト）、test_hybrid_routing.py（9テスト、全102件通過）、TRD-013 を mock_store.py + seed.py に追加（AM04 シナリオ、workflow_status=BoAgentToCheck + bo_check_results プリシード）、docs/demo_hybrid_agent.md（8シナリオのcurlデモ手順書）
+
+---
+
+#### Phase 32 — ハイブリッドエージェント デモ準備（テストシナリオ・シードデータ整備）
+
+**目的:** Phase 31 で実装したハイブリッド構造（決定論的 + 自律的パス）を実証・検証するためのテストシナリオ、シードデータ、テストコードを整備する。
+
+---
+
+##### テストシナリオ一覧（8 件）
+
+| # | Trade ID | トリガー条件 | 期待 triage_path | 期待アクション | パス種別 |
+|---|----------|------------|----------------|--------------|---------|
+| 1 | TRD-009 | `AG01` in error_message | `AG01` | `reactivate_counterparty` (HITL) | 決定論的 |
+| 2 | TRD-001 | `ssi_exists` 失敗、外部 SSI あり | `MISSING_SSI` | `register_ssi` (HITL) | 決定論的 |
+| 3 | TRD-008 | `AC01` in error_message、外部 SSI なし | `MISSING_SSI` | `escalate_to_bo_user` (直接) | 決定論的 |
+| 4 | TRD-011 | `iban_format_valid` 失敗 または `BE01` | `BE01` | `escalate_to_bo_user` (直接) | 決定論的 |
+| 5 | TRD-013 (新規) | `AM04` in error_message、sendback_count=0 | `AM04` | `send_back_to_fo` (HITL) | 決定論的 |
+| 6 | TRD-013 (sendback 状態) | `AM04` in error_message、sendback_count≥1 | `AM04` | `escalate_to_bo_user` (直接) | 決定論的 |
+| 7 | TRD-010 | `counterparty_active` + `ssi_exists` 失敗 | `COMPOUND` | `deep_investigation_node`（自律 ReAct） | 自律的 |
+| 8 | TRD-012 | 不明エラー・ルール失敗なし | `UNKNOWN` | `deep_investigation_node`（自律 ReAct） | 自律的 |
+
+各シナリオで確認すべきこと：
+- `state["triage_path"]` が期待値と一致しているか
+- `snapshot.next[0]` が期待するノード名（HITL ノードまたは `deep_investigation`）か
+- 決定論的パスでは LLM 呼び出しが summary の 1 回のみか（`cost_log` で確認）
+- `action_taken=True` が適切なタイミングで set されているか
+
+---
+
+##### 必要な実装・ツール
+
+**1. `tests/unit/test_determine_triage_path.py`（新規）**
+
+`_determine_triage_path()` 純粋関数の単体テスト。DB・LLM 不要。
+
+```python
+# カバーすべきケース
+("AG01 in error_message", "AG01", [], "AG01"),
+("counterparty_active in failed_rules", "", ["counterparty_active"], "AG01"),
+("BE01 in error_message", "BE01 mismatch", [], "BE01"),
+("bic_format_valid failed", "", ["bic_format_valid"], "BE01"),
+("iban_format_valid failed", "", ["iban_format_valid"], "BE01"),
+("AM04 in error_message", "AM04 liquidity", [], "AM04"),
+("AC01 in error_message", "AC01 account", [], "MISSING_SSI"),
+("ssi_exists failed", "", ["ssi_exists"], "MISSING_SSI"),
+("複数ルール失敗 → COMPOUND", "", ["counterparty_active", "ssi_exists"], "COMPOUND"),
+("AG01 + BE01 同時 → COMPOUND", "AG01 BE01", [], "COMPOUND"),
+("何も該当しない → UNKNOWN", "Generic error", [], "UNKNOWN"),
+```
+
+**2. `tests/unit/test_gather_context_routing.py`（新規）**
+
+`gather_context_node` の単体テスト：`get_bo_check_results` / `get_trade_detail` をモックして `triage_path` / `sendback_count` / `failed_rules` の state 更新を検証。LangGraph の `MemorySaver` で軽量グラフを組んで実行可能。LLM 呼び出しなし。
+
+```python
+# モック戦略：tools.py の関数を unittest.mock.patch で差し替える
+# patch("src.infrastructure.bo_agent.get_bo_check_results", return_value=json.dumps({...}))
+# 検証：returned_dict["triage_path"] == "AG01"
+```
+
+**3. `tests/integration/test_hybrid_routing.py`（新規）**
+
+決定論的パスのみを対象にした統合テスト（`@pytest.mark.integration`）。DB 必要・LLM 不要。
+
+```python
+# 手順：
+# 1. 対象 trade の bo_check_results を DB に手動 set
+# 2. graph.invoke(initial_state, config) を呼び出す
+# 3. snapshot.next[0] が期待するノード名か検証（interrupt_before で停止する）
+# 4. cost_log に LLM 呼び出しが含まれないことを確認（決定論的パス）
+```
+
+対象シナリオ：#1（AG01）、#3（MISSING_SSI+escalate）、#4（BE01）、#5（AM04+sendback0）
+
+**4. `src/infrastructure/seed.py` 更新**
+
+- **TRD-013 追加（AM04 シナリオ）:** counterparty・SSI は正常だが FO 側の流動性問題を想定。error_message に `"AM04"` を含む。workflow_status = `BoAgentToCheck`
+- **TRD-008〜012 の `bo_check_results` を手動シード:** 各 trade の真の原因に対応したルール失敗リストを `bo_check_results` カラムに INSERT する（rule_engine の `run_bo_check` を seed 時に呼び出すか、JSON を直接 set）
+
+```python
+# 例：TRD-011 の bo_check_results シード
+# [{"rule_name": "iban_format_valid", "passed": False, "severity": "error",
+#   "message": "IBAN GB29NWBK... is not valid for currency GBP"}]
+```
+
+**5. `src/infrastructure/mock_store.py` 更新**
+
+- TRD-013 用のモックトレードデータ追加（`_TRADES` dict）
+- TRD-011 用の外部 SSI エントリなし確認（IBAN エラーの場合、外部 SSI も同様に無効なので意図的に登録しない）
+- TRD-009 (AG01) の外部 SSI エントリ不在を確認（counterparty 再アクティブ化後に SSI を別途確認するフローのため）
+
+**6. デモ実行手順書**
+
+`docs/demo_hybrid_agent.md`（新規、markdown）
+
+```
+シナリオ別の curl コマンド例と期待される triage_path / 実際の HITL 停止ノード一覧。
+cost_log を比較して決定論的パス（LLM 1 回）vs 自律パス（LLM 複数回）のコスト差を示す。
+```
+
+---
+
+##### 検証コマンド
+
+```bash
+# LLM・DB 不要（即時実行可能）
+uv run pytest tests/unit/test_determine_triage_path.py -v
+uv run pytest tests/unit/test_gather_context_routing.py -v
+
+# DB 必要・LLM 不要（決定論的パスのみ）
+uv run pytest tests/integration/test_hybrid_routing.py -m integration -v
+
+# フル統合テスト（ANTHROPIC_API_KEY 必要）
+uv run pytest tests/integration/ -m integration -v
+```
 
 ---
 
