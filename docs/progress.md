@@ -4,14 +4,41 @@
 
 ## Current Status
 
-**Branch:** `claude/hybrid-agent-refactor-nj2Nw`
+**Branch:** `claude/remove-stp-status-column-U0NpW`
 **Last updated:** 2026-04-28
 **In Progress:** —
-**Next:** 実際の ANTHROPIC_API_KEY 環境で AG01/COMPOUND 各パスの E2E 動作確認、または次フェーズへ
+**Next:** Alembic `alembic upgrade head` を本番 DB に適用して stp_status カラムを DROP、または次フェーズへ
 
 ---
 
 ## Step Log
+
+### Step 39 — feat: Phase 29 stp_status カラム削除（技術的負債解消）(2026-04-28)
+
+Files: `src/presentation/routers/stp_exceptions.py`, `src/presentation/routers/trades.py`,
+       `src/infrastructure/db/models.py`, `src/infrastructure/db/trade_repository.py`,
+       `src/infrastructure/seed.py`, `src/presentation/schemas.py`, `src/domain/entities.py`,
+       `alembic/versions/0005_drop_stp_status.py` (新規),
+       `frontend/src/types/trade.ts`, `frontend/src/api/trades.ts`,
+       `frontend/src/pages/TradeListPage.tsx`, `frontend/src/pages/TradeDetailPage.tsx`,
+       `frontend/src/version.ts`, `docs/tasks.md`
+
+- **stp_exceptions.py**: `trade.stp_status != "NEW"` → `trade.workflow_status != "Initial"` に置き換え（エラーメッセージも更新）
+- **models.py**: `TradeModel.stp_status` カラム定義（Mapped[str]）を削除
+- **trade_repository.py**: `TradeStatus` import 削除、`list()` の `stp_status` パラメータ削除、`create_next_version()` の `stp_status="NEW"` 指定削除
+- **trades.py**: `_to_out()` の `stp_status=row.stp_status` 削除、`list_trades` エンドポイントの `stp_status` Query パラメータ・repo.list() 引数削除、`create_trade()` の `stp_status="NEW"` 削除
+- **seed.py**: failed/complex_failed タプルから stp_status 要素削除（8→7要素）、TradeModel インスタンス化から `stp_status=` 削除（全4箇所）
+- **schemas.py**: `TradeOut.stp_status: str` フィールド削除
+- **entities.py**: `TradeStatus` enum（NEW/STP_PASSED/STP_FAILED/SETTLED）を削除
+- **alembic 0005**: `op.drop_column("trades", "stp_status")` + downgrade で `add_column` 復元
+- **frontend/types/trade.ts**: `Trade.stp_status` フィールド削除、`TradeStatus` 型・`TRADE_STATUS_LABELS`・`TRADE_STATUS_COLORS` 定数を削除
+- **frontend/api/trades.ts**: `TradeListParams.stp_status` 削除
+- **frontend/TradeListPage.tsx**: STP Status フィルタドロップダウン削除、テーブルヘッダ "STP" 列・各行の STP バッジ削除（10列→9列）
+- **frontend/TradeDetailPage.tsx**: トレードヘッダの `['STP Status', trade.stp_status]` 行削除
+- **version.ts**: `0.2.1 → 0.3.0`（minor: UI 機能削除）
+- **テスト**: 93件全通過、TypeScript エラーなし
+
+---
 
 ### Step 38 — test: Phase 32 ハイブリッドエージェント デモ準備 (2026-04-28)
 
