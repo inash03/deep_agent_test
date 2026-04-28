@@ -72,11 +72,37 @@ jobs:
     environment: GCP_VM
     needs: deploy-backend
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend dist on runner
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Archive dist
+        run: tar -czf frontend-dist.tar.gz -C frontend dist
+
+      - name: Upload dist to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: frontend-dist.tar.gz
+          target: /tmp
+
       - name: Deploy frontend to VM via SSH
         uses: appleboy/ssh-action@v1.2.0
         env:
           CLOUD_RUN_URL: ${{ needs.deploy-backend.outputs.url }}
-          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
           APP_USERNAME: ${{ secrets.APP_USERNAME }}
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           DEPLOY_REF: ${{ github.sha }}
@@ -85,14 +111,14 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           command_timeout: 10m
-          envs: CLOUD_RUN_URL,VITE_API_KEY,APP_USERNAME,APP_PASSWORD,DEPLOY_REF
+          envs: CLOUD_RUN_URL,APP_USERNAME,APP_PASSWORD,DEPLOY_REF
           script: |
             set -e
             cd ~/deep_agent_test
             git fetch origin "$DEPLOY_REF"
             git reset --hard "$DEPLOY_REF"
             # .env に必要な値を更新
-            for var in VITE_API_URL VITE_API_KEY APP_USERNAME APP_PASSWORD; do
+            for var in VITE_API_URL APP_USERNAME APP_PASSWORD; do
               eval "val=\$$( [ $var = VITE_API_URL ] && echo CLOUD_RUN_URL || echo $var )"
               if grep -q "^${var}=" .env; then
                 sed -i "s|^${var}=.*|${var}=$val|" .env
@@ -100,5 +126,7 @@ jobs:
                 echo "${var}=$val" >> .env
               fi
             done
+            rm -rf frontend/dist
+            tar -xzf /tmp/frontend-dist.tar.gz -C frontend
             docker compose up --build -d
             docker compose ps

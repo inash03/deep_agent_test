@@ -3,11 +3,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
-        VITE_API_KEY: ${VITE_API_KEY:-}
-        APP_USERNAME: ${APP_USERNAME:-admin}
-        APP_PASSWORD: ${APP_PASSWORD:-}
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+      VITE_API_KEY: ${VITE_API_KEY:-}
+      APP_USERNAME: ${APP_USERNAME:-admin}
+      APP_PASSWORD: ${APP_PASSWORD:-}
     ports:
       - "5173:80"
 

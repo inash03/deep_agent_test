@@ -7,10 +7,10 @@ Endpoints:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from src.infrastructure.bo_triage_use_case import BoTriageUseCase
-from src.presentation.dependencies import verify_api_key
+from src.presentation.dependencies import limiter, verify_api_key
 from src.presentation.schemas import ResumeRequest, TriageRequest, TriageResponse
 
 router = APIRouter(prefix="/api/v1/trades", tags=["bo-triage"])
@@ -44,7 +44,9 @@ def get_bo_use_case() -> BoTriageUseCase:
         "when the agent needs operator approval (e.g. register SSI, reactivate counterparty)."
     ),
 )
+@limiter.limit("5/minute")
 def start_bo_triage(
+    request: Request,
     trade_id: str,
     body: TriageRequest,
     use_case: BoTriageUseCase = Depends(get_bo_use_case),
@@ -63,7 +65,9 @@ def start_bo_triage(
         "Set approved=true to allow the pending action, or approved=false to skip it."
     ),
 )
+@limiter.limit("5/minute")
 def resume_bo_triage(
+    request: Request,
     trade_id: str,
     run_id: str,
     body: ResumeRequest,

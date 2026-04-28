@@ -4,8 +4,11 @@ import os
 
 from fastapi import HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+limiter = Limiter(key_func=get_remote_address)
 
 
 async def verify_api_key(api_key: str = Security(_api_key_header)) -> None:
