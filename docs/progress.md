@@ -5,13 +5,31 @@
 ## Current Status
 
 **Branch:** `claude/hybrid-agent-refactor-nj2Nw`
-**Last updated:** 2026-04-27
+**Last updated:** 2026-04-28
 **In Progress:** —
-**Next:** 統合テスト（ANTHROPIC_API_KEY 環境で AG01/UNKNOWN 各パスの動作確認）後、次フェーズへ
+**Next:** 実際の ANTHROPIC_API_KEY 環境で AG01/COMPOUND 各パスの E2E 動作確認、または次フェーズへ
 
 ---
 
 ## Step Log
+
+### Step 38 — test: Phase 32 ハイブリッドエージェント デモ準備 (2026-04-28)
+
+Files: `tests/unit/test_determine_triage_path.py` (新規),
+       `tests/unit/test_gather_context_routing.py` (新規),
+       `tests/integration/test_hybrid_routing.py` (新規),
+       `src/infrastructure/mock_store.py`, `src/infrastructure/seed.py`,
+       `docs/demo_hybrid_agent.md` (新規), `docs/tasks.md`
+
+- **test_determine_triage_path.py**: 24 テスト — `_determine_triage_path()` 純粋関数を網羅的にテスト（AG01/BE01/AM04/MISSING_SSI/COMPOUND/UNKNOWN、大文字小文字非依存、unrecognised rules → UNKNOWN、3条件同時 → COMPOUND）
+- **test_gather_context_routing.py**: 11 テスト — `get_bo_check_results` / `get_trade_detail` をモックし、軽量 MemorySaver mini-graph で `gather_context_node` の state 更新を検証。LLM・DB 不要。
+- **test_hybrid_routing.py**: 9 テスト — 全プロダクショングラフ（`build_bo_graph()`）を使用。ツールをパッチ + `call_with_cost_tracking` をモックして LLM なしで実行。8シナリオすべての`snapshot.next` / `triage_path` / `action_taken` を検証。
+- **mock_store.py**: TRD-013 追加（AM04 シナリオ：Pacific Finance Corp、USD、2M、counterparty + SSI 正常）
+- **seed.py**: TRD-013 追加（`workflow_status="BoAgentToCheck"`、`bo_check_results` 全通過でプリシード、AM04 error_message）
+- **demo_hybrid_agent.md**: 8シナリオのcurlデモ手順書、コスト比較表（決定論的 ~$0.002 vs 自律的 ~$0.01–0.05）
+- **テスト**: 102件全通過（unit 93 + integration 9）
+
+---
 
 ### Step 37 — refactor: BO/FO エージェント ハイブリッド構造リファクタリング (2026-04-27)
 

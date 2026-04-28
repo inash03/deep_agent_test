@@ -8,11 +8,15 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-（なし）
+<!-- (empty) -->
 
 ---
 
-## Backlog
+## Done
+
+- Phase 32: ハイブリッドエージェント デモ準備 — test_determine_triage_path.py（24テスト）、test_gather_context_routing.py（11テスト）、test_hybrid_routing.py（9テスト、全102件通過）、TRD-013 を mock_store.py + seed.py に追加（AM04 シナリオ、workflow_status=BoAgentToCheck + bo_check_results プリシード）、docs/demo_hybrid_agent.md（8シナリオのcurlデモ手順書）
+
+---
 
 #### Phase 32 — ハイブリッドエージェント デモ準備（テストシナリオ・シードデータ整備）
 
@@ -129,6 +133,8 @@ uv run pytest tests/integration/ -m integration -v
 ```
 
 ---
+
+## Backlog
 
 #### Phase 29 — stp_status カラム削除（技術的負債解消）
 

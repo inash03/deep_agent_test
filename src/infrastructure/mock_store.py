@@ -102,6 +102,16 @@ _TRADES: dict[str, TradeDetail] = {
         value_date=date(2026, 4, 8),
         settlement_currency="USD",
     ),
+    # TRD-013: AM04 — FO-side liquidity shortfall; counterparty and SSI are valid
+    "TRD-013": TradeDetail(
+        trade_id="TRD-013",
+        counterparty_lei="9695005MSX1OYEMGDF46",
+        instrument_id="USDJPY",
+        currency="USD",
+        amount=Decimal("2000000.00"),
+        value_date=date(2026, 5, 1),
+        settlement_currency="USD",
+    ),
 }
 
 # ---------------------------------------------------------------------------
