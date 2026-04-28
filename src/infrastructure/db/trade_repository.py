@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from src.domain.entities import TradeDetail, TradeStatus
+from src.domain.entities import TradeDetail
 from src.infrastructure.db.models import TradeModel
 
 _TRD_NUMERIC_ID = re.compile(r"^TRD-(\d+)$", re.IGNORECASE)
@@ -36,7 +36,6 @@ class TradeRepository:
     def list(
         self,
         trade_id: str | None = None,
-        stp_status: str | None = None,
         workflow_status: str | None = None,
         trade_date: date | None = None,
         limit: int = 20,
@@ -46,8 +45,6 @@ class TradeRepository:
         q = self._db.query(TradeModel).filter(TradeModel.is_current.is_(True))
         if trade_id:
             q = q.filter(TradeModel.trade_id.ilike(f"%{trade_id}%"))
-        if stp_status:
-            q = q.filter(TradeModel.stp_status == stp_status)
         if workflow_status:
             q = q.filter(TradeModel.workflow_status == workflow_status)
         if trade_date:
@@ -107,7 +104,6 @@ class TradeRepository:
             value_date=fields.get("value_date", current.value_date),
             trade_date=fields.get("trade_date", current.trade_date),
             settlement_currency=fields.get("settlement_currency", current.settlement_currency),
-            stp_status="NEW",
             sendback_count=0,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),

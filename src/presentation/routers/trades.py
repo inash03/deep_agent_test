@@ -39,7 +39,6 @@ def _to_out(row) -> TradeOut:
         value_date=row.value_date,
         trade_date=row.trade_date,
         settlement_currency=row.settlement_currency,
-        stp_status=row.stp_status,
         fo_check_results=row.fo_check_results,
         bo_check_results=row.bo_check_results,
     )
@@ -48,7 +47,6 @@ def _to_out(row) -> TradeOut:
 @router.get("", response_model=TradeListResponse)
 def list_trades(
     trade_id: str | None = Query(None, description="部分一致フィルタ"),
-    stp_status: str | None = Query(None, description="完全一致フィルタ (e.g. STP_FAILED)"),
     workflow_status: str | None = Query(None, description="完全一致フィルタ (e.g. FoAgentToCheck)"),
     trade_date: date | None = Query(None, description="取引日フィルタ (YYYY-MM-DD)"),
     limit: int = Query(20, ge=1, le=100),
@@ -57,7 +55,7 @@ def list_trades(
 ) -> TradeListResponse:
     repo = TradeRepository(db)
     items, total = repo.list(
-        trade_id=trade_id, stp_status=stp_status, workflow_status=workflow_status,
+        trade_id=trade_id, workflow_status=workflow_status,
         trade_date=trade_date, limit=limit, offset=offset,
     )
     return TradeListResponse(items=[_to_out(r) for r in items], total=total)
@@ -86,7 +84,6 @@ def create_trade(body: TradeCreateRequest, db: Session = Depends(get_db)) -> Tra
             value_date=body.value_date,
             trade_date=body.trade_date,
             settlement_currency=body.currency,
-            stp_status="NEW",
             sendback_count=0,
         )
         db.add(row)

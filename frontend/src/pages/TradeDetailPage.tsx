@@ -297,7 +297,6 @@ export function TradeDetailPage() {
             ['Amount', Number(trade.amount).toLocaleString()],
             ['Trade Date', trade.trade_date],
             ['Value Date', trade.value_date],
-            ['STP Status', trade.stp_status],
           ].map(([label, val]) => (
             <div key={label}>
               <span style={{ color: COLOR.textMuted, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>{label}</span>

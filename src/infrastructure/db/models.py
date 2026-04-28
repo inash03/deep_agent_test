@@ -146,8 +146,6 @@ class TradeModel(Base):
     value_date: Mapped[date] = mapped_column(Date, nullable=False)
     trade_date: Mapped[date] = mapped_column(Date, nullable=False)
     settlement_currency: Mapped[str] = mapped_column(String(10), nullable=False)
-    # Legacy STP status: NEW / STP_PASSED / STP_FAILED / SETTLED
-    stp_status: Mapped[str] = mapped_column(String(20), nullable=False, default="NEW")
     sendback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     fo_check_results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     bo_check_results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

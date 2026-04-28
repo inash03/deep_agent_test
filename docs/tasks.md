@@ -14,6 +14,7 @@ Max 1 task in In Progress at a time.
 
 ## Done
 
+- Phase 29: stp_status カラム削除 — TradeStatus enum 削除、models.py/trade_repository.py/seed.py/schemas.py/trades.py/stp_exceptions.py から stp_status 参照を全削除、alembic/versions/0005_drop_stp_status.py 追加、フロントエンド（types/api/TradeListPage/TradeDetailPage）から stp_status フィルタ・列・表示を削除、frontend version 0.2.1 → 0.3.0
 - Phase 32: ハイブリッドエージェント デモ準備 — test_determine_triage_path.py（24テスト）、test_gather_context_routing.py（11テスト）、test_hybrid_routing.py（9テスト、全102件通過）、TRD-013 を mock_store.py + seed.py に追加（AM04 シナリオ、workflow_status=BoAgentToCheck + bo_check_results プリシード）、docs/demo_hybrid_agent.md（8シナリオのcurlデモ手順書）
 
 ---
@@ -135,33 +136,6 @@ uv run pytest tests/integration/ -m integration -v
 ---
 
 ## Backlog
-
-#### Phase 29 — stp_status カラム削除（技術的負債解消）
-
-**背景:** Phase 26 で `workflow_status`（12 状態）が導入され、`trades.stp_status`（NEW / STP_PASSED / STP_FAILED / SETTLED）は実質的に冗長になった。`workflow_status` は `stp_status` が表現していた全状態を包含するため、削除しても情報欠損なし。
-
-**削除前に必要な対応:**
-
-- `src/presentation/routers/stp_exceptions.py`
-  - 例外作成検証 `trade.stp_status != "NEW"` を `trade.workflow_status != "Initial"` に書き換え
-- `src/infrastructure/db/models.py`
-  - `TradeModel.stp_status` カラム定義を削除
-- `src/infrastructure/db/trade_repository.py`
-  - `list()` の `stp_status` フィルタパラメータを削除
-- `src/infrastructure/seed.py`
-  - シードデータから `stp_status=` 指定を削除
-- `src/presentation/schemas.py`
-  - `TradeOut.stp_status` フィールドを削除
-- `src/domain/entities.py`
-  - `TradeStatus` enum を削除（`TradeWorkflowStatus` に統一）
-- `alembic/versions/` に新規マイグレーションを追加（`stp_status` カラム DROP）
-- **Frontend:**
-  - `frontend/src/types/trade.ts` — `TradeStatus` 型・`TRADE_STATUS_LABELS`・`TRADE_STATUS_COLORS` を削除
-  - `frontend/src/api/trades.ts` — `TradeListParams.stp_status` を削除
-  - `frontend/src/pages/TradeListPage.tsx` — stp_status フィルタ・列表示を削除
-  - `frontend/src/pages/TradeDetailPage.tsx` — stp_status プロパティ表示を削除
-
----
 
 #### Phase 28 — 取引入力画面：Counterparty 検索モーダル
 
