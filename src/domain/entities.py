@@ -14,13 +14,6 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
-class TradeStatus(str, Enum):
-    NEW = "NEW"
-    STP_PASSED = "STP_PASSED"
-    STP_FAILED = "STP_FAILED"
-    SETTLED = "SETTLED"
-
-
 class TradeWorkflowStatus(str, Enum):
     INITIAL = "Initial"
     FO_CHECK = "FoCheck"

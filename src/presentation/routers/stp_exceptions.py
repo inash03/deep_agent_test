@@ -66,10 +66,10 @@ def create_stp_exception(
     trade = TradeRepository(db).get_by_trade_id(body.trade_id)
     if trade is None:
         raise HTTPException(status_code=404, detail=f"Trade '{body.trade_id}' not found")
-    if trade.stp_status != "NEW":
+    if trade.workflow_status != "Initial":
         raise HTTPException(
             status_code=422,
-            detail=f"Trade '{body.trade_id}' has stp_status='{trade.stp_status}'. Only NEW trades can have exceptions created manually.",
+            detail=f"Trade '{body.trade_id}' has workflow_status='{trade.workflow_status}'. Only Initial trades can have exceptions created manually.",
         )
     row = StpExceptionRepository(db).create(
         trade_id=body.trade_id, error_message=body.error_message

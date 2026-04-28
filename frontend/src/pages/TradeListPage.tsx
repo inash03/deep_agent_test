@@ -5,7 +5,7 @@ import { PageLayout } from '../components/PageLayout'
 import { Pagination } from '../components/Pagination'
 import { BTN_PRIMARY, CARD, COLOR, INPUT, TABLE, TD, TH } from '../styles/theme'
 import type { Trade } from '../types/trade'
-import { TRADE_STATUS_COLORS, TRADE_STATUS_LABELS, WORKFLOW_STATUS_COLORS, WORKFLOW_STATUS_LABELS } from '../types/trade'
+import { WORKFLOW_STATUS_COLORS, WORKFLOW_STATUS_LABELS } from '../types/trade'
 
 const LIMIT = 20
 
@@ -50,17 +50,15 @@ export function TradeListPage() {
   const [loading, setLoading] = useState(false)
 
   const [filterTradeId, setFilterTradeId] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
   const [filterWorkflow, setFilterWorkflow] = useState('')
   const [filterDate, setFilterDate] = useState('')
-  const [applied, setApplied] = useState({ tradeId: '', status: '', workflow: '', date: '' })
+  const [applied, setApplied] = useState({ tradeId: '', workflow: '', date: '' })
 
   const fetch = async (off = offset) => {
     setLoading(true)
     try {
       const res = await listTrades({
         trade_id: applied.tradeId || undefined,
-        stp_status: applied.status || undefined,
         workflow_status: applied.workflow || undefined,
         trade_date: applied.date || undefined,
         limit: LIMIT,
@@ -77,7 +75,7 @@ export function TradeListPage() {
 
   const handleSearch = () => {
     setOffset(0)
-    setApplied({ tradeId: filterTradeId, status: filterStatus, workflow: filterWorkflow, date: filterDate })
+    setApplied({ tradeId: filterTradeId, workflow: filterWorkflow, date: filterDate })
   }
 
   const handlePageChange = (off: number) => {
@@ -98,16 +96,6 @@ export function TradeListPage() {
           <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: COLOR.textMuted, marginBottom: 4 }}>Trade ID</label>
           <input style={INPUT} placeholder="TRD-001" value={filterTradeId} onChange={e => setFilterTradeId(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSearch()} />
-        </div>
-        <div style={{ flex: '1 1 140px' }}>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: COLOR.textMuted, marginBottom: 4 }}>STP Status</label>
-          <select style={{ ...INPUT }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-            <option value="">All</option>
-            <option value="NEW">New</option>
-            <option value="STP_PASSED">STP Passed</option>
-            <option value="STP_FAILED">STP Failed</option>
-            <option value="SETTLED">Settled</option>
-          </select>
         </div>
         <div style={{ flex: '1 1 160px' }}>
           <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: COLOR.textMuted, marginBottom: 4 }}>Workflow Status</label>
@@ -139,7 +127,7 @@ export function TradeListPage() {
             <table style={TABLE}>
               <thead>
                 <tr>
-                  {['Trade ID', 'Ver', 'Trade Date', 'Counterparty LEI', 'Instrument', 'CCY', 'Amount', 'Value Date', 'Workflow', 'STP'].map((h, index) => (
+                  {['Trade ID', 'Ver', 'Trade Date', 'Counterparty LEI', 'Instrument', 'CCY', 'Amount', 'Value Date', 'Workflow'].map((h, index) => (
                     <th key={h} style={index === 0 ? STICKY_TRADE_ID_TH : TH}>{h}</th>
                   ))}
                 </tr>
@@ -169,12 +157,6 @@ export function TradeListPage() {
                       <Badge
                         label={WORKFLOW_STATUS_LABELS[t.workflow_status] ?? t.workflow_status}
                         style={WORKFLOW_STATUS_COLORS[t.workflow_status] ?? {}}
-                      />
-                    </td>
-                    <td style={TD}>
-                      <Badge
-                        label={TRADE_STATUS_LABELS[t.stp_status] ?? t.stp_status}
-                        style={TRADE_STATUS_COLORS[t.stp_status] ?? {}}
                       />
                     </td>
                   </tr>

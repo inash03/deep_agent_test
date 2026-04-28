@@ -4,7 +4,6 @@ import type { TriageResponse } from '../types/triage'
 
 export interface TradeListParams {
   trade_id?: string
-  stp_status?: string
   workflow_status?: string
   trade_date?: string
   limit?: number

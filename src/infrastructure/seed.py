@@ -132,32 +132,32 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
     existing_trades = {tid for (tid,) in db.query(TradeModel.trade_id)}
     existing_exc_trades = {tid for (tid,) in db.query(StpExceptionModel.trade_id)}
 
-    # (trade_id, cp_lei, instrument, currency, amount, value_date, settlement_ccy, stp_status,
+    # (trade_id, cp_lei, instrument, currency, amount, value_date, settlement_ccy,
     #  workflow_status, error_message)
     failed = [
         (
             "TRD-001", "213800QILIUD4ROSUO03", "USDJPY", "USD",
-            Decimal("1000000.00"), date(2026, 4, 8), "USD", "STP_FAILED", "FoAgentToCheck",
+            Decimal("1000000.00"), date(2026, 4, 8), "USD", "FoAgentToCheck",
             "SSI not registered for counterparty 213800QILIUD4ROSUO03 / USD",
         ),
         (
             "TRD-002", "5493001KJTIIGC8Y1R12", "EURUSD", "EUR",
-            Decimal("500000.00"), date(2026, 4, 8), "EUR", "STP_FAILED", "FoAgentToCheck",
+            Decimal("500000.00"), date(2026, 4, 8), "EUR", "FoAgentToCheck",
             "Invalid BIC format in settlement instructions for 5493001KJTIIGC8Y1R12 / EUR",
         ),
         (
             "TRD-003", "UNKNOWNLEI000000001", "GBPUSD", "GBP",
-            Decimal("250000.00"), date(2026, 4, 8), "GBP", "STP_FAILED", "FoAgentToCheck",
+            Decimal("250000.00"), date(2026, 4, 8), "GBP", "FoAgentToCheck",
             "Counterparty LEI UNKNOWNLEI000000001 not found in master data",
         ),
         (
             "TRD-004", "9695005MSX1OYEMGDF46", "AUDUSD", "AUD",
-            Decimal("750000.00"), date(2024, 1, 1), "AUD", "STP_FAILED", "FoAgentToCheck",
+            Decimal("750000.00"), date(2024, 1, 1), "AUD", "FoAgentToCheck",
             "Value date 2024-01-01 is in the past",
         ),
         (
             "TRD-005", "9695005MSX1OYEMGDF46", "UNKNOWN_CCY_PAIR", "USD",
-            Decimal("100000.00"), date(2026, 4, 8), "USD", "STP_FAILED", "FoAgentToCheck",
+            Decimal("100000.00"), date(2026, 4, 8), "USD", "FoAgentToCheck",
             "Instrument UNKNOWN_CCY_PAIR not found in reference data",
         ),
     ]
@@ -165,51 +165,51 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
     complex_failed = [
         (
             "TRD-008", "213800QILIUD4ROSUO03", "EURUSD", "EUR",
-            Decimal("800000.00"), date(2026, 4, 8), "EUR", "STP_FAILED", "FoAgentToCheck",
+            Decimal("800000.00"), date(2026, 4, 8), "EUR", "FoAgentToCheck",
             "MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.",
         ),
         (
             "TRD-009", "213800XYZINACTIVE001", "USDJPY", "USD",
-            Decimal("1200000.00"), date(2026, 4, 8), "USD", "STP_FAILED", "FoAgentToCheck",
+            Decimal("1200000.00"), date(2026, 4, 8), "USD", "FoAgentToCheck",
             "MT103 rejected by SWIFT. Reason code: AG01. Counterparty LEI: 213800XYZINACTIVE001.",
         ),
         (
             "TRD-010", "213800XYZINACTIVE001", "GBPUSD", "GBP",
-            Decimal("600000.00"), date(2026, 4, 8), "GBP", "STP_FAILED", "FoAgentToCheck",
+            Decimal("600000.00"), date(2026, 4, 8), "GBP", "FoAgentToCheck",
             "Pre-settlement validation failed for TRD-010. Multiple checks not passed.",
         ),
         (
             "TRD-011", "254900CUSTBANK000001", "GBPUSD", "GBP",
-            Decimal("450000.00"), date(2026, 4, 8), "GBP", "STP_FAILED", "FoAgentToCheck",
+            Decimal("450000.00"), date(2026, 4, 8), "GBP", "FoAgentToCheck",
             "Custodian HSBC rejected settlement instruction for TRD-011. No further details provided.",
         ),
         (
             "TRD-012", "529900ATLANTIC000001", "USDJPY", "JPY",
-            Decimal("90000000.00"), date(2026, 4, 8), "JPY", "STP_FAILED", "FoAgentToCheck",
+            Decimal("90000000.00"), date(2026, 4, 8), "JPY", "FoAgentToCheck",
             "Settlement confirmation not received within SLA window for TRD-012. Status unknown.",
         ),
     ]
-    # NEW / Initial trades for the "create exception" demo (no exceptions yet)
+    # Initial trades for the "create exception" demo (no exceptions yet)
     new_trades = [
         (
             "TRD-006", "213800QILIUD4ROSUO03", "EURUSD", "EUR",
-            Decimal("200000.00"), date(2026, 4, 20), "EUR", "NEW", "Initial",
+            Decimal("200000.00"), date(2026, 4, 20), "EUR", "Initial",
         ),
         (
             "TRD-007", "9695005MSX1OYEMGDF46", "GBPUSD", "GBP",
-            Decimal("350000.00"), date(2026, 4, 20), "GBP", "NEW", "Initial",
+            Decimal("350000.00"), date(2026, 4, 20), "GBP", "Initial",
         ),
     ]
 
     for row in failed + complex_failed:
-        trade_id, cp_lei, instr, ccy, amt, vd, sc, stp_status, _wf_status, err = row
+        trade_id, cp_lei, instr, ccy, amt, vd, sc, _wf_status, err = row
         if trade_id not in existing_trades:
             db.add(TradeModel(
                 trade_id=trade_id, version=1, is_current=True,
                 workflow_status="FoCheck",
                 counterparty_lei=cp_lei, instrument_id=instr,
                 currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
-                settlement_currency=sc, stp_status=stp_status,
+                settlement_currency=sc,
                 sendback_count=0,
                 created_at=_now(), updated_at=_now(),
             ))
@@ -220,14 +220,14 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
                 created_at=_now(), updated_at=_now(),
             ))
 
-    for trade_id, cp_lei, instr, ccy, amt, vd, sc, stp_status, wf_status in new_trades:
+    for trade_id, cp_lei, instr, ccy, amt, vd, sc, wf_status in new_trades:
         if trade_id not in existing_trades:
             db.add(TradeModel(
                 trade_id=trade_id, version=1, is_current=True,
                 workflow_status=wf_status,
                 counterparty_lei=cp_lei, instrument_id=instr,
                 currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
-                settlement_currency=sc, stp_status=stp_status,
+                settlement_currency=sc,
                 sendback_count=0,
                 created_at=_now(), updated_at=_now(),
             ))
@@ -256,7 +256,7 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
             counterparty_lei="9695005MSX1OYEMGDF46", instrument_id="USDJPY",
             currency="USD", amount=Decimal("2000000.00"),
             value_date=date(2026, 5, 1), trade_date=_TRADE_DATE,
-            settlement_currency="USD", stp_status="STP_FAILED",
+            settlement_currency="USD",
             sendback_count=0,
             bo_check_results=_TRD_013_BO_RESULTS,
             created_at=_now(), updated_at=_now(),
