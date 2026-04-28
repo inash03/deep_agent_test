@@ -7,10 +7,10 @@ Endpoints:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from src.infrastructure.fo_triage_use_case import FoTriageUseCase
-from src.presentation.dependencies import verify_api_key
+from src.presentation.dependencies import limiter, verify_api_key
 from src.presentation.schemas import ResumeRequest, TriageRequest, TriageResponse
 
 router = APIRouter(prefix="/api/v1/trades", tags=["fo-triage"])
@@ -44,7 +44,9 @@ def get_fo_use_case() -> FoTriageUseCase:
         "when the agent needs operator approval (e.g. amend trade data, cancel trade)."
     ),
 )
+@limiter.limit("5/minute")
 def start_fo_triage(
+    request: Request,
     trade_id: str,
     body: TriageRequest,
     use_case: FoTriageUseCase = Depends(get_fo_use_case),
@@ -63,7 +65,9 @@ def start_fo_triage(
         "Set approved=true to allow the pending action, or approved=false to skip it."
     ),
 )
+@limiter.limit("5/minute")
 def resume_fo_triage(
+    request: Request,
     trade_id: str,
     run_id: str,
     body: ResumeRequest,

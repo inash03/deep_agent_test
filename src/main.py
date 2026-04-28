@@ -9,9 +9,13 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from src.infrastructure.logging_config import setup_logging
 from src.infrastructure.secrets import load_secrets
+from src.presentation.dependencies import limiter
 from src.presentation.router import router
 from src.presentation.routers.counterparties import router as counterparties_router
 from src.presentation.routers.reference_data import router as reference_data_router
@@ -40,6 +44,9 @@ app = FastAPI(
     ),
     version="0.1.0",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 _cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
