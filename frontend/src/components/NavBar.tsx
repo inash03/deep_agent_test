@@ -9,6 +9,7 @@ const LINKS = [
   { to: '/counterparties', label: 'Counterparties', end: false },
   { to: '/ssis', label: 'SSIs', end: false },
   { to: '/reference-data', label: 'Ref Data', end: false },
+  { to: '/rules', label: 'Rules', end: false },
   { to: '/settings', label: 'Settings', end: false },
 ]
 

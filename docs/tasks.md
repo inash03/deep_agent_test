@@ -8,7 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-<!-- (empty) -->
+- Phase 34: Rule一覧画面 — FO/BO ルール一覧とチェック内容を表示する新規フロントエンドページ（`/rules`）を作成。バックエンドに `GET /api/v1/rules` エンドポイント追加、NavBar にリンク追加、version bump。
 
 ---
 

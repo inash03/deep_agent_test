@@ -3,6 +3,7 @@ import { NavBar } from './components/NavBar'
 import { CounterpartyEditPage } from './pages/CounterpartyEditPage'
 import { CounterpartyListPage } from './pages/CounterpartyListPage'
 import { ReferenceDataListPage } from './pages/ReferenceDataListPage'
+import { RuleListPage } from './pages/RuleListPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SsiEditPage } from './pages/SsiEditPage'
 import { SsiListPage } from './pages/SsiListPage'
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/ssis" element={<SsiListPage />} />
           <Route path="/ssis/:id" element={<SsiEditPage />} />
           <Route path="/reference-data" element={<ReferenceDataListPage />} />
+          <Route path="/rules" element={<RuleListPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </div>
