@@ -8,12 +8,13 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-- Phase 34: Rule一覧画面 — FO/BO ルール一覧とチェック内容を表示する新規フロントエンドページ（`/rules`）を作成。バックエンドに `GET /api/v1/rules` エンドポイント追加、NavBar にリンク追加、version bump。
+<!-- (empty) -->
 
 ---
 
 ## Done
 
+- Phase 34: Rule一覧画面 — GET /api/v1/rules エンドポイント追加（FO 9ルール・BO 8ルールのメタデータ返却）、RuleListPage.tsx 新規作成（FO/BO 別テーブル、severity バッジ・stub フラグ表示）、NavBar に "Rules" リンク追加、version 0.4.0 → 0.5.0
 - Phase 33: seed / rule_engine 整合性修正 — FO_RULES に counterparty_exists・instrument_exists stub 追加、BO_RULES に settlement_confirmed stub 追加、seed.py を静的チェック結果 pre-seed 方式に再設計（TRD-004/005 を FoAgentToCheck + fo_check_results、TRD-001〜003/008〜013 を BoAgentToCheck + fo/bo_check_results 付きで登録、_wf_status バグ修正）、Zenith Trading Corp（非アクティブ CP）の USD SSI をマスタに追加（TRD-009 が counterparty_active のみ失敗し AG01 パスになるよう調整）
 - Phase 29: stp_status カラム削除 — TradeStatus enum 削除、models.py/trade_repository.py/seed.py/schemas.py/trades.py/stp_exceptions.py から stp_status 参照を全削除、alembic/versions/0005_drop_stp_status.py 追加、フロントエンド（types/api/TradeListPage/TradeDetailPage）から stp_status フィルタ・列・表示を削除、frontend version 0.2.1 → 0.3.0
 - Phase 32: ハイブリッドエージェント デモ準備 — test_determine_triage_path.py（24テスト）、test_gather_context_routing.py（11テスト）、test_hybrid_routing.py（9テスト、全102件通過）、TRD-013 を mock_store.py + seed.py に追加（AM04 シナリオ、workflow_status=BoAgentToCheck + bo_check_results プリシード）、docs/demo_hybrid_agent.md（8シナリオのcurlデモ手順書）

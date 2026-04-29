@@ -4,14 +4,34 @@
 
 ## Current Status
 
-**Branch:** `claude/review-trade-rules-RMvpA`
+**Branch:** `claude/create-rule-list-screen-9sFDr`
 **Last updated:** 2026-04-29
 **In Progress:** —
-**Next:** `python -m src.infrastructure.seed reset` で DB をリセットして seed を確認、または次フェーズへ
+**Next:** 次フェーズへ（Counterparty 検索モーダル等 Backlog から選択）
 
 ---
 
 ## Step Log
+
+### Step 41 — feat: Phase 34 Rule一覧画面 (2026-04-29)
+
+Files: `src/presentation/routers/rules.py` (新規), `src/main.py`,
+       `frontend/src/types/rule.ts` (新規), `frontend/src/api/rules.ts` (新規),
+       `frontend/src/pages/RuleListPage.tsx` (新規),
+       `frontend/src/components/NavBar.tsx`, `frontend/src/App.tsx`,
+       `frontend/src/version.ts`, `docs/tasks.md`
+
+- **rules.py**: `GET /api/v1/rules` エンドポイント新規作成。`RuleOut`（rule_name/severity/check_type/description/is_stub）と `RuleListResponse`（fo_rules/bo_rules）をPydanticで定義。FO_RULES 9件・BO_RULES 8件を日本語説明付きでハードコード
+- **main.py**: `rules_router` を登録
+- **frontend/types/rule.ts**: `Rule` / `RuleListResponse` 型定義（新規）
+- **frontend/api/rules.ts**: `listRules()` API クライアント（新規）
+- **frontend/pages/RuleListPage.tsx**: `/rules` ページ（新規）。FO/BO 別テーブルでルール名（monospace）・severity バッジ（error=赤/warning=黄）・チェック内容・stub ラベルを表示。説明バナーあり
+- **NavBar.tsx**: "Rules" リンクを Settings の前に追加
+- **App.tsx**: `/rules` → `RuleListPage` ルート追加
+- **version.ts**: `0.4.0 → 0.5.0`（minor: 新機能追加）
+- **テスト**: TypeScript エラーなし、ユニットテスト 98件全通過
+
+---
 
 ### Step 40 — feat: Phase 33 seed / rule_engine 整合性修正 (2026-04-29)
 
