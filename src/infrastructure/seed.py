@@ -86,6 +86,8 @@ _SSIS = [
     ("213800QILIUD4ROSUO03", "EUR", False, "ACMEGB2L",   "GB29NWBK60161331000000", "GB29NWBK60161331000000"),
     ("254900CUSTBANK000001", "GBP", False, "MTCUBS33",   "GBXX-INVALID-IBAN-9999", "GBXX-INVALID-IBAN-9999"),
     ("529900ATLANTIC000001", "JPY", False, "ATLCGB2LXXX","AT483200000012345864",    None),
+    # Registered when Zenith Trading Corp was active; remains in DB after deactivation
+    ("213800XYZINACTIVE001", "USD", False, "ZNTHGB2L",   "US12345678901234",        None),
 ]
 
 
@@ -138,103 +140,305 @@ def _upsert_app_settings(db: Session) -> None:
             db.add(AppSettingModel(**row, updated_at=_now()))
 
 
+# ---------------------------------------------------------------------------
+# Pre-computed check results
+# ---------------------------------------------------------------------------
+
+
+def _fo_all_pass() -> list[dict]:
+    """FoCheck results for a trade where all FO rules passed."""
+    return [
+        {"rule_name": "trade_date_not_future",           "passed": True, "severity": "error",   "message": f"Trade date {_TRADE_DATE} is not in the future"},
+        {"rule_name": "trade_date_not_weekend",          "passed": True, "severity": "error",   "message": f"Trade date {_TRADE_DATE} is a business day"},
+        {"rule_name": "value_date_after_trade_date",     "passed": True, "severity": "error",   "message": "Value date 2026-04-08 is after trade date 2026-04-01"},
+        {"rule_name": "value_date_not_past",             "passed": True, "severity": "error",   "message": "Value date 2026-04-08 is not in the past"},
+        {"rule_name": "value_date_settlement_cycle",     "passed": True, "severity": "warning", "message": "Value date 2026-04-08 meets T+2 settlement cycle"},
+        {"rule_name": "amount_positive",                 "passed": True, "severity": "error",   "message": "Amount is positive"},
+        {"rule_name": "settlement_currency_consistency", "passed": True, "severity": "error",   "message": "Settlement currency is consistent with instrument"},
+        {"rule_name": "counterparty_exists",             "passed": True, "severity": "error",   "message": "Counterparty pre-check skipped (stub; validated at BoCheck)"},
+        {"rule_name": "instrument_exists",               "passed": True, "severity": "error",   "message": "Instrument pre-check skipped (stub; validated at BoCheck)"},
+    ]
+
+
+# TRD-004: value_date=2024-01-01 predates trade_date=2026-04-01 and is in the past
+_TRD_004_FO_RESULTS: list[dict] = [
+    {"rule_name": "trade_date_not_future",           "passed": True,  "severity": "error",   "message": f"Trade date {_TRADE_DATE} is not in the future"},
+    {"rule_name": "trade_date_not_weekend",          "passed": True,  "severity": "error",   "message": f"Trade date {_TRADE_DATE} is a business day"},
+    {"rule_name": "value_date_after_trade_date",     "passed": False, "severity": "error",   "message": "Value date 2024-01-01 must be strictly after trade date 2026-04-01"},
+    {"rule_name": "value_date_not_past",             "passed": False, "severity": "error",   "message": "Value date 2024-01-01 is in the past (today: 2026-04-01)"},
+    {"rule_name": "value_date_settlement_cycle",     "passed": False, "severity": "warning", "message": "Value date 2024-01-01 is earlier than T+2 (2026-04-03) — FX standard settlement cycle"},
+    {"rule_name": "amount_positive",                 "passed": True,  "severity": "error",   "message": "Amount 750000.00 is positive"},
+    {"rule_name": "settlement_currency_consistency", "passed": True,  "severity": "error",   "message": "Settlement currency 'AUD' is consistent with instrument 'AUDUSD'"},
+    {"rule_name": "counterparty_exists",             "passed": True,  "severity": "error",   "message": "Counterparty pre-check skipped (stub; validated at BoCheck)"},
+    {"rule_name": "instrument_exists",               "passed": True,  "severity": "error",   "message": "Instrument pre-check skipped (stub; validated at BoCheck)"},
+]
+
+# TRD-005: instrument=UNKNOWN_CCY_PAIR — settlement currency mismatch + unknown instrument
+_TRD_005_FO_RESULTS: list[dict] = [
+    {"rule_name": "trade_date_not_future",           "passed": True,  "severity": "error",   "message": f"Trade date {_TRADE_DATE} is not in the future"},
+    {"rule_name": "trade_date_not_weekend",          "passed": True,  "severity": "error",   "message": f"Trade date {_TRADE_DATE} is a business day"},
+    {"rule_name": "value_date_after_trade_date",     "passed": True,  "severity": "error",   "message": "Value date 2026-04-08 is after trade date 2026-04-01"},
+    {"rule_name": "value_date_not_past",             "passed": True,  "severity": "error",   "message": "Value date 2026-04-08 is not in the past"},
+    {"rule_name": "value_date_settlement_cycle",     "passed": True,  "severity": "warning", "message": "Value date 2026-04-08 meets T+2 settlement cycle"},
+    {"rule_name": "amount_positive",                 "passed": True,  "severity": "error",   "message": "Amount 100000.00 is positive"},
+    {"rule_name": "settlement_currency_consistency", "passed": False, "severity": "error",   "message": "Settlement currency 'USD' does not appear in instrument 'UNKNOWN_CCY_PAIR'"},
+    {"rule_name": "counterparty_exists",             "passed": True,  "severity": "error",   "message": "Counterparty pre-check skipped (stub; validated at BoCheck)"},
+    {"rule_name": "instrument_exists",               "passed": False, "severity": "error",   "message": "Instrument 'UNKNOWN_CCY_PAIR' not found in reference data"},
+]
+
+
+# TRD-001: ssi_exists fails — no internal SSI for 213800QILIUD4ROSUO03 / USD (only external)
+_TRD_001_BO_RESULTS: list[dict] = [
+    {"rule_name": "counterparty_exists",  "passed": True,  "severity": "error",   "message": "Counterparty '213800QILIUD4ROSUO03' exists in master data"},
+    {"rule_name": "counterparty_active",  "passed": True,  "severity": "error",   "message": "Counterparty '213800QILIUD4ROSUO03' is active"},
+    {"rule_name": "ssi_exists",           "passed": False, "severity": "error",   "message": "No internal SSI registered for LEI '213800QILIUD4ROSUO03' / currency 'USD'"},
+    {"rule_name": "bic_format_valid",     "passed": True,  "severity": "error",   "message": "No SSI present — BIC check skipped"},
+    {"rule_name": "iban_format_valid",    "passed": True,  "severity": "error",   "message": "No IBAN to validate"},
+    {"rule_name": "risk_limit_check",     "passed": True,  "severity": "error",   "message": "Risk limit check passed (stub — always passes)"},
+    {"rule_name": "compliance_check",     "passed": True,  "severity": "error",   "message": "Compliance / sanctions check passed (stub — always passes)"},
+    {"rule_name": "settlement_confirmed", "passed": True,  "severity": "error",   "message": "Settlement confirmation stub — always passes"},
+]
+
+# TRD-002: bic_format_valid fails — BIC 'GLSBUSS33' is 9 chars (must be 8 or 11)
+_TRD_002_BO_RESULTS: list[dict] = [
+    {"rule_name": "counterparty_exists",  "passed": True,  "severity": "error",   "message": "Counterparty '5493001KJTIIGC8Y1R12' exists in master data"},
+    {"rule_name": "counterparty_active",  "passed": True,  "severity": "error",   "message": "Counterparty '5493001KJTIIGC8Y1R12' is active"},
+    {"rule_name": "ssi_exists",           "passed": True,  "severity": "error",   "message": "Internal SSI found for LEI '5493001KJTIIGC8Y1R12' / currency 'EUR'"},
+    {"rule_name": "bic_format_valid",     "passed": False, "severity": "error",   "message": "BIC 'GLSBUSS33' must be 8 or 11 characters (actual: 9)"},
+    {"rule_name": "iban_format_valid",    "passed": True,  "severity": "error",   "message": "IBAN 'DE89370400440532013000' has valid format"},
+    {"rule_name": "risk_limit_check",     "passed": True,  "severity": "error",   "message": "Risk limit check passed (stub — always passes)"},
+    {"rule_name": "compliance_check",     "passed": True,  "severity": "error",   "message": "Compliance / sanctions check passed (stub — always passes)"},
+    {"rule_name": "settlement_confirmed", "passed": True,  "severity": "error",   "message": "Settlement confirmation stub — always passes"},
+]
+
+# TRD-003: counterparty_exists / active / ssi_exists all fail — unknown LEI → COMPOUND
+_TRD_003_BO_RESULTS: list[dict] = [
+    {"rule_name": "counterparty_exists",  "passed": False, "severity": "error",   "message": "Counterparty LEI 'UNKNOWNLEI000000001' not found in master data"},
+    {"rule_name": "counterparty_active",  "passed": False, "severity": "error",   "message": "Counterparty not found — cannot verify active status"},
+    {"rule_name": "ssi_exists",           "passed": False, "severity": "error",   "message": "No internal SSI registered for LEI 'UNKNOWNLEI000000001' / currency 'GBP'"},
+    {"rule_name": "bic_format_valid",     "passed": True,  "severity": "error",   "message": "No SSI present — BIC check skipped"},
+    {"rule_name": "iban_format_valid",    "passed": True,  "severity": "error",   "message": "No IBAN to validate"},
+    {"rule_name": "risk_limit_check",     "passed": True,  "severity": "error",   "message": "Risk limit check passed (stub — always passes)"},
+    {"rule_name": "compliance_check",     "passed": True,  "severity": "error",   "message": "Compliance / sanctions check passed (stub — always passes)"},
+    {"rule_name": "settlement_confirmed", "passed": True,  "severity": "error",   "message": "Settlement confirmation stub — always passes"},
+]
+
+
+# TRD-008: settlement_confirmed fails — SWIFT AC01 rejection (internal SSI format valid)
+_TRD_008_BO_RESULTS: list[dict] = [
+    {"rule_name": "counterparty_exists",  "passed": True,  "severity": "error",   "message": "Counterparty '213800QILIUD4ROSUO03' exists in master data"},
+    {"rule_name": "counterparty_active",  "passed": True,  "severity": "error",   "message": "Counterparty '213800QILIUD4ROSUO03' is active"},
+    {"rule_name": "ssi_exists",           "passed": True,  "severity": "error",   "message": "Internal SSI found for LEI '213800QILIUD4ROSUO03' / currency 'EUR'"},
+    {"rule_name": "bic_format_valid",     "passed": True,  "severity": "error",   "message": "BIC 'ACMEGB2L' has valid length (8 chars)"},
+    {"rule_name": "iban_format_valid",    "passed": True,  "severity": "error",   "message": "IBAN 'GB29NWBK60161331000000' has valid format"},
+    {"rule_name": "risk_limit_check",     "passed": True,  "severity": "error",   "message": "Risk limit check passed (stub — always passes)"},
+    {"rule_name": "compliance_check",     "passed": True,  "severity": "error",   "message": "Compliance / sanctions check passed (stub — always passes)"},
+    {"rule_name": "settlement_confirmed", "passed": False, "severity": "error",   "message": "MT103 rejected by SWIFT: AC01 — incorrect account number. Sender BIC: ACMEGB2L."},
+]
+
+# TRD-009: counterparty_active fails — AG01 (inactive CP; USD SSI still registered)
+_TRD_009_BO_RESULTS: list[dict] = [
+    {"rule_name": "counterparty_exists",  "passed": True,  "severity": "error",   "message": "Counterparty '213800XYZINACTIVE001' exists in master data"},
+    {"rule_name": "counterparty_active",  "passed": False, "severity": "error",   "message": "Counterparty '213800XYZINACTIVE001' (Zenith Trading Corp) is inactive"},
+    {"rule_name": "ssi_exists",           "passed": True,  "severity": "error",   "message": "Internal SSI found for LEI '213800XYZINACTIVE001' / currency 'USD'"},
+    {"rule_name": "bic_format_valid",     "passed": True,  "severity": "error",   "message": "BIC 'ZNTHGB2L' has valid length (8 chars)"},
+    {"rule_name": "iban_format_valid",    "passed": True,  "severity": "error",   "message": "No IBAN to validate"},
+    {"rule_name": "risk_limit_check",     "passed": True,  "severity": "error",   "message": "Risk limit check passed (stub — always passes)"},
+    {"rule_name": "compliance_check",     "passed": True,  "severity": "error",   "message": "Compliance / sanctions check passed (stub — always passes)"},
+    {"rule_name": "settlement_confirmed", "passed": True,  "severity": "error",   "message": "Settlement confirmation stub — always passes"},
+]
+
+# TRD-010: counterparty_active + ssi_exists both fail — COMPOUND (inactive CP, no GBP SSI)
+_TRD_010_BO_RESULTS: list[dict] = [
+    {"rule_name": "counterparty_exists",  "passed": True,  "severity": "error",   "message": "Counterparty '213800XYZINACTIVE001' exists in master data"},
+    {"rule_name": "counterparty_active",  "passed": False, "severity": "error",   "message": "Counterparty '213800XYZINACTIVE001' (Zenith Trading Corp) is inactive"},
+    {"rule_name": "ssi_exists",           "passed": False, "severity": "error",   "message": "No internal SSI registered for LEI '213800XYZINACTIVE001' / currency 'GBP'"},
+    {"rule_name": "bic_format_valid",     "passed": True,  "severity": "error",   "message": "No SSI present — BIC check skipped"},
+    {"rule_name": "iban_format_valid",    "passed": True,  "severity": "error",   "message": "No IBAN to validate"},
+    {"rule_name": "risk_limit_check",     "passed": True,  "severity": "error",   "message": "Risk limit check passed (stub — always passes)"},
+    {"rule_name": "compliance_check",     "passed": True,  "severity": "error",   "message": "Compliance / sanctions check passed (stub — always passes)"},
+    {"rule_name": "settlement_confirmed", "passed": True,  "severity": "error",   "message": "Settlement confirmation stub — always passes"},
+]
+
+# TRD-011: iban_format_valid fails — BE01 (GBXX-INVALID-IBAN-9999 contains hyphens)
+_TRD_011_BO_RESULTS: list[dict] = [
+    {"rule_name": "counterparty_exists",  "passed": True,  "severity": "error",   "message": "Counterparty '254900CUSTBANK000001' exists in master data"},
+    {"rule_name": "counterparty_active",  "passed": True,  "severity": "error",   "message": "Counterparty '254900CUSTBANK000001' is active"},
+    {"rule_name": "ssi_exists",           "passed": True,  "severity": "error",   "message": "Internal SSI found for LEI '254900CUSTBANK000001' / currency 'GBP'"},
+    {"rule_name": "bic_format_valid",     "passed": True,  "severity": "error",   "message": "BIC 'MTCUBS33' has valid length (8 chars)"},
+    {"rule_name": "iban_format_valid",    "passed": False, "severity": "error",   "message": "IBAN 'GBXX-INVALID-IBAN-9999' does not match [A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}"},
+    {"rule_name": "risk_limit_check",     "passed": True,  "severity": "error",   "message": "Risk limit check passed (stub — always passes)"},
+    {"rule_name": "compliance_check",     "passed": True,  "severity": "error",   "message": "Compliance / sanctions check passed (stub — always passes)"},
+    {"rule_name": "settlement_confirmed", "passed": True,  "severity": "error",   "message": "Settlement confirmation stub — always passes"},
+]
+
+# TRD-012: settlement_confirmed fails — SLA exceeded, BIC may be expired → UNKNOWN
+_TRD_012_BO_RESULTS: list[dict] = [
+    {"rule_name": "counterparty_exists",  "passed": True,  "severity": "error",   "message": "Counterparty '529900ATLANTIC000001' exists in master data"},
+    {"rule_name": "counterparty_active",  "passed": True,  "severity": "error",   "message": "Counterparty '529900ATLANTIC000001' is active"},
+    {"rule_name": "ssi_exists",           "passed": True,  "severity": "error",   "message": "Internal SSI found for LEI '529900ATLANTIC000001' / currency 'JPY'"},
+    {"rule_name": "bic_format_valid",     "passed": True,  "severity": "error",   "message": "BIC 'ATLCGB2LXXX' has valid length (11 chars)"},
+    {"rule_name": "iban_format_valid",    "passed": True,  "severity": "error",   "message": "No IBAN to validate"},
+    {"rule_name": "risk_limit_check",     "passed": True,  "severity": "error",   "message": "Risk limit check passed (stub — always passes)"},
+    {"rule_name": "compliance_check",     "passed": True,  "severity": "error",   "message": "Compliance / sanctions check passed (stub — always passes)"},
+    {"rule_name": "settlement_confirmed", "passed": False, "severity": "error",   "message": "Settlement confirmation not received within SLA window. BIC ATLCGB2LXXX may be expired."},
+]
+
+# TRD-013: settlement_confirmed fails — SWIFT AM04 (FO liquidity shortfall)
+_TRD_013_BO_RESULTS: list[dict] = [
+    {"rule_name": "counterparty_exists",  "passed": True,  "severity": "error",   "message": "Counterparty '9695005MSX1OYEMGDF46' exists in master data"},
+    {"rule_name": "counterparty_active",  "passed": True,  "severity": "error",   "message": "Counterparty '9695005MSX1OYEMGDF46' is active"},
+    {"rule_name": "ssi_exists",           "passed": True,  "severity": "error",   "message": "Internal SSI found for LEI '9695005MSX1OYEMGDF46' / currency 'USD'"},
+    {"rule_name": "bic_format_valid",     "passed": True,  "severity": "error",   "message": "BIC 'PACFJPJT' has valid length (8 chars)"},
+    {"rule_name": "iban_format_valid",    "passed": True,  "severity": "error",   "message": "No IBAN to validate"},
+    {"rule_name": "risk_limit_check",     "passed": True,  "severity": "error",   "message": "Risk limit check passed (stub — always passes)"},
+    {"rule_name": "compliance_check",     "passed": True,  "severity": "error",   "message": "Compliance / sanctions check passed (stub — always passes)"},
+    {"rule_name": "settlement_confirmed", "passed": False, "severity": "error",   "message": "MT103 rejected by SWIFT: AM04 — insufficient funds at correspondent bank. FO liquidity shortfall."},
+]
+
+
 def _upsert_trades_and_exceptions(db: Session) -> None:
     existing_trades = {tid for (tid,) in db.query(TradeModel.trade_id)}
     existing_exc_trades = {tid for (tid,) in db.query(StpExceptionModel.trade_id)}
 
-    # (trade_id, cp_lei, instrument, currency, amount, value_date, settlement_ccy,
-    #  workflow_status, error_message)
-    failed = [
-        (
-            "TRD-001", "213800QILIUD4ROSUO03", "USDJPY", "USD",
-            Decimal("1000000.00"), date(2026, 4, 8), "USD", "FoAgentToCheck",
-            "SSI not registered for counterparty 213800QILIUD4ROSUO03 / USD",
-        ),
-        (
-            "TRD-002", "5493001KJTIIGC8Y1R12", "EURUSD", "EUR",
-            Decimal("500000.00"), date(2026, 4, 8), "EUR", "FoAgentToCheck",
-            "Invalid BIC format in settlement instructions for 5493001KJTIIGC8Y1R12 / EUR",
-        ),
-        (
-            "TRD-003", "UNKNOWNLEI000000001", "GBPUSD", "GBP",
-            Decimal("250000.00"), date(2026, 4, 8), "GBP", "FoAgentToCheck",
-            "Counterparty LEI UNKNOWNLEI000000001 not found in master data",
-        ),
-        (
-            "TRD-004", "9695005MSX1OYEMGDF46", "AUDUSD", "AUD",
-            Decimal("750000.00"), date(2024, 1, 1), "AUD", "FoAgentToCheck",
-            "Value date 2024-01-01 is in the past",
-        ),
-        (
-            "TRD-005", "9695005MSX1OYEMGDF46", "UNKNOWN_CCY_PAIR", "USD",
-            Decimal("100000.00"), date(2026, 4, 8), "USD", "FoAgentToCheck",
-            "Instrument UNKNOWN_CCY_PAIR not found in reference data",
-        ),
-    ]
-    # Phase 24-B: complex/ambiguous SWIFT scenarios (TRD-008〜012)
-    complex_failed = [
-        (
-            "TRD-008", "213800QILIUD4ROSUO03", "EURUSD", "EUR",
-            Decimal("800000.00"), date(2026, 4, 8), "EUR", "FoAgentToCheck",
-            "MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.",
-        ),
-        (
-            "TRD-009", "213800XYZINACTIVE001", "USDJPY", "USD",
-            Decimal("1200000.00"), date(2026, 4, 8), "USD", "FoAgentToCheck",
-            "MT103 rejected by SWIFT. Reason code: AG01. Counterparty LEI: 213800XYZINACTIVE001.",
-        ),
-        (
-            "TRD-010", "213800XYZINACTIVE001", "GBPUSD", "GBP",
-            Decimal("600000.00"), date(2026, 4, 8), "GBP", "FoAgentToCheck",
-            "Pre-settlement validation failed for TRD-010. Multiple checks not passed.",
-        ),
-        (
-            "TRD-011", "254900CUSTBANK000001", "GBPUSD", "GBP",
-            Decimal("450000.00"), date(2026, 4, 8), "GBP", "FoAgentToCheck",
-            "Custodian HSBC rejected settlement instruction for TRD-011. No further details provided.",
-        ),
-        (
-            "TRD-012", "529900ATLANTIC000001", "USDJPY", "JPY",
-            Decimal("90000000.00"), date(2026, 4, 8), "JPY", "FoAgentToCheck",
-            "Settlement confirmation not received within SLA window for TRD-012. Status unknown.",
-        ),
-    ]
-    # Initial trades for the "create exception" demo (no exceptions yet)
-    new_trades = [
-        (
-            "TRD-006", "213800QILIUD4ROSUO03", "EURUSD", "EUR",
-            Decimal("200000.00"), date(2026, 4, 20), "EUR", "Initial",
-        ),
-        (
-            "TRD-007", "9695005MSX1OYEMGDF46", "GBPUSD", "GBP",
-            Decimal("350000.00"), date(2026, 4, 20), "GBP", "Initial",
-        ),
+    # ------------------------------------------------------------------
+    # FO-failing trades — FoCheck ran and found FO-level errors
+    # workflow_status=FoAgentToCheck; fo_check_results populated
+    # ------------------------------------------------------------------
+    fo_failing = [
+        {
+            "trade_id": "TRD-004",
+            "cp_lei": "9695005MSX1OYEMGDF46", "instr": "AUDUSD", "ccy": "AUD",
+            "amt": Decimal("750000.00"), "vd": date(2024, 1, 1), "sc": "AUD",
+            "err": "Value date 2024-01-01 is in the past",
+            "fo_results": _TRD_004_FO_RESULTS,
+        },
+        {
+            "trade_id": "TRD-005",
+            "cp_lei": "9695005MSX1OYEMGDF46", "instr": "UNKNOWN_CCY_PAIR", "ccy": "USD",
+            "amt": Decimal("100000.00"), "vd": date(2026, 4, 8), "sc": "USD",
+            "err": "Instrument UNKNOWN_CCY_PAIR not found in reference data",
+            "fo_results": _TRD_005_FO_RESULTS,
+        },
     ]
 
-    for row in failed + complex_failed:
-        trade_id, cp_lei, instr, ccy, amt, vd, sc, _wf_status, err = row
-        if trade_id not in existing_trades:
+    for t in fo_failing:
+        if t["trade_id"] not in existing_trades:
             db.add(TradeModel(
-                trade_id=trade_id, version=1, is_current=True,
-                workflow_status="FoCheck",
-                counterparty_lei=cp_lei, instrument_id=instr,
-                currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
-                settlement_currency=sc,
+                trade_id=t["trade_id"], version=1, is_current=True,
+                workflow_status="FoAgentToCheck",
+                counterparty_lei=t["cp_lei"], instrument_id=t["instr"],
+                currency=t["ccy"], amount=t["amt"],
+                value_date=t["vd"], trade_date=_TRADE_DATE,
+                settlement_currency=t["sc"],
                 sendback_count=0,
+                fo_check_results=t["fo_results"],
                 created_at=_now(), updated_at=_now(),
             ))
-        if trade_id not in existing_exc_trades:
+        if t["trade_id"] not in existing_exc_trades:
             db.add(StpExceptionModel(
-                id=uuid.uuid4(), trade_id=trade_id, error_message=err,
+                id=uuid.uuid4(), trade_id=t["trade_id"], error_message=t["err"],
                 status="OPEN", triage_run_id=None,
                 created_at=_now(), updated_at=_now(),
             ))
 
-    for trade_id, cp_lei, instr, ccy, amt, vd, sc, wf_status in new_trades:
+    # ------------------------------------------------------------------
+    # BO-failing trades — FoCheck passed, BoCheck found errors
+    # workflow_status=BoAgentToCheck; both fo_ and bo_check_results populated
+    # ------------------------------------------------------------------
+    bo_failing = [
+        {
+            "trade_id": "TRD-001",
+            "cp_lei": "213800QILIUD4ROSUO03", "instr": "USDJPY", "ccy": "USD",
+            "amt": Decimal("1000000.00"), "vd": date(2026, 4, 8), "sc": "USD",
+            "err": "SSI not registered for counterparty 213800QILIUD4ROSUO03 / USD",
+            "bo_results": _TRD_001_BO_RESULTS,
+        },
+        {
+            "trade_id": "TRD-002",
+            "cp_lei": "5493001KJTIIGC8Y1R12", "instr": "EURUSD", "ccy": "EUR",
+            "amt": Decimal("500000.00"), "vd": date(2026, 4, 8), "sc": "EUR",
+            "err": "Invalid BIC format in settlement instructions for 5493001KJTIIGC8Y1R12 / EUR",
+            "bo_results": _TRD_002_BO_RESULTS,
+        },
+        {
+            "trade_id": "TRD-003",
+            "cp_lei": "UNKNOWNLEI000000001", "instr": "GBPUSD", "ccy": "GBP",
+            "amt": Decimal("250000.00"), "vd": date(2026, 4, 8), "sc": "GBP",
+            "err": "Counterparty LEI UNKNOWNLEI000000001 not found in master data",
+            "bo_results": _TRD_003_BO_RESULTS,
+        },
+        {
+            "trade_id": "TRD-008",
+            "cp_lei": "213800QILIUD4ROSUO03", "instr": "EURUSD", "ccy": "EUR",
+            "amt": Decimal("800000.00"), "vd": date(2026, 4, 8), "sc": "EUR",
+            "err": "MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.",
+            "bo_results": _TRD_008_BO_RESULTS,
+        },
+        {
+            "trade_id": "TRD-009",
+            "cp_lei": "213800XYZINACTIVE001", "instr": "USDJPY", "ccy": "USD",
+            "amt": Decimal("1200000.00"), "vd": date(2026, 4, 8), "sc": "USD",
+            "err": "MT103 rejected by SWIFT. Reason code: AG01. Counterparty LEI: 213800XYZINACTIVE001.",
+            "bo_results": _TRD_009_BO_RESULTS,
+        },
+        {
+            "trade_id": "TRD-010",
+            "cp_lei": "213800XYZINACTIVE001", "instr": "GBPUSD", "ccy": "GBP",
+            "amt": Decimal("600000.00"), "vd": date(2026, 4, 8), "sc": "GBP",
+            "err": "Pre-settlement validation failed for TRD-010. Multiple checks not passed.",
+            "bo_results": _TRD_010_BO_RESULTS,
+        },
+        {
+            "trade_id": "TRD-011",
+            "cp_lei": "254900CUSTBANK000001", "instr": "GBPUSD", "ccy": "GBP",
+            "amt": Decimal("450000.00"), "vd": date(2026, 4, 8), "sc": "GBP",
+            "err": "Custodian HSBC rejected settlement instruction for TRD-011. No further details provided.",
+            "bo_results": _TRD_011_BO_RESULTS,
+        },
+        {
+            "trade_id": "TRD-012",
+            "cp_lei": "529900ATLANTIC000001", "instr": "USDJPY", "ccy": "JPY",
+            "amt": Decimal("90000000.00"), "vd": date(2026, 4, 8), "sc": "JPY",
+            "err": "Settlement confirmation not received within SLA window for TRD-012. Status unknown.",
+            "bo_results": _TRD_012_BO_RESULTS,
+        },
+    ]
+
+    fo_pass = _fo_all_pass()
+    for t in bo_failing:
+        if t["trade_id"] not in existing_trades:
+            db.add(TradeModel(
+                trade_id=t["trade_id"], version=1, is_current=True,
+                workflow_status="BoAgentToCheck",
+                counterparty_lei=t["cp_lei"], instrument_id=t["instr"],
+                currency=t["ccy"], amount=t["amt"],
+                value_date=t["vd"], trade_date=_TRADE_DATE,
+                settlement_currency=t["sc"],
+                sendback_count=0,
+                fo_check_results=fo_pass,
+                bo_check_results=t["bo_results"],
+                created_at=_now(), updated_at=_now(),
+            ))
+        if t["trade_id"] not in existing_exc_trades:
+            db.add(StpExceptionModel(
+                id=uuid.uuid4(), trade_id=t["trade_id"], error_message=t["err"],
+                status="OPEN", triage_run_id=None,
+                created_at=_now(), updated_at=_now(),
+            ))
+
+    # ------------------------------------------------------------------
+    # Initial trades — no checks run yet
+    # ------------------------------------------------------------------
+    new_trades = [
+        ("TRD-006", "213800QILIUD4ROSUO03", "EURUSD", "EUR", Decimal("200000.00"), date(2026, 4, 20), "EUR"),
+        ("TRD-007", "9695005MSX1OYEMGDF46", "GBPUSD", "GBP", Decimal("350000.00"), date(2026, 4, 20), "GBP"),
+    ]
+    for trade_id, cp_lei, instr, ccy, amt, vd, sc in new_trades:
         if trade_id not in existing_trades:
             db.add(TradeModel(
                 trade_id=trade_id, version=1, is_current=True,
-                workflow_status=wf_status,
+                workflow_status="Initial",
                 counterparty_lei=cp_lei, instrument_id=instr,
                 currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
                 settlement_currency=sc,
@@ -242,38 +446,29 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
                 created_at=_now(), updated_at=_now(),
             ))
 
-    # Phase 32: TRD-013 — AM04 demo trade, seeded directly in BoAgentToCheck
-    # Counterparty (9695005MSX1OYEMGDF46) and SSI are valid; root cause is FO-side liquidity.
-    # bo_check_results pre-populated (all BO rules pass) so BoAgent can run immediately.
-    _TRD_013_ID = "TRD-013"
-    _TRD_013_ERR = (
-        "MT103 rejected by SWIFT. Reason code: AM04. "
-        "Insufficient funds at correspondent bank. FO liquidity shortfall."
-    )
-    _TRD_013_BO_RESULTS = [
-        {"rule_name": "counterparty_exists",  "passed": True, "severity": "error", "message": ""},
-        {"rule_name": "counterparty_active",  "passed": True, "severity": "error", "message": ""},
-        {"rule_name": "ssi_exists",           "passed": True, "severity": "error", "message": ""},
-        {"rule_name": "bic_format_valid",     "passed": True, "severity": "error", "message": ""},
-        {"rule_name": "iban_format_valid",    "passed": True, "severity": "warning", "message": ""},
-        {"rule_name": "value_date_valid",     "passed": True, "severity": "error", "message": ""},
-        {"rule_name": "instrument_exists",    "passed": True, "severity": "error", "message": ""},
-    ]
-    if _TRD_013_ID not in existing_trades:
+    # ------------------------------------------------------------------
+    # TRD-013: AM04 — FO liquidity shortfall, all internal BO checks pass
+    # ------------------------------------------------------------------
+    if "TRD-013" not in existing_trades:
         db.add(TradeModel(
-            trade_id=_TRD_013_ID, version=1, is_current=True,
+            trade_id="TRD-013", version=1, is_current=True,
             workflow_status="BoAgentToCheck",
             counterparty_lei="9695005MSX1OYEMGDF46", instrument_id="USDJPY",
             currency="USD", amount=Decimal("2000000.00"),
             value_date=date(2026, 5, 1), trade_date=_TRADE_DATE,
             settlement_currency="USD",
             sendback_count=0,
+            fo_check_results=fo_pass,
             bo_check_results=_TRD_013_BO_RESULTS,
             created_at=_now(), updated_at=_now(),
         ))
-    if _TRD_013_ID not in existing_exc_trades:
+    if "TRD-013" not in existing_exc_trades:
         db.add(StpExceptionModel(
-            id=uuid.uuid4(), trade_id=_TRD_013_ID, error_message=_TRD_013_ERR,
+            id=uuid.uuid4(), trade_id="TRD-013",
+            error_message=(
+                "MT103 rejected by SWIFT. Reason code: AM04. "
+                "Insufficient funds at correspondent bank. FO liquidity shortfall."
+            ),
             status="OPEN", triage_run_id=None,
             created_at=_now(), updated_at=_now(),
         ))
