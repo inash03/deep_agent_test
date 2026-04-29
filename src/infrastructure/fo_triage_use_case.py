@@ -144,6 +144,8 @@ class FoTriageUseCase:
             pending_action_type=action_type,
             pending_action_description=description,
             steps=_extract_steps(state["messages"]),
+            cost_log=list(state.get("cost_log") or []),
+            total_cost_usd=float(state.get("total_cost_usd") or 0.0),
         )
 
     def _completed_result(
@@ -170,6 +172,8 @@ class FoTriageUseCase:
             recommended_action=recommended_action,
             action_taken=action_taken,
             steps=steps,
+            cost_log=list(state.get("cost_log") or []),
+            total_cost_usd=float(state.get("total_cost_usd") or 0.0),
         )
 
 

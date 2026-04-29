@@ -14,6 +14,7 @@ Max 1 task in In Progress at a time.
 
 ## Done
 
+- Phase 35: LLM コスト集計機能 — LlmCostLogModel + Alembic 0006 migration、llm_cost_log_repository（save_batch/get_summary/get_daily_costs）、TriageResult に cost_log/total_cost_usd 追加、FO/BO use case からコスト保存、GET /api/v1/cost/summary + GET /api/v1/cost/logs、CostPage（サマリーカード・エージェント別・モデル別・日次テーブル・最近の呼び出しログ）、NavBar "Cost" リンク追加、version 0.5.0 → 0.6.0
 - Phase 34: Rule一覧画面 — GET /api/v1/rules エンドポイント追加（FO 9ルール・BO 8ルールのメタデータ返却）、RuleListPage.tsx 新規作成（FO/BO 別テーブル、severity バッジ・stub フラグ表示）、NavBar に "Rules" リンク追加、version 0.4.0 → 0.5.0
 - Phase 33: seed / rule_engine 整合性修正 — FO_RULES に counterparty_exists・instrument_exists stub 追加、BO_RULES に settlement_confirmed stub 追加、seed.py を静的チェック結果 pre-seed 方式に再設計（TRD-004/005 を FoAgentToCheck + fo_check_results、TRD-001〜003/008〜013 を BoAgentToCheck + fo/bo_check_results 付きで登録、_wf_status バグ修正）、Zenith Trading Corp（非アクティブ CP）の USD SSI をマスタに追加（TRD-009 が counterparty_active のみ失敗し AG01 パスになるよう調整）
 - Phase 29: stp_status カラム削除 — TradeStatus enum 削除、models.py/trade_repository.py/seed.py/schemas.py/trades.py/stp_exceptions.py から stp_status 参照を全削除、alembic/versions/0005_drop_stp_status.py 追加、フロントエンド（types/api/TradeListPage/TradeDetailPage）から stp_status フィルタ・列・表示を削除、frontend version 0.2.1 → 0.3.0

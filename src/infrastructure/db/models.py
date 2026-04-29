@@ -302,3 +302,41 @@ class AppSettingModel(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+
+
+class LlmCostLogModel(Base):
+    """One row per LLM call made by FoAgent or BoAgent.
+
+    Columns:
+      id            — UUID PK
+      run_id        — LangGraph thread_id (nullable for legacy runs)
+      trade_id      — trade being triaged (nullable)
+      agent_type    — "fo" | "bo" | "legacy"
+      node          — graph node name (e.g. "agent", "model_router")
+      model         — model ID (e.g. "claude-sonnet-4-6")
+      input_tokens  — prompt token count
+      output_tokens — completion token count
+      cost_usd      — calculated cost in USD
+      reason        — model selection reason / audit note
+      created_at    — wall-clock time of the call
+    """
+
+    __tablename__ = "llm_cost_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    run_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    trade_id: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    agent_type: Mapped[str] = mapped_column(String(10), nullable=False)
+    node: Mapped[str] = mapped_column(String(100), nullable=False)
+    model: Mapped[str] = mapped_column(String(60), nullable=False)
+    input_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cost_usd: Mapped[Decimal] = mapped_column(Numeric(12, 8), nullable=False, default=0)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
