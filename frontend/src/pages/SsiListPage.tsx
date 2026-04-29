@@ -32,6 +32,8 @@ export function SsiListPage() {
     setApplied({ lei: filterLei, external: filterExternal })
   }
 
+  const goToSsi = (id: string) => navigate(`/ssis/${id}`)
+
   return (
     <PageLayout title="Settlement Standing Instructions">
       <div style={{ ...CARD, marginBottom: '1rem' }}>
@@ -69,12 +71,22 @@ export function SsiListPage() {
                 <th style={TH}>IBAN</th>
                 <th style={TH}>Type</th>
                 <th style={TH}>Updated</th>
-                <th style={TH}></th>
               </tr>
             </thead>
             <tbody>
               {items.map(row => (
-                <tr key={row.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                <tr
+                  key={row.id}
+                  onClick={() => goToSsi(row.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      goToSsi(row.id)
+                    }
+                  }}
+                  tabIndex={0}
+                  style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+                >
                   <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.lei}</td>
                   <td style={TD}>{row.currency}</td>
                   <td style={{ ...TD, fontFamily: 'monospace' }}>{row.bic}</td>
@@ -88,20 +100,10 @@ export function SsiListPage() {
                     </span>
                   </td>
                   <td style={{ ...TD, fontSize: '0.8rem', color: COLOR.textMuted }}>{new Date(row.updated_at).toLocaleDateString()}</td>
-                  <td style={TD}>
-                    {!row.is_external && (
-                      <button
-                        onClick={() => navigate(`/ssis/${row.id}`)}
-                        style={{ fontSize: '0.8rem', padding: '2px 10px', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', cursor: 'pointer' }}
-                      >
-                        Edit
-                      </button>
-                    )}
-                  </td>
                 </tr>
               ))}
               {items.length === 0 && (
-                <tr><td colSpan={8} style={{ padding: '1rem', textAlign: 'center', color: COLOR.textMuted }}>No SSIs found</td></tr>
+                <tr><td colSpan={7} style={{ padding: '1rem', textAlign: 'center', color: COLOR.textMuted }}>No SSIs found</td></tr>
               )}
             </tbody>
           </table>

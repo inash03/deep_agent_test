@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getCounterparty, updateCounterparty } from '../api/counterparties'
+import { listSsis } from '../api/ssis'
 import { PageLayout } from '../components/PageLayout'
-import { BTN_PRIMARY, BTN_SECONDARY, CARD, COLOR, INPUT, LABEL } from '../styles/theme'
+import { BTN_PRIMARY, BTN_SECONDARY, CARD, COLOR, INPUT, LABEL, TABLE, TD, TH } from '../styles/theme'
 import type { Counterparty } from '../types/counterparty'
+import type { Ssi } from '../types/ssi'
 
 export function CounterpartyEditPage() {
   const { lei } = useParams<{ lei: string }>()
@@ -12,18 +14,30 @@ export function CounterpartyEditPage() {
   const [name, setName] = useState('')
   const [bic, setBic] = useState('')
   const [isActive, setIsActive] = useState(true)
+  const [ssis, setSsis] = useState<Ssi[]>([])
+  const [ssiLoading, setSsiLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
   useEffect(() => {
     if (!lei) return
+    setError('')
     getCounterparty(lei).then(data => {
       setCp(data)
       setName(data.name)
       setBic(data.bic)
       setIsActive(data.is_active)
     }).catch(() => setError('Counterparty not found.'))
+  }, [lei])
+
+  useEffect(() => {
+    if (!lei) return
+    setSsiLoading(true)
+    listSsis({ lei, limit: 100, offset: 0 })
+      .then((data) => setSsis(data.items))
+      .catch(() => setSsis([]))
+      .finally(() => setSsiLoading(false))
   }, [lei])
 
   const handleSave = async () => {
@@ -102,6 +116,65 @@ export function CounterpartyEditPage() {
               Cancel
             </button>
           </div>
+        </div>
+
+        <div style={{ ...CARD, marginTop: '1rem' }}>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1rem' }}>SSI List</h2>
+            <p style={{ margin: '0.35rem 0 0', color: COLOR.textMuted, fontSize: '0.875rem' }}>
+              Click a row to open the SSI details for this counterparty.
+            </p>
+          </div>
+
+          {ssiLoading ? (
+            <p style={{ color: COLOR.textMuted }}>Loading SSIs…</p>
+          ) : ssis.length === 0 ? (
+            <p style={{ color: COLOR.textMuted, margin: 0 }}>No SSIs found for this counterparty.</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={TABLE}>
+                <thead>
+                  <tr>
+                    <th style={TH}>Currency</th>
+                    <th style={TH}>BIC</th>
+                    <th style={TH}>Account</th>
+                    <th style={TH}>IBAN</th>
+                    <th style={TH}>Type</th>
+                    <th style={TH}>Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ssis.map((row) => (
+                    <tr
+                      key={row.id}
+                      onClick={() => navigate(`/ssis/${row.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          navigate(`/ssis/${row.id}`)
+                        }
+                      }}
+                      tabIndex={0}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td style={TD}>{row.currency}</td>
+                      <td style={{ ...TD, fontFamily: 'monospace' }}>{row.bic}</td>
+                      <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.account}</td>
+                      <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem', color: row.iban ? COLOR.text : COLOR.textMuted }}>
+                        {row.iban ?? '—'}
+                      </td>
+                      <td style={TD}>
+                        <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: '0.75rem', background: row.is_external ? '#dbeafe' : '#d1fae5', color: row.is_external ? '#1e40af' : '#065f46' }}>
+                          {row.is_external ? 'External' : 'Internal'}
+                        </span>
+                      </td>
+                      <td style={{ ...TD, fontSize: '0.8rem', color: COLOR.textMuted }}>{new Date(row.updated_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </PageLayout>

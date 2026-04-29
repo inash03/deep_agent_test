@@ -108,7 +108,7 @@ export function TradeListPage() {
   const [uiFilterWorkflow, setUiFilterWorkflow] = useState('')
   const [sortSpecs, setSortSpecs] = useState<SortSpec[]>([
     { key: 'workflow_status', dir: 'asc' },
-    { key: 'trade_id', dir: 'desc' },
+    { key: 'trade_id', dir: 'asc' },
   ])
 
   const fetch = async (off = offset) => {
