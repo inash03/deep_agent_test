@@ -4,14 +4,26 @@
 
 ## Current Status
 
-**Branch:** `claude/remove-stp-status-column-U0NpW`
-**Last updated:** 2026-04-28
+**Branch:** `claude/review-trade-rules-RMvpA`
+**Last updated:** 2026-04-29
 **In Progress:** —
-**Next:** Alembic `alembic upgrade head` を本番 DB に適用して stp_status カラムを DROP、または次フェーズへ
+**Next:** `python -m src.infrastructure.seed reset` で DB をリセットして seed を確認、または次フェーズへ
 
 ---
 
 ## Step Log
+
+### Step 40 — feat: Phase 33 seed / rule_engine 整合性修正 (2026-04-29)
+
+Files: `src/domain/check_rules.py`, `src/infrastructure/seed.py`
+
+- **check_rules.py**: FO_RULES に `counterparty_exists`・`instrument_exists` stub 追加（実行時は常に pass、pre-seed 結果で fail 設定可）; BO_RULES に `settlement_confirmed` stub 追加（SWIFT 拒否シナリオ AC01/AM04/SLA timeout 用）
+- **seed.py**: `_upsert_trades_and_exceptions` を全面再設計
+  - `_wf_status` バグ修正: タプルで定義した workflow_status が無視され "FoCheck" ハードコードになっていた問題を解消
+  - FO 失敗取引（TRD-004/005）: `FoAgentToCheck` + `fo_check_results` 付きで登録
+  - BO 失敗取引（TRD-001〜003, 008〜013）: `BoAgentToCheck` + `fo_check_results`（全 pass） + `bo_check_results`（各シナリオ対応） 付きで登録
+  - Zenith Trading Corp（非アクティブ CP）の USD SSI をマスタに追加 → TRD-009 が counterparty_active のみ失敗し AG01 パスに正しく分類される
+  - TRD-013 の bo_check_results を現行 BO_RULES 名に整合（旧 value_date_valid / instrument_exists → settlement_confirmed）
 
 ### Step 39 — feat: Phase 29 stp_status カラム削除（技術的負債解消）(2026-04-28)
 
