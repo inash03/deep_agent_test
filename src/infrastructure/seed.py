@@ -118,6 +118,16 @@ _APP_SETTINGS = [
         "value": "manual",
         "description": "Trigger mode for BoCheck: auto (run on FoValidated entry) or manual",
     },
+    {
+        "key": "fo_triage_trigger",
+        "value": "manual",
+        "description": "Trigger mode for FoTriage: auto (run after FoCheck failure) or manual",
+    },
+    {
+        "key": "bo_triage_trigger",
+        "value": "manual",
+        "description": "Trigger mode for BoTriage: auto (run after BoCheck failure) or manual",
+    },
 ]
 
 
@@ -275,10 +285,11 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
 
 
 def _maybe_auto_run_fo_check(db: Session) -> None:
-    """If fo_check_trigger=auto, run FoCheck for all trades in FoCheck status.
+    """If fo_check_trigger=auto, run FoCheck for all trades in Initial status.
 
     Called after seeding so that auto-mode deployments don't require a manual
-    "Run FoCheck" click for every freshly seeded trade.
+    "Run FoCheck" click for every freshly seeded trade. This mirrors the same
+    trigger semantics used by create_trade -> maybe_run_fo_check.
     """
     setting = db.query(AppSettingModel).filter(AppSettingModel.key == "fo_check_trigger").first()
     if not (setting and setting.value == "auto"):
@@ -288,7 +299,7 @@ def _maybe_auto_run_fo_check(db: Session) -> None:
     from src.infrastructure.rule_engine import run_fo_check  # noqa: PLC0415
 
     repo = TradeRepository(db)
-    items, _ = repo.list(workflow_status="FoCheck", limit=100, offset=0)
+    items, _ = repo.list(workflow_status="Initial", limit=100, offset=0)
     for trade in items:
         try:
             run_fo_check(trade.trade_id, db)

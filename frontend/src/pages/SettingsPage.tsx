@@ -4,14 +4,18 @@ import { PageLayout } from '../components/PageLayout'
 import { CARD, COLOR, LABEL } from '../styles/theme'
 import type { AppSetting } from '../types/settings'
 
-const TRIGGER_KEYS = ['fo_check_trigger', 'bo_check_trigger']
+const TRIGGER_KEYS = ['fo_check_trigger', 'bo_check_trigger', 'fo_triage_trigger', 'bo_triage_trigger']
 const TRIGGER_LABELS: Record<string, string> = {
   fo_check_trigger: 'FoCheck Trigger',
   bo_check_trigger: 'BoCheck Trigger',
+  fo_triage_trigger: 'FO Triage Trigger',
+  bo_triage_trigger: 'BO Triage Trigger',
 }
 const TRIGGER_DESCS: Record<string, string> = {
-  fo_check_trigger: 'auto: runs FoCheck automatically when a trade reaches FoCheck status. manual: operator must trigger via API or UI.',
+  fo_check_trigger: 'auto: runs FoCheck automatically after trade creation (Initial). manual: operator must trigger via API or UI.',
   bo_check_trigger: 'auto: runs BoCheck automatically when a trade reaches FoValidated. manual: operator must trigger via API or UI.',
+  fo_triage_trigger: 'auto: starts FO triage automatically after FoCheck fails. manual: operator starts via Start FO Triage button.',
+  bo_triage_trigger: 'auto: starts BO triage automatically after BoCheck fails. manual: operator starts via Start BO Triage button.',
 }
 
 function ToggleButton({

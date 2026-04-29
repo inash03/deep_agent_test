@@ -215,7 +215,7 @@ trade_id=TRD-001, version=1, workflow_status=FoValidated, is_current=True
 
 | 設定キー | 値 | 説明 |
 |---------|-----|------|
-| `fo_check_trigger` | `auto` / `manual` | auto: FoValidated 移行時に自動実行 |
+| `fo_check_trigger` | `auto` / `manual` | auto: Initial 登録後に FoCheck を即時実行 |
 | `bo_check_trigger` | `auto` / `manual` | auto: FoValidated 移行後に自動実行 |
 
 ---

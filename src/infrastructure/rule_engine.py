@@ -20,9 +20,34 @@ from src.domain.check_rules import BO_RULES, FO_RULES
 from src.domain.entities import CheckResult
 from src.infrastructure.db.app_setting_repository import AppSettingRepository
 from src.infrastructure.db.models import CounterpartyModel, SettlementInstructionModel
+from src.infrastructure.bo_triage_use_case import BoTriageUseCase
+from src.infrastructure.fo_triage_use_case import FoTriageUseCase
 from src.infrastructure.db.trade_repository import TradeRepository
 
 _logger = logging.getLogger("stp_triage.rule_engine")
+_fo_triage_use_case: FoTriageUseCase | None = None
+_bo_triage_use_case: BoTriageUseCase | None = None
+
+
+def _build_error_context(results: list[CheckResult]) -> str:
+    failed = [r for r in results if not r.passed]
+    if not failed:
+        return ""
+    return "\n".join(f"[{r.rule_name}] {r.message}" for r in failed)
+
+
+def _get_fo_triage_use_case() -> FoTriageUseCase:
+    global _fo_triage_use_case
+    if _fo_triage_use_case is None:
+        _fo_triage_use_case = FoTriageUseCase()
+    return _fo_triage_use_case
+
+
+def _get_bo_triage_use_case() -> BoTriageUseCase:
+    global _bo_triage_use_case
+    if _bo_triage_use_case is None:
+        _bo_triage_use_case = BoTriageUseCase()
+    return _bo_triage_use_case
 
 
 # ---------------------------------------------------------------------------
@@ -81,6 +106,20 @@ def run_fo_check(trade_id: str, db: Session) -> tuple[list[CheckResult], str]:
             "failures": sum(1 for r in results if not r.passed),
         },
     )
+    if new_status == "FoAgentToCheck":
+        setting = AppSettingRepository(db).get("fo_triage_trigger")
+        if setting and setting.value == "auto":
+            try:
+                _get_fo_triage_use_case().start(
+                    trade_id=trade_id,
+                    error_context=_build_error_context(results),
+                )
+                _logger.info("fo_triage auto-triggered", extra={"trade_id": trade_id})
+            except Exception as exc:  # noqa: BLE001
+                _logger.warning(
+                    "fo_triage auto-trigger failed",
+                    extra={"trade_id": trade_id, "error": str(exc)},
+                )
     return results, new_status
 
 
@@ -151,6 +190,20 @@ def run_bo_check(trade_id: str, db: Session) -> tuple[list[CheckResult], str]:
             "failures": sum(1 for r in results if not r.passed),
         },
     )
+    if new_status == "BoAgentToCheck":
+        setting = AppSettingRepository(db).get("bo_triage_trigger")
+        if setting and setting.value == "auto":
+            try:
+                _get_bo_triage_use_case().start(
+                    trade_id=trade_id,
+                    error_context=_build_error_context(results),
+                )
+                _logger.info("bo_triage auto-triggered", extra={"trade_id": trade_id})
+            except Exception as exc:  # noqa: BLE001
+                _logger.warning(
+                    "bo_triage auto-trigger failed",
+                    extra={"trade_id": trade_id, "error": str(exc)},
+                )
     return results, new_status
 
 
