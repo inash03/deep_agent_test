@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { NavBar } from './components/NavBar'
+import { CostPage } from './pages/CostPage'
 import { CounterpartyEditPage } from './pages/CounterpartyEditPage'
 import { CounterpartyListPage } from './pages/CounterpartyListPage'
 import { ReferenceDataListPage } from './pages/ReferenceDataListPage'
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/ssis/:id" element={<SsiEditPage />} />
           <Route path="/reference-data" element={<ReferenceDataListPage />} />
           <Route path="/rules" element={<RuleListPage />} />
+          <Route path="/cost" element={<CostPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </div>

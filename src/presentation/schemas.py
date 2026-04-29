@@ -312,3 +312,60 @@ class TradeEventCreateRequest(BaseModel):
 class EventApproveRequest(BaseModel):
     approved: bool
     comment: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Cost tracking schemas
+# ---------------------------------------------------------------------------
+
+
+class LlmCostLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    run_id: str | None = None
+    trade_id: str | None = None
+    agent_type: str
+    node: str
+    model: str
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
+    reason: str | None = None
+    created_at: datetime
+
+
+class AgentCostBreakdown(BaseModel):
+    agent_type: str
+    cost_usd: float
+    run_count: int
+    call_count: int
+
+
+class ModelCostBreakdown(BaseModel):
+    model: str
+    cost_usd: float
+    call_count: int
+
+
+class DailyCostOut(BaseModel):
+    date: str
+    cost_usd: float
+    run_count: int
+    call_count: int
+
+
+class CostSummaryResponse(BaseModel):
+    total_cost_usd: float
+    total_input_tokens: int
+    total_output_tokens: int
+    total_calls: int
+    total_runs: int
+    by_agent: list[AgentCostBreakdown]
+    by_model: list[ModelCostBreakdown]
+    daily_costs: list[DailyCostOut]
+
+
+class CostLogListResponse(BaseModel):
+    items: list[LlmCostLogOut]
+    total: int

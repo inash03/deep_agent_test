@@ -7,11 +7,18 @@ Endpoints:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+import logging
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+
+from src.infrastructure.db.llm_cost_log_repository import LlmCostLogRepository
+from src.infrastructure.db.session import get_db
 from src.infrastructure.fo_triage_use_case import FoTriageUseCase
 from src.presentation.dependencies import limiter, verify_api_key
 from src.presentation.schemas import ResumeRequest, TriageRequest, TriageResponse
+
+_logger = logging.getLogger("stp_triage.fo_triage_router")
 
 router = APIRouter(prefix="/api/v1/trades", tags=["fo-triage"])
 
@@ -50,9 +57,11 @@ def start_fo_triage(
     trade_id: str,
     body: TriageRequest,
     use_case: FoTriageUseCase = Depends(get_fo_use_case),
+    db: Session = Depends(get_db),
     _: None = Depends(verify_api_key),
 ) -> TriageResponse:
     result = use_case.start(trade_id=trade_id, error_context=body.error_message)
+    _save_cost_logs(db, result, agent_type="fo")
     return TriageResponse.from_domain(result)
 
 
@@ -72,6 +81,7 @@ def resume_fo_triage(
     run_id: str,
     body: ResumeRequest,
     use_case: FoTriageUseCase = Depends(get_fo_use_case),
+    db: Session = Depends(get_db),
     _: None = Depends(verify_api_key),
 ) -> TriageResponse:
     try:
@@ -81,4 +91,17 @@ def resume_fo_triage(
             status_code=404,
             detail=f"FO triage run '{run_id}' not found or already completed.",
         )
+    _save_cost_logs(db, result, agent_type="fo")
     return TriageResponse.from_domain(result)
+
+
+def _save_cost_logs(db: Session, result, agent_type: str) -> None:
+    if not result.cost_log:
+        return
+    try:
+        repo = LlmCostLogRepository(db)
+        repo.save_batch(result.cost_log, result.run_id or "", result.trade_id, agent_type)
+        db.commit()
+    except Exception as exc:
+        _logger.warning("Failed to save cost logs: %s", exc)
+        db.rollback()

@@ -10,6 +10,7 @@ const LINKS = [
   { to: '/ssis', label: 'SSIs', end: false },
   { to: '/reference-data', label: 'Ref Data', end: false },
   { to: '/rules', label: 'Rules', end: false },
+  { to: '/cost', label: 'Cost', end: false },
   { to: '/settings', label: 'Settings', end: false },
 ]
 

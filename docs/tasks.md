@@ -8,7 +8,7 @@ Max 1 task in In Progress at a time.
 
 ## In Progress
 
-<!-- (empty) -->
+- Phase 35: LLM コスト集計機能 — llm_cost_logs テーブル新設・Alembic migration・リポジトリ・FO/BO use case からのコスト保存・GET /api/v1/cost-summary エンドポイント・フロントエンド CostPage 追加
 
 ---
 

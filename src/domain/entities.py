@@ -165,6 +165,10 @@ class TriageResult(BaseModel):
     # Always populated
     steps: list[Step] = Field(default_factory=list)
 
+    # Cost tracking (populated when available)
+    cost_log: list[dict[str, Any]] = Field(default_factory=list)
+    total_cost_usd: float = 0.0
+
 
 # ---------------------------------------------------------------------------
 # Rule check result
