@@ -25,6 +25,7 @@ from src.presentation.routers.stp_exceptions import router as stp_exceptions_rou
 from src.presentation.routers.bo_triage import router as bo_triage_router
 from src.presentation.routers.fo_triage import router as fo_triage_router
 from src.presentation.routers.trade_events import router as trade_events_router
+from src.presentation.routers.rules import router as rules_router
 from src.presentation.routers.settings import router as settings_router
 from src.presentation.routers.trades import router as trades_router
 
@@ -87,6 +88,7 @@ app.include_router(stp_exceptions_router)
 app.include_router(ssis_router)
 app.include_router(reference_data_router)
 app.include_router(seed_router)
+app.include_router(rules_router)
 app.include_router(settings_router)
 app.include_router(bo_triage_router)
 app.include_router(fo_triage_router)
