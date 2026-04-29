@@ -4,14 +4,37 @@
 
 ## Current Status
 
-**Branch:** `claude/create-rule-list-screen-9sFDr`
+**Branch:** `claude/add-cost-tracking-ceHhC`
 **Last updated:** 2026-04-29
 **In Progress:** —
-**Next:** 次フェーズへ（Counterparty 検索モーダル等 Backlog から選択）
+**Next:** alembic upgrade head を本番 DB に適用してコスト確認画面を動作確認
 
 ---
 
 ## Step Log
+
+### Step 42 — feat: Phase 35 LLM コスト集計機能 (2026-04-29)
+
+Files: `alembic/versions/0006_add_llm_cost_log.py` (新規),
+       `src/infrastructure/db/models.py`, `src/infrastructure/db/llm_cost_log_repository.py` (新規),
+       `src/domain/entities.py`, `src/infrastructure/fo_triage_use_case.py`,
+       `src/infrastructure/bo_triage_use_case.py`,
+       `src/presentation/routers/fo_triage.py`, `src/presentation/routers/bo_triage.py`,
+       `src/presentation/schemas.py`, `src/presentation/routers/cost.py` (新規),
+       `src/main.py`, `frontend/src/types/cost.ts` (新規), `frontend/src/api/cost.ts` (新規),
+       `frontend/src/pages/CostPage.tsx` (新規), `frontend/src/App.tsx`,
+       `frontend/src/components/NavBar.tsx`, `frontend/src/version.ts`
+
+- **LlmCostLogModel**: `llm_cost_logs` テーブル定義（id/run_id/trade_id/agent_type/node/model/input_tokens/output_tokens/cost_usd/reason/created_at）
+- **Alembic 0006**: `llm_cost_logs` テーブル作成 migration
+- **llm_cost_log_repository.py**: `save_batch`（cost_log リストを一括保存）、`get_summary`（集計統計）、`get_daily_costs`（直近 N 日の日次集計）、`list_recent`（最新 N 件）
+- **entities.py**: `TriageResult` に `cost_log: list[dict]` と `total_cost_usd: float` を追加
+- **fo/bo_triage_use_case.py**: `_completed_result` / `_pending_result` でグラフ state からコストデータを TriageResult に含める
+- **fo/bo_triage.py routers**: `db: Session = Depends(get_db)` を追加し、triage 完了後に `save_batch` でコストを DB 保存
+- **schemas.py**: `LlmCostLogOut`, `AgentCostBreakdown`, `ModelCostBreakdown`, `DailyCostOut`, `CostSummaryResponse`, `CostLogListResponse` を追加
+- **routers/cost.py**: `GET /api/v1/cost/summary`（集計）+ `GET /api/v1/cost/logs`（最新ログ一覧）
+- **CostPage.tsx**: サマリーカード 5 枚（Total Cost / Runs / Avg/Run / Input Tokens / Output Tokens）+ エージェント別・モデル別テーブル + 日次コスト表 + 最近の LLM 呼び出しログ
+- **version**: 0.5.0 → 0.6.0
 
 ### Step 41 — feat: Phase 34 Rule一覧画面 (2026-04-29)
 
