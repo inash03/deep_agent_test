@@ -116,6 +116,17 @@ def _settlement_currency_consistency(trade: "TradeModel") -> tuple[bool, str]:
     )
 
 
+# Placeholder rules — always pass at runtime so existing logic is unaffected,
+# but referenced by name in pre-seeded fo_check_results for demo scenarios that
+# predate the FO/BO rule split.
+def _counterparty_exists_fo(trade: "TradeModel") -> tuple[bool, str]:
+    return True, f"Counterparty pre-check skipped (stub; validated at BoCheck)"
+
+
+def _instrument_exists_fo(trade: "TradeModel") -> tuple[bool, str]:
+    return True, f"Instrument pre-check skipped (stub; validated at BoCheck)"
+
+
 FO_RULES: list[FoRule] = [
     FoRule("trade_date_not_future", "error", _trade_date_not_future),
     FoRule("trade_date_not_weekend", "error", _trade_date_not_weekend),
@@ -124,6 +135,8 @@ FO_RULES: list[FoRule] = [
     FoRule("value_date_settlement_cycle", "warning", _value_date_settlement_cycle),
     FoRule("amount_positive", "error", _amount_positive),
     FoRule("settlement_currency_consistency", "error", _settlement_currency_consistency),
+    FoRule("counterparty_exists", "error", _counterparty_exists_fo),
+    FoRule("instrument_exists", "error", _instrument_exists_fo),
 ]
 
 
@@ -214,6 +227,17 @@ def _compliance_check(
     return True, "Compliance / sanctions check passed (stub — always passes)"
 
 
+def _settlement_confirmed(
+    trade: "TradeModel",
+    cp: "CounterpartyModel | None",
+    ssi: "SettlementInstructionModel | None",
+) -> tuple[bool, str]:
+    # Placeholder — always passes at runtime.
+    # Pre-seeded bo_check_results can set this to False for SWIFT rejection scenarios
+    # (AC01, AM04, SLA timeout) that are not detectable by internal data checks alone.
+    return True, "Settlement confirmation stub — always passes"
+
+
 BO_RULES: list[BoRule] = [
     BoRule("counterparty_exists", "error", _counterparty_exists),
     BoRule("counterparty_active", "error", _counterparty_active),
@@ -222,4 +246,5 @@ BO_RULES: list[BoRule] = [
     BoRule("iban_format_valid", "error", _iban_format_valid),
     BoRule("risk_limit_check", "error", _risk_limit_check),
     BoRule("compliance_check", "error", _compliance_check),
+    BoRule("settlement_confirmed", "error", _settlement_confirmed),
 ]
