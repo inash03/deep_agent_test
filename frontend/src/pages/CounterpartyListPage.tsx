@@ -37,6 +37,8 @@ export function CounterpartyListPage() {
     setApplied({ lei: filterLei, name: filterName })
   }
 
+  const goToCounterparty = (lei: string) => navigate(`/counterparties/${lei}`)
+
   return (
     <PageLayout title="Counterparties">
       <div style={{ ...CARD, marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -66,16 +68,27 @@ export function CounterpartyListPage() {
             <table style={TABLE}>
               <thead>
                 <tr>
-                  {['LEI', 'Name', 'BIC', 'Active', 'Actions'].map(h => (
+                  {['LEI', 'Name', 'BIC', 'Active'].map(h => (
                     <th key={h} style={TH}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
-                  <tr><td colSpan={5} style={{ ...TD, textAlign: 'center', color: COLOR.textMuted, padding: '2rem' }}>No counterparties found.</td></tr>
+                  <tr><td colSpan={4} style={{ ...TD, textAlign: 'center', color: COLOR.textMuted, padding: '2rem' }}>No counterparties found.</td></tr>
                 ) : items.map(cp => (
-                  <tr key={cp.lei}>
+                  <tr
+                    key={cp.lei}
+                    onClick={() => goToCounterparty(cp.lei)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        goToCounterparty(cp.lei)
+                      }
+                    }}
+                    tabIndex={0}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem' }}>{cp.lei}</td>
                     <td style={{ ...TD, fontWeight: 500 }}>{cp.name}</td>
                     <td style={{ ...TD, fontFamily: 'monospace' }}>{cp.bic}</td>
@@ -88,14 +101,6 @@ export function CounterpartyListPage() {
                       }}>
                         {cp.is_active ? 'Active' : 'Inactive'}
                       </span>
-                    </td>
-                    <td style={TD}>
-                      <button
-                        onClick={() => navigate(`/counterparties/${cp.lei}`)}
-                        style={{ padding: '0.3rem 0.75rem', backgroundColor: COLOR.primary, color: '#fff', border: 'none', borderRadius: 5, fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
-                      >
-                        Edit
-                      </button>
                     </td>
                   </tr>
                 ))}
