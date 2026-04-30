@@ -9,19 +9,16 @@ Completed tasks are archived in `docs/tasks_done.md`.
 
 ## In Progress
 
-#### Phase 37 — ドキュメント最新化 + CLAUDE.md の自動更新ルール追加
+#### Phase 39 — TradeDetailPage FoCheck 結果表示の不具合修正
 
-**目的:** `docs/architecture.md` と `docs/requirements.md` が古い状態のため最新化する。
-また、実装コミット時にこれらのドキュメントも更新するよう `CLAUDE.md` にルールを追記する
-（現状は `progress.md` のみ更新されており、`architecture.md` / `requirements.md` は放置されている）。
+**目的:** `frontend/src/pages/TradeDetailPage.tsx` において、
+FoCheck が未実行のときも・実行済みでエラーなしのときも、
+同じメッセージ `"No FoCheck failures found. Run FoCheck first."` が表示される不具合を修正する。
 
-**作業内容:**
-- `docs/tasks.md` を In Progress/Backlog のみに再設計、`docs/tasks_done.md` を新設
-- `docs/architecture.md` を現在の実装（Phase 35 相当）に合わせて更新
-- `docs/requirements.md` を現在のスコープ・ステータスに合わせて更新
-- `CLAUDE.md` の「End-of-step checklist」に以下を追記:
-  - 実装内容がアーキテクチャに影響する場合は `docs/architecture.md` を更新する
-  - 要件が変わった・追加された場合は `docs/requirements.md` を更新する
+**修正内容:**
+- FoCheck 未実行（`fo_check_results` が null / 未設定）の場合: `"FoCheck has not been run yet."` を表示
+- FoCheck 実行済みで全ルール合格の場合: `"All FoCheck rules passed."` を表示
+- FoCheck 実行済みで失敗あり: 失敗ルール一覧を表示（既存ロジック）
 
 ---
 
@@ -40,31 +37,6 @@ Completed tasks are archived in `docs/tasks_done.md`.
 **Backend:**
 - `GET /api/v1/agent-tools` エンドポイント追加
   - FO/BO エージェントが保持するツール定義（name, description, is_hitl）を返却
-
----
-
-#### Phase 38 — src/infrastructure/agent.py の要否確認と削除
-
-**目的:** `fo_agent.py` と `bo_agent.py` が実装された現在、`src/infrastructure/agent.py` が
-依然として必要か確認し、不要であれば削除してコードベースをクリーンにする。
-
-**作業内容:**
-- `agent.py` の参照箇所を全ファイルで検索
-- テスト・ユースケース・ルーターから呼ばれていなければ削除
-- 削除する場合は `pyproject.toml` / `tests/` 等に影響がないか確認してから実施
-
----
-
-#### Phase 39 — TradeDetailPage FoCheck 結果表示の不具合修正
-
-**目的:** `frontend/src/pages/TradeDetailPage.tsx` において、
-FoCheck が未実行のときも・実行済みでエラーなしのときも、
-同じメッセージ `"No FoCheck failures found. Run FoCheck first."` が表示される不具合を修正する。
-
-**修正内容:**
-- FoCheck 未実行（`fo_check_results` が null / 未設定）の場合: `"FoCheck has not been run yet."` を表示
-- FoCheck 実行済みで全ルール合格の場合: `"All FoCheck rules passed."` を表示
-- FoCheck 実行済みで失敗あり: 失敗ルール一覧を表示（既存ロジック）
 
 ---
 

@@ -35,6 +35,7 @@ export interface TriageResponse {
   root_cause: RootCause | null
   recommended_action: string | null
   action_taken: boolean
+  agent_type?: string
   steps: StepOut[]
 }
 

@@ -4,14 +4,57 @@
 
 ## Current Status
 
-**Branch:** `claude/update-tasks-docs-ozjjb`
+**Branch:** `claude/phase-38-agent-deletion-XAXUh`
 **Last updated:** 2026-04-30
-**In Progress:** —
-**Next:** Phase 36（FO/BO エージェントのツール一覧確認画面）または Phase 38（agent.py 削除確認）
+**In Progress:** Phase 39（TradeDetailPage FoCheck 結果表示の不具合修正）
+**Next:** Phase 39 実装（FoCheck 未実行/合格/失敗の表示分岐修正）
 
 ---
 
 ## Step Log
+
+### Step 45 — feat: 旧トリアージチェーン削除 + TriageHistory 修正 + ナビゲーション整備 (2026-04-30)
+
+Files: `alembic/versions/0007_add_agent_type_to_triage_runs.py` (新規),
+       `src/domain/entities.py`, `src/infrastructure/db/models.py`,
+       `src/infrastructure/db/repository.py`,
+       `src/infrastructure/fo_triage_use_case.py`, `src/infrastructure/bo_triage_use_case.py`,
+       `src/presentation/schemas.py`,
+       `src/presentation/routers/triage_history.py` (新規),
+       `src/presentation/routers/fo_triage.py`, `src/presentation/routers/bo_triage.py`,
+       `src/presentation/routers/stp_exceptions.py`, `src/main.py`,
+       `frontend/src/pages/HomePage.tsx` (新規),
+       `frontend/src/types/triage.ts`, `frontend/src/api/triage.ts`,
+       `frontend/src/api/stpExceptions.ts`, `frontend/src/pages/TriageHistoryPage.tsx`,
+       `frontend/src/App.tsx`, `frontend/src/components/NavBar.tsx`,
+       `frontend/src/version.ts`
+       **削除:** `src/infrastructure/agent.py`, `src/infrastructure/triage_use_case.py`,
+       `src/presentation/router.py`, `frontend/src/pages/TriagePage.tsx`,
+       `tests/unit/test_output_parsing.py`, `tests/integration/test_triage_api.py`
+
+- **旧チェーン削除:** `agent.py` / `triage_use_case.py` / `router.py` / `TriagePage.tsx` をすべて削除。`stp_exceptions.py` の `start-triage` エンドポイントと `get_use_case` 依存も除去
+- **agent_type 導入:** `TriageResult` / `TriageRunModel` / `TriageResponse` に `agent_type` フィールドを追加、Alembic 0007 マイグレーション作成。FO/BO ユースケースがそれぞれ `"fo"` / `"bo"` を設定
+- **履歴保存修正:** FO/BO ルーターに `_save_triage_result()` を追加 — トリアージ実行ごとに `TriageResultRepository.save()` が呼ばれるよう修正
+- **履歴エンドポイント移設:** `GET /api/v1/triage/history` を新設 `triage_history.py` ルーターに移動
+- **HomePage 新設:** ルート `/` を `TriagePage`（旧）から `HomePage`（システム概要・ワークフロー説明・各画面リンク）に変更
+- **ナビゲーション整備:** `NavBar.tsx` に `Home`（`/`）と `Triage History`（`/history`）リンクを追加。全画面がメニューから到達可能に
+- **TriageHistoryPage 修正:** Agent 列追加（`fo`/`bo` 表示）、`colSpan` 5→6
+- **version:** `0.6.0` → `0.7.0`
+
+---
+
+### Step 44 — chore: Phase 38 agent.py 要否確認 — 削除不可と判定 (2026-04-30)
+
+Files: `docs/tasks.md`, `docs/tasks_done.md`, `docs/progress.md`
+
+- **調査結果:** `src/infrastructure/agent.py` は旧 `/api/v1/triage` エンドポイント経由でまだ参照されている
+  - 依存チェーン: `agent.py` ← `triage_use_case.py` ← `src/presentation/router.py` ← `src/main.py`
+  - フロントエンド: `frontend/src/api/triage.ts` が `/api/v1/triage` を直接呼び出し中
+  - テスト: `tests/unit/test_output_parsing.py`・`tests/integration/test_triage_api.py` が依存
+- **判定:** 削除条件（テスト・ユースケース・ルーターから呼ばれていない）を満たさないため **削除見送り**
+- **今後の課題:** 旧エンドポイント廃止（`router.py` + `triage_use_case.py` + `agent.py` を一括削除）を別タスクで行う場合は、フロントエンドの `triage.ts` 移行も合わせて実施する必要あり
+
+---
 
 ### Step 43 — docs: Phase 37 ドキュメント最新化 + CLAUDE.md 更新ルール追記 (2026-04-30)
 

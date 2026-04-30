@@ -145,8 +145,7 @@ sequenceDiagram
 ```mermaid
 graph TB
     subgraph Presentation["Presentation Layer (src/presentation/)"]
-        router["router.py (レガシー)\nPOST /triage + resume"]
-        routers["routers/\ntrades.py / trade_events.py\nfo_triage.py / bo_triage.py\ncounterparties.py / ssis.py\nstp_exceptions.py / settings.py\nrules.py / cost.py / seed.py"]
+        routers["routers/\ntrades.py / trade_events.py\nfo_triage.py / bo_triage.py\ntriage_history.py\ncounterparties.py / ssis.py\nstp_exceptions.py / settings.py\nrules.py / cost.py / seed.py"]
         schemas["schemas.py\nTradeOut / TradeEventOut\nCheckResultsResponse\nCostSummaryResponse など"]
     end
 
@@ -492,7 +491,8 @@ class BoAgentState(TypedDict):
 
 | 画面 | パス | 説明 |
 |------|------|------|
-| TriagePage | `/` | レガシートリアージ UI（旧 agent.py 使用） |
+| HomePage | `/` | システム概要・ワークフロー説明・各画面へのリンク |
+| TriageHistoryPage | `/history` | FO/BO トリアージ履歴一覧（Agent/RootCause/Diagnosis） |
 | TradeListPage | `/trades` | 取引一覧・workflow_status フィルタ |
 | TradeInputPage | `/trades/new` | 新規取引入力フォーム |
 | TradeDetailPage | `/trades/:id` | 取引詳細（FoCheck/BoCheck/Events/Triage タブ） |

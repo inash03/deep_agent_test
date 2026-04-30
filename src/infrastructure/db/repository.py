@@ -63,6 +63,7 @@ class TriageResultRepository:
             root_cause=result.root_cause.value if result.root_cause else None,
             recommended_action=result.recommended_action,
             action_taken=result.action_taken,
+            agent_type=result.agent_type,
             steps=[_step_to_model(s, pos) for pos, s in enumerate(result.steps)],
         )
         self._db.add(run)
@@ -124,6 +125,7 @@ def _run_to_domain(run: TriageRunModel) -> TriageResult:
         root_cause=RootCause(run.root_cause) if run.root_cause else None,
         recommended_action=run.recommended_action,
         action_taken=run.action_taken,
+        agent_type=run.agent_type,
         steps=[
             Step(
                 step_type=s.step_type,

@@ -3,6 +3,7 @@ import { NavBar } from './components/NavBar'
 import { CostPage } from './pages/CostPage'
 import { CounterpartyEditPage } from './pages/CounterpartyEditPage'
 import { CounterpartyListPage } from './pages/CounterpartyListPage'
+import { HomePage } from './pages/HomePage'
 import { ReferenceDataListPage } from './pages/ReferenceDataListPage'
 import { RuleListPage } from './pages/RuleListPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -14,7 +15,6 @@ import { TradeDetailPage } from './pages/TradeDetailPage'
 import { TradeInputPage } from './pages/TradeInputPage'
 import { TradeListPage } from './pages/TradeListPage'
 import { TriageHistoryPage } from './pages/TriageHistoryPage'
-import { TriagePage } from './pages/TriagePage'
 
 export default function App() {
   return (
@@ -22,7 +22,7 @@ export default function App() {
       <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', paddingTop: 52, overflowX: 'hidden' }}>
         <NavBar />
         <Routes>
-          <Route path="/" element={<TriagePage />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/history" element={<TriageHistoryPage />} />
           <Route path="/trades" element={<TradeListPage />} />
           <Route path="/trades/new" element={<TradeInputPage />} />

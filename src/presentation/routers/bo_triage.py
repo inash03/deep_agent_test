@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from src.infrastructure.bo_triage_use_case import BoTriageUseCase
 from src.infrastructure.db.llm_cost_log_repository import LlmCostLogRepository
+from src.infrastructure.db.repository import TriageResultRepository
 from src.infrastructure.db.session import get_db
 from src.presentation.dependencies import limiter, verify_api_key
 from src.presentation.schemas import ResumeRequest, TriageRequest, TriageResponse
@@ -62,6 +63,7 @@ def start_bo_triage(
 ) -> TriageResponse:
     result = use_case.start(trade_id=trade_id, error_context=body.error_message)
     _save_cost_logs(db, result, agent_type="bo")
+    _save_triage_result(db, result)
     return TriageResponse.from_domain(result)
 
 
@@ -92,7 +94,15 @@ def resume_bo_triage(
             detail=f"BO triage run '{run_id}' not found or already completed.",
         )
     _save_cost_logs(db, result, agent_type="bo")
+    _save_triage_result(db, result)
     return TriageResponse.from_domain(result)
+
+
+def _save_triage_result(db: Session, result) -> None:
+    try:
+        TriageResultRepository(db).save(result)
+    except Exception as exc:
+        _logger.warning("Failed to save triage result to history: %s", exc)
 
 
 def _save_cost_logs(db: Session, result, agent_type: str) -> None:
