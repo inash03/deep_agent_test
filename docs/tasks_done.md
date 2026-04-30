@@ -4,7 +4,7 @@
 
 ---
 
-- Phase 38: agent.py 要否確認 — fo_agent/bo_agent 実装後も旧 /api/v1/triage エンドポイント（router.py + triage_use_case.py + frontend/src/api/triage.ts）が現役のため削除不可と判定。削除には旧エンドポイント廃止を伴う別タスクが必要
+- Phase 38: 旧 /api/v1/triage チェーン削除 + TriageHistory 修正 + ナビゲーション整備 — agent.py/triage_use_case.py/router.py を削除、FO/BO ルーターに TriageResultRepository.save() 追加、agent_type フィールド導入（Alembic 0007）、HomePage.tsx 新設、NavBar に Home/Triage History リンク追加、version 0.6.0 → 0.7.0
 - Phase 37: ドキュメント最新化 + CLAUDE.md 自動更新ルール追加 — tasks/requirements/architecture を Phase 35 相当に最新化、tasks_done.md 新設、CLAUDE.md の End-of-step checklist に architecture.md/requirements.md 更新ルール追記
 - Phase 35: LLM コスト集計機能 — LlmCostLogModel + Alembic 0006 migration、llm_cost_log_repository（save_batch/get_summary/get_daily_costs）、TriageResult に cost_log/total_cost_usd 追加、FO/BO use case からコスト保存、GET /api/v1/cost/summary + GET /api/v1/cost/logs、CostPage（サマリーカード・エージェント別・モデル別・日次テーブル・最近の呼び出しログ）、NavBar "Cost" リンク追加、version 0.5.0 → 0.6.0
 - Phase 34: Rule一覧画面 — GET /api/v1/rules エンドポイント追加（FO 9ルール・BO 8ルールのメタデータ返却）、RuleListPage.tsx 新規作成（FO/BO 別テーブル、severity バッジ・stub フラグ表示）、NavBar に "Rules" リンク追加、version 0.4.0 → 0.5.0
