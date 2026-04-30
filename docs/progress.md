@@ -4,7 +4,7 @@
 
 ## Current Status
 
-**Branch:** `claude/phase-38-agent-deletion-XAXUh`
+**Branch:** `claude/standardize-docker-pipeline-cVzbH`
 **Last updated:** 2026-04-30
 **In Progress:** Phase 39（TradeDetailPage FoCheck 結果表示の不具合修正）
 **Next:** Phase 39 実装（FoCheck 未実行/合格/失敗の表示分岐修正）
@@ -12,6 +12,16 @@
 ---
 
 ## Step Log
+
+### Step 46 — chore: フロントエンド Docker パイプライン統一 (2026-04-30)
+
+Files: `frontend/Dockerfile`, `docker-compose.yml`,
+       `.github/workflows/deploy.yml`, `.env.example`
+
+- `frontend/Dockerfile` をマルチステージビルド（Node.js 20 → nginx:alpine）に変更
+- `docker-compose.yml` の frontend サービスに `image: ${FRONTEND_IMAGE:-deep_agent_test-frontend:latest}` を追加
+- `deploy-frontend` CI ジョブを全面刷新：npm/SCP/VM build を廃止し、GCP Auth → `docker build+push`(Artifact Registry) → SSH `docker pull` + `docker compose up -d` に変更（backend ジョブと同じパターン）
+- `.env.example` に `FRONTEND_IMAGE=` を追記
 
 ### Step 45 — feat: 旧トリアージチェーン削除 + TriageHistory 修正 + ナビゲーション整備 (2026-04-30)
 

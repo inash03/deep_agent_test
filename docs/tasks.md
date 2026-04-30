@@ -9,21 +9,6 @@ Completed tasks are archived in `docs/tasks_done.md`.
 
 ## In Progress
 
-#### Ops — フロントエンド Docker パイプラインの統一
-
-**目的:** フロントエンドのコンテナイメージビルドをGitHub Runner上に移し、
-バックエンドパイプライン（docker build → Artifact Registry push → VM pull）と一貫させる。
-
-**修正対象:**
-- `frontend/Dockerfile` — マルチステージビルド化（Node.js で React ビルド → nginx）
-- `docker-compose.yml` — `image:` フィールドを追加（`FRONTEND_IMAGE` 環境変数で切り替え）
-- `.github/workflows/deploy.yml` — フロントエンドジョブを npm build/SCP/VM build から GCP Auth/Docker build+push/VM pull に変更
-- `.env.example` — `FRONTEND_IMAGE` を追記
-
----
-
-## Backlog
-
 #### Phase 39 — TradeDetailPage FoCheck 結果表示の不具合修正
 
 **目的:** `frontend/src/pages/TradeDetailPage.tsx` において、
@@ -36,6 +21,8 @@ FoCheck が未実行のときも・実行済みでエラーなしのときも、
 - FoCheck 実行済みで失敗あり: 失敗ルール一覧を表示（既存ロジック）
 
 ---
+
+## Backlog
 
 #### Phase 36 — FO/BO エージェントのツール一覧確認画面
 
