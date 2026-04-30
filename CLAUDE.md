@@ -30,25 +30,30 @@ Position = state:
 |---------|---------|
 | `## Backlog` | Not yet started |
 | `## In Progress` | Currently being worked on (max 1 task at a time) |
-| `## Done` | Completed and committed |
+
+Completed tasks are archived to `docs/tasks_done.md` (not kept in tasks.md).
 
 **Transition rules:**
 - **Before writing code:** Move the task from Backlog → In Progress
-- **After committing:** Move the task from In Progress → Done
+- **After committing:** Move the task from In Progress to `docs/tasks_done.md` (one-line summary)
 
 ### End-of-step checklist (execute in order)
 
 1. Commit the code change
-2. Move completed task: In Progress → Done (in `docs/tasks.md`)
+2. Move completed task: cut from In Progress in `docs/tasks.md`, append one-line summary to `docs/tasks_done.md`
 3. Move next task: Backlog → In Progress (in `docs/tasks.md`)
 4. Update `docs/progress.md`: replace "Current Status" block at top and append to log
-5. Summarize what was done and propose next steps to the user
+5. If the change affects architecture (new files, new endpoints, new DB tables, agent graph changes): update `docs/architecture.md`
+6. If requirements changed or a new FR was fulfilled: update `docs/requirements.md`
+7. Summarize what was done and propose next steps to the user
 
 ### Tracking files
 
 - `docs/progress.md` — progress log (updated every step)
-- `docs/requirements.md` — feature requirements (update only when requirements change)
-- `docs/tasks.md` — concrete task list (Backlog / In Progress / Done)
+- `docs/tasks.md` — active task list (In Progress + Backlog only)
+- `docs/tasks_done.md` — completed task archive (append-only)
+- `docs/requirements.md` — feature requirements (update when FRs are added or completed)
+- `docs/architecture.md` — system design (update when architecture changes)
 
 ---
 

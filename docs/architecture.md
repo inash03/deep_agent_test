@@ -2,67 +2,108 @@
 
 ## LangGraph StateGraph — エージェントフロー
 
-4 種の HITL ノードを汎化アーキテクチャで管理。`_HITL_TOOL_TO_NODE` dict でルーティングを制御する。
+FoAgent と BoAgent はそれぞれ独立した LangGraph StateGraph を持つ。
+BoAgent はハイブリッド構造（決定論的パス + 自律 ReAct パス）を採用している。
+
+### BoAgent フロー（`src/infrastructure/bo_agent.py`）
 
 ```mermaid
 flowchart TD
-    START([START]) --> agent_node
+    START([START]) --> model_router
 
-    agent_node["agent_node\n(LLM: Claude claude-sonnet-4-6)"]
+    model_router["model_router_node\n(Haiku/Sonnet 自動選択)"]
+    model_router --> gather_context
 
-    agent_node -->|"register_ssi"| register_ssi_node
-    agent_node -->|"reactivate_counterparty"| reactivate_node
-    agent_node -->|"update_ssi"| update_ssi_node
-    agent_node -->|"escalate"| escalate_node
-    agent_node -->|"read-only tool calls\n(7 tools)"| read_tools_node
-    agent_node -->|"no tool calls\n(final JSON output)"| END_NODE([END])
+    gather_context["gather_context_node\n(get_bo_check_results + get_trade_detail)\n決定論的データ収集 — LLM 不使用"]
+    gather_context -->|"triage_path=AG01"| ag01_handler
+    gather_context -->|"triage_path=MISSING_SSI"| lookup_ssi
+    gather_context -->|"triage_path=BE01"| be01_handler
+    gather_context -->|"triage_path=AM04"| fo_side_handler
+    gather_context -->|"triage_path=COMPOUND\nor UNKNOWN"| deep_investigation
 
-    read_tools_node["read_tools_node\n(ToolNode — read-only)"]
-    read_tools_node --> agent_node
+    ag01_handler["ag01_handler\n(reactivate_counterparty HITL 準備)"]
+    lookup_ssi["lookup_ssi\n(lookup_external_ssi 直呼び)"]
+    be01_handler["be01_handler\n(直接 escalate_to_bo_user)"]
+    fo_side_handler["fo_side_handler\n(sendback_count で分岐)"]
 
-    register_ssi_node["register_ssi_node\n(write — SSI登録)"]
-    reactivate_node["reactivate_counterparty_node\n(write — CP再有効化)"]
-    update_ssi_node["update_ssi_node\n(write — SSI修正)"]
-    escalate_node["escalate_node\n(write — エスカレーション)"]
+    lookup_ssi -->|"SSI あり"| prepare_register_ssi
+    lookup_ssi -->|"SSI なし"| ssi_not_found_escalate
 
-    register_ssi_node --> agent_node
+    prepare_register_ssi["prepare_register_ssi\n(register_ssi HITL 準備)"]
+    ssi_not_found_escalate["ssi_not_found_escalate\n(直接 escalate)"]
+
+    ag01_handler --> reactivate_node
+    prepare_register_ssi --> register_ssi_node
+    fo_side_handler -->|"sendback_count=0"| send_back_node
+    fo_side_handler -->|"sendback_count>=1"| agent_node
+
+    deep_investigation["deep_investigation_node\n(自律 ReAct — LLM × N 回)"]
+    deep_investigation --> di_register_ssi_node
+    deep_investigation --> di_reactivate_node
+    deep_investigation --> di_send_back_node
+    deep_investigation --> di_update_ssi_node
+    deep_investigation -->|"read tools"| deep_investigation
+    deep_investigation -->|"完了"| END_NODE([END])
+
+    agent_node["agent_node\n(サマリー生成 — LLM 1回)"]
+    agent_node --> END_NODE
+
+    reactivate_node["reactivate_counterparty_node ⏸"]
+    register_ssi_node["register_ssi_node ⏸"]
+    send_back_node["send_back_to_fo_node ⏸"]
+    di_register_ssi_node["di_register_ssi_node ⏸"]
+    di_reactivate_node["di_reactivate_counterparty_node ⏸"]
+    di_send_back_node["di_send_back_to_fo_node ⏸"]
+    di_update_ssi_node["di_update_ssi_node ⏸"]
+
     reactivate_node --> agent_node
-    update_ssi_node --> agent_node
-    escalate_node --> agent_node
-
-    HITL["⏸ interrupt_before\n(operator approval required)"]
-    register_ssi_node -.->|"pauses"| HITL
-    reactivate_node -.->|"pauses"| HITL
-    update_ssi_node -.->|"pauses"| HITL
-    escalate_node -.->|"pauses"| HITL
+    register_ssi_node --> agent_node
+    send_back_node --> agent_node
 
     classDef hitl fill:#f90,stroke:#c60,color:#000
-    class register_ssi_node,reactivate_node,update_ssi_node,escalate_node,HITL hitl
+    classDef det fill:#4af,stroke:#08f,color:#000
+    class reactivate_node,register_ssi_node,send_back_node,di_register_ssi_node,di_reactivate_node,di_send_back_node,di_update_ssi_node hitl
+    class gather_context,ag01_handler,lookup_ssi,be01_handler,fo_side_handler,prepare_register_ssi,ssi_not_found_escalate det
 ```
 
-### HITL ルーティング実装
+### FoAgent フロー（`src/infrastructure/fo_agent.py`）
 
-```python
-# agent.py
-_HITL_TOOL_TO_NODE: dict[str, str] = {
-    "register_ssi":            "register_ssi_node",
-    "reactivate_counterparty": "reactivate_counterparty_node",
-    "update_ssi":              "update_ssi_node",
-    "escalate":                "escalate_node",
-}
+```mermaid
+flowchart TD
+    START([START]) --> model_router
+    model_router["model_router_node\n(Haiku/Sonnet 自動選択)"]
+    model_router --> gather_context
+    gather_context["gather_context_node\n(get_fo_check_results + get_trade_detail)\nLLM 不使用"]
+    gather_context --> agent_node
+    agent_node["agent_node\n(LLM: ReAct ループ)"]
+    agent_node -->|"create_amend_event"| amend_node
+    agent_node -->|"create_cancel_event"| cancel_node
+    agent_node -->|"read tools"| agent_node
+    agent_node -->|"完了"| END_NODE([END])
+    amend_node["create_amend_event_node ⏸"]
+    cancel_node["create_cancel_event_node ⏸"]
+    amend_node --> agent_node
+    cancel_node --> agent_node
 
-def _route_after_agent(state: AgentState) -> str:
-    tool_name = last_tool_call(state)
-    if tool_name in _HITL_TOOL_TO_NODE:
-        return _HITL_TOOL_TO_NODE[tool_name]   # → HITL ノード
-    if tool_name:
-        return "read_tools_node"
-    return END
+    classDef hitl fill:#f90,stroke:#c60,color:#000
+    class amend_node,cancel_node hitl
 ```
+
+### 決定論的パス vs 自律パスのコスト比較
+
+| エラー種別 | パス | LLM 呼び出し | コスト目安 |
+|-----------|------|-------------|---------|
+| AG01 / counterparty_inactive | 決定論的 | summary 1 回 | ~$0.002 |
+| MISSING_SSI (外部 SSI あり) | 決定論的 | summary 1 回 | ~$0.002 |
+| MISSING_SSI (外部 SSI なし) | 決定論的 | summary 1 回 | ~$0.002 |
+| BE01 / format error | 決定論的 | summary 1 回 | ~$0.002 |
+| AM04 (sendback=0) | 決定論的 | summary 1 回 | ~$0.002 |
+| AM04 (sendback≥1) | 決定論的 | summary 1 回 | ~$0.002 |
+| UNKNOWN / COMPOUND | 自律（ReAct） | 2 回以上 | ~$0.01〜0.05 |
 
 ---
 
-## HITL シーケンス（4 アクション共通）
+## HITL シーケンス（FO/BO トリアージ共通）
 
 ```mermaid
 sequenceDiagram
@@ -72,28 +113,29 @@ sequenceDiagram
     participant PostgreSQL
     participant Operator
 
-    Client->>FastAPI: POST /api/v1/triage {trade_id, error_message}
+    Client->>FastAPI: POST /api/v1/trades/{id}/bo-triage {error_message}
     FastAPI->>LangGraph: graph.invoke(initial_state)
-    LangGraph->>LangGraph: ReAct ループ（read tools × N 回）
-    LangGraph->>LangGraph: LLM が HITL ツールを呼び出す
-    Note over LangGraph: ⏸ interrupt_before = [4 HITL nodes]
+    LangGraph->>LangGraph: model_router → gather_context（LLM なし）
+    LangGraph->>LangGraph: 決定論的ハンドラ or deep_investigation
+    Note over LangGraph: ⏸ interrupt_before = [HITL nodes]
     LangGraph-->>FastAPI: snapshot.next = ("xxx_node",)
     FastAPI->>PostgreSQL: INSERT triage_runs (PENDING_APPROVAL)
-    FastAPI-->>Client: 200 PENDING_APPROVAL\n+ pending_action_description\n+ pending_action_type
+    FastAPI-->>Client: 200 PENDING_APPROVAL + pending_action_type + cost_log
 
     Operator->>Client: UI で承認 or 拒否
-    Client->>FastAPI: POST /api/v1/triage/{run_id}/resume {approved}
+    Client->>FastAPI: POST /api/v1/trades/{id}/bo-triage/{run_id}/resume {approved}
     alt approved=true
-        FastAPI->>LangGraph: graph.invoke(None, config, as_node=hitl_node)
+        FastAPI->>LangGraph: graph.invoke(None, config, as_node=snapshot.next[0])
         LangGraph->>LangGraph: HITL ノード実行（DB 書き込み）
     else approved=false
         FastAPI->>LangGraph: graph.update_state（拒否 ToolMessage 注入）
-        FastAPI->>LangGraph: graph.invoke(None, config, as_node=hitl_node)
+        FastAPI->>LangGraph: graph.invoke(None, config, as_node=snapshot.next[0])
     end
-    LangGraph->>LangGraph: agent_node → 最終 JSON 出力
+    LangGraph->>LangGraph: agent_node → サマリー生成
     LangGraph-->>FastAPI: COMPLETED
+    FastAPI->>PostgreSQL: INSERT llm_cost_logs（コスト保存）
     FastAPI->>PostgreSQL: UPDATE triage_runs (COMPLETED)
-    FastAPI-->>Client: 200 COMPLETED + diagnosis + root_cause
+    FastAPI-->>Client: 200 COMPLETED + diagnosis + triage_path + total_cost_usd
 ```
 
 ---
@@ -103,41 +145,53 @@ sequenceDiagram
 ```mermaid
 graph TB
     subgraph Presentation["Presentation Layer (src/presentation/)"]
-        router["router.py\nPOST /triage\nPOST /triage/{id}/resume\nGET /triage/history"]
-        routers["routers/\ntrades.py\ncounterparties.py\nssis.py\nstp_exceptions.py\nreference_data.py\nseed.py"]
-        schemas["schemas.py\nTriageRequest/Response\nTradeOut / CounterpartyOut\nSsiOut / StpExceptionOut など"]
+        router["router.py (レガシー)\nPOST /triage + resume"]
+        routers["routers/\ntrades.py / trade_events.py\nfo_triage.py / bo_triage.py\ncounterparties.py / ssis.py\nstp_exceptions.py / settings.py\nrules.py / cost.py / seed.py"]
+        schemas["schemas.py\nTradeOut / TradeEventOut\nCheckResultsResponse\nCostSummaryResponse など"]
     end
 
     subgraph Domain["Domain Layer (src/domain/)"]
-        entities["entities.py\nSTPFailure, TriageResult, Step\nRootCause, TriageStatus\nTradeStatus, StpExceptionStatus"]
-        interfaces["interfaces.py\nITriageUseCase\nstart() / resume()"]
+        entities["entities.py\nTradeWorkflowStatus / EventType\nCheckResult / TradeEvent\nSTPFailure / TriageResult / Step\nRootCause / TriageStatus"]
+        check_rules["check_rules.py\nFoRule × 9 / BoRule × 8"]
+        interfaces["interfaces.py\nITriageUseCase"]
     end
 
     subgraph Infrastructure["Infrastructure Layer (src/infrastructure/)"]
-        usecase["triage_use_case.py\nTriageSTPFailureUseCase"]
-        agent["agent.py\nLangGraph StateGraph\nbuild_graph()\n_HITL_TOOL_TO_NODE"]
-        tools["tools.py\n11 @tool 関数\n(7 read-only + 4 HITL-write)"]
-        mock["mock_store.py\nユニットテスト用モック"]
+        fo_uc["fo_triage_use_case.py\nFoTriageUseCase"]
+        bo_uc["bo_triage_use_case.py\nBoTriageUseCase"]
+        fo_agent["fo_agent.py\nbuild_fo_graph()\nFoAgentState"]
+        bo_agent["bo_agent.py\nbuild_bo_graph()\nBoAgentState\n_determine_triage_path()"]
+        rule_engine["rule_engine.py\nrun_fo_check()\nrun_bo_check()\nmaybe_run_*()"]
+        tools["tools.py\nFO_ALL_TOOLS / BO_ALL_TOOLS\n@tool 関数群"]
+        cost_tracker["utils/cost_tracker.py\ncalc_cost()\nselect_model()\ncall_with_cost_tracking()"]
+        mock["mock_store.py\nユニットテスト用モック\nTRD-001〜013"]
         seed["seed.py\nseed_database()\nreset_and_seed()"]
-        secrets["secrets.py\nload_secrets()\nenv / gcp 切り替え"]
+        secrets["secrets.py\nload_secrets()"]
         logging_cfg["logging_config.py\n構造化 JSON ロギング"]
 
         subgraph DB["db/"]
-            models["models.py\n7 ORM モデル"]
+            models["models.py\n11 ORM モデル"]
             session["session.py\nget_db()"]
-            repos["*_repository.py\n× 6 リポジトリ"]
+            repos["*_repository.py × 9\ntrade / counterparty / ssi\nstp_exception / reference_data\ntrade_event / app_setting\nllm_cost_log / triage_run"]
         end
     end
 
     subgraph Storage["Storage"]
-        neon[("Neon PostgreSQL\n7 tables")]
+        neon[("Neon PostgreSQL\n11 tables")]
     end
 
-    router --> interfaces
+    routers --> fo_uc
+    routers --> bo_uc
+    routers --> rule_engine
     routers --> repos
-    usecase --> interfaces
-    usecase --> agent
-    agent --> tools
+    fo_uc --> fo_agent
+    bo_uc --> bo_agent
+    fo_agent --> tools
+    bo_agent --> tools
+    fo_agent --> cost_tracker
+    bo_agent --> cost_tracker
+    rule_engine --> check_rules
+    rule_engine --> repos
     tools --> mock
     tools --> repos
     repos --> models
@@ -148,7 +202,7 @@ graph TB
 **層のルール:**
 - Infrastructure → Domain のみ参照可
 - Domain はフレームワーク依存ゼロ（純粋な Python）
-- Presentation は Domain インターフェース経由でユースケースを呼び出す
+- Presentation → Infrastructure はユースケース経由のみ
 
 ---
 
@@ -216,10 +270,15 @@ docker compose --profile test run test
 
 ```
 alembic/versions/
-  0001_initial_schema.py     # triage_runs + triage_steps
-  0002_add_domain_tables.py  # trades / counterparties /
-                             # settlement_instructions /
-                             # reference_data / stp_exceptions
+  0001_initial_schema.py          # triage_runs + triage_steps
+  0002_add_domain_tables.py       # trades / counterparties / settlement_instructions
+                                  # reference_data / stp_exceptions
+  0003_add_workflow_schema.py     # trades に uuid id / version / workflow_status /
+                                  # is_current / fo_check_results / bo_check_results 等追加
+                                  # trade_events / app_settings テーブル追加
+  0004_fix_focheck_initial_status.py  # データ修正 migration（FoAgentToCheck→FoCheck）
+  0005_drop_stp_status.py         # trades.stp_status カラム削除
+  0006_add_llm_cost_log.py        # llm_cost_logs テーブル追加
 ```
 
 ```bash
@@ -239,7 +298,7 @@ erDiagram
         UUID id PK
         VARCHAR trade_id
         VARCHAR status
-        VARCHAR run_id "LangGraph thread_id"
+        VARCHAR run_id
         TEXT pending_action_description
         VARCHAR pending_action_type
         TEXT diagnosis
@@ -260,7 +319,12 @@ erDiagram
         BOOLEAN approved
     }
     trades {
-        VARCHAR trade_id PK
+        UUID id PK
+        VARCHAR trade_id
+        INT version
+        BOOLEAN is_current
+        VARCHAR workflow_status
+        INT sendback_count
         VARCHAR counterparty_lei
         VARCHAR instrument_id
         VARCHAR currency
@@ -268,9 +332,44 @@ erDiagram
         DATE value_date
         DATE trade_date
         VARCHAR settlement_currency
-        VARCHAR stp_status
+        JSONB fo_check_results
+        JSONB bo_check_results
+        TEXT bo_sendback_reason
+        TEXT fo_explanation
         TIMESTAMPTZ created_at
         TIMESTAMPTZ updated_at
+    }
+    trade_events {
+        UUID id PK
+        VARCHAR trade_id
+        INT from_version
+        INT to_version
+        VARCHAR event_type
+        VARCHAR workflow_status
+        VARCHAR requested_by
+        TEXT reason
+        JSONB amended_fields
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+    app_settings {
+        VARCHAR key PK
+        VARCHAR value
+        TEXT description
+        TIMESTAMPTZ updated_at
+    }
+    llm_cost_logs {
+        UUID id PK
+        VARCHAR run_id
+        VARCHAR trade_id
+        VARCHAR agent_type
+        VARCHAR node
+        VARCHAR model
+        INT input_tokens
+        INT output_tokens
+        FLOAT cost_usd
+        TEXT reason
+        TIMESTAMPTZ created_at
     }
     counterparties {
         VARCHAR lei PK
@@ -310,7 +409,7 @@ erDiagram
     }
 
     triage_runs ||--o{ triage_steps : "cascade delete"
-    trades ||--o{ stp_exceptions : "soft ref (no FK)"
+    trades ||--o{ trade_events : "trade_id (soft ref)"
     counterparties ||--o{ settlement_instructions : "lei"
 ```
 
@@ -318,30 +417,73 @@ erDiagram
 
 ## ツール一覧
 
+### FO エージェント用ツール（`FO_ALL_TOOLS`）
+
 | ツール名 | 種別 | 説明 |
 |---------|------|------|
-| `get_trade_detail` | read | トレード詳細取得（DB / mock fallback） |
+| `get_trade_detail` | read | 取引詳細取得 |
+| `get_reference_data` | read | 銘柄マスタ参照 |
+| `get_counterparty` | read | 取引先情報参照 |
 | `get_settlement_instructions` | read | 登録済み SSI 取得 |
-| `get_reference_data` | read | 銘柄リファレンスデータ取得 |
-| `get_counterparty` | read | カウンターパーティ情報取得 |
-| `lookup_external_ssi` | read | 外部ソースから SSI 検索 |
-| `get_triage_history` | read | 同一取引の過去トリアージ結果 |
-| `get_counterparty_exception_history` | read | 直近 30 日の CP 別 STP 失敗件数 |
+| `get_triage_history` | read | 過去トリアージ履歴 |
+| `get_counterparty_exception_history` | read | 直近 30 日 CP 別失敗件数 |
+| `get_fo_check_results` | read | FoCheck ルール結果取得 |
+| `get_bo_sendback_reason` | read | BoAgent 差し戻し理由取得 |
+| `create_amend_event` | **HITL write** | Amend イベント作成 |
+| `create_cancel_event` | **HITL write** | Cancel イベント作成 |
+| `provide_explanation` | write | 説明付き FoValidated 遷移 |
+| `escalate_to_fo_user` | write | FoUserToValidate 遷移 |
+
+### BO エージェント用ツール（`BO_ALL_TOOLS`）
+
+| ツール名 | 種別 | 説明 |
+|---------|------|------|
+| `get_trade_detail` | read | 取引詳細取得 |
+| `get_counterparty` | read | 取引先情報参照 |
+| `get_settlement_instructions` | read | 登録済み SSI 取得 |
+| `lookup_external_ssi` | read | 外部ソース SSI 検索 |
+| `get_triage_history` | read | 過去トリアージ履歴 |
+| `get_counterparty_exception_history` | read | 直近 30 日 CP 別失敗件数 |
+| `get_bo_check_results` | read | BoCheck ルール結果取得 |
+| `get_fo_explanation` | read | FoAgent 説明取得（2 回目トリアージ時） |
 | `register_ssi` | **HITL write** | 新規 SSI 登録 |
-| `update_ssi` | **HITL write** | 既存 SSI の BIC / 口座番号 / IBAN 修正 |
-| `reactivate_counterparty` | **HITL write** | 非アクティブ CP を再有効化 |
-| `escalate` | **HITL write** | 担当者エスカレーション |
+| `update_ssi` | **HITL write** | 既存 SSI 修正（BIC/口座/IBAN） |
+| `reactivate_counterparty` | **HITL write** | 非アクティブ CP 再有効化 |
+| `send_back_to_fo` | **HITL write** | FoAgent 差し戻し（1 回目のみ） |
+| `escalate_to_bo_user` | write | BoUserToValidate 遷移 |
 
 ---
 
 ## AgentState（LangGraph）
 
 ```python
-class AgentState(TypedDict):
+class FoAgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
-    trade_id: str        # 調査対象トレード ID
-    error_message: str   # STP エラーメッセージ
-    action_taken: bool   # HITL アクションが実行されたか
+    trade_id: str
+    error_message: str
+    action_taken: bool
+    triage_path: str          # 診断パス種別
+    sendback_count: int       # BoAgent からの差し戻し回数
+    failed_rules: list[str]
+    cost_log: Annotated[list[dict], operator.add]
+    total_cost_usd: Annotated[float, operator.add]
+    task_type: str            # "simple" / "complex" / "critical"
+    selected_model: str       # 実際に使用したモデル ID
+
+class BoAgentState(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]
+    trade_id: str
+    error_message: str
+    action_taken: bool
+    triage_path: str          # AG01 / MISSING_SSI / BE01 / AM04 / COMPOUND / UNKNOWN
+    sendback_count: int
+    failed_rules: list[str]
+    counterparty_lei: str
+    currency: str
+    cost_log: Annotated[list[dict], operator.add]
+    total_cost_usd: Annotated[float, operator.add]
+    task_type: str
+    selected_model: str
 ```
 
 ---
@@ -350,13 +492,13 @@ class AgentState(TypedDict):
 
 | 画面 | パス | 説明 |
 |------|------|------|
-| TriagePage | `/` | トリアージ実行・HITL 承認 UI |
-| TriageHistoryPage | `/history` | トリアージ履歴（展開でフル診断表示） |
-| TradeListPage | `/trades` | 取引一覧・フィルタ |
-| StpExceptionListPage | `/stp-exceptions` | STP 例外一覧・トリアージ起動 |
-| StpExceptionCreatePage | `/stp-exceptions/new` | STP 例外手動登録 |
+| TriagePage | `/` | レガシートリアージ UI（旧 agent.py 使用） |
+| TradeListPage | `/trades` | 取引一覧・workflow_status フィルタ |
+| TradeInputPage | `/trades/new` | 新規取引入力フォーム |
+| TradeDetailPage | `/trades/:id` | 取引詳細（FoCheck/BoCheck/Events/Triage タブ） |
+| StpExceptionListPage | `/stp-exceptions` | STP 例外一覧・ルール違反モーダル |
 | CounterpartyListPage | `/counterparties` | CP 一覧・フィルタ |
 | CounterpartyEditPage | `/counterparties/:lei` | CP 編集（name/BIC/is_active） |
-| SsiListPage | `/ssis` | SSI 一覧（内部/外部フィルタ） |
-| SsiEditPage | `/ssis/:id` | 内部 SSI 編集（BIC/account/IBAN） |
-| ReferenceDataListPage | `/reference-data` | 銘柄マスタ一覧（参照のみ） |
+| SettingsPage | `/settings` | FoCheck/BoCheck トリガー設定（auto/manual） |
+| RuleListPage | `/rules` | FO/BO ルール一覧（severity バッジ・stub フラグ） |
+| CostPage | `/cost` | LLM コストダッシュボード（サマリー/エージェント別/日次） |

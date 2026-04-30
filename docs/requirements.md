@@ -222,40 +222,39 @@ trade_id=TRD-001, version=1, workflow_status=FoValidated, is_current=True
 
 ## Functional Requirements
 
-### 実装済み（Phase 1〜25）
+### 実装済み（Phase 1〜35）
 
-| ID | 機能 | 状態 |
-|----|------|------|
-| FR-01 | STP 失敗入力バリデーション（trade_id + error_message） | Done |
-| FR-02 | ReAct ループによる動的ツール選択 | Done |
-| FR-03 | read-only ツール群（get_trade_detail 等 7 ツール） | Done |
-| FR-04 | write ツール群（register_ssi, update_ssi, reactivate_counterparty, escalate） | Done |
-| FR-05 | HITL（interrupt_before）による書き込み前承認 | Done |
-| FR-06 | 診断レポート生成（root_cause, diagnosis, recommended_action） | Done |
-| FR-07 | POST /api/v1/triage エンドポイント | Done |
-| FR-08 | POST /api/v1/triage/{run_id}/resume エンドポイント | Done |
-| FR-09 | エージェント実行ステップのレスポンス埋め込み | Done |
-| FR-10 | DB 永続化（PostgreSQL + Alembic） | Done |
-| FR-11 | CRUD API（trades / counterparties / ssis / stp_exceptions / reference_data） | Done |
-| FR-12 | 取引・カウンターパーティ・SSI・Ref Data 管理画面 | Done |
-| FR-13 | アクセス制御（Nginx Basic Auth + API Key） | Done |
-| FR-14 | CI/CD（GitHub Actions → Cloud Run + VM） | Done |
-
-### 新規（Phase 26）
-
-| ID | 機能 | 優先度 |
-|----|------|--------|
-| FR-15 | 取引 WorkflowStatus 管理（11 ステータス遷移） | Must |
-| FR-16 | 取引バージョン管理（Amend/Cancel ごとにインクリメント） | Must |
-| FR-17 | FoCheck ルールエンジン（7 ルール） | Must |
-| FR-18 | BoCheck ルールエンジン（7 ルール、うち 2 はスタブ） | Must |
-| FR-19 | FoAgent 実装（FoCheck 結果トリアージ + 差し戻し対応） | Must |
-| FR-20 | BoAgent 実装（BoCheck 結果トリアージ + 差し戻し機能） | Must |
-| FR-21 | BoAgent → FoAgent 差し戻し（最大 1 回、2 回目は BoUser にエスカレーション） | Must |
-| FR-22 | トレードイベント（Amend / Cancel）の作成・承認 | Must |
-| FR-23 | FoAgent による Amend/Cancel イベント作成（HITL） | Must |
-| FR-24 | チェックトリガー設定（auto / manual）の管理画面 | Should |
-| FR-25 | 取引詳細画面（バージョン履歴・チェック結果・イベント・トリアージボタン） | Must |
+| ID | 機能 | Phase |
+|----|------|-------|
+| FR-01 | STP 失敗入力バリデーション（trade_id + error_message） | 1〜4 |
+| FR-02 | ReAct ループによる動的ツール選択 | 3 |
+| FR-03 | read-only ツール群（get_trade_detail 等） | 3 |
+| FR-04 | write ツール群（register_ssi, update_ssi, reactivate_counterparty, escalate） | 3/24 |
+| FR-05 | HITL（interrupt_before）による書き込み前承認 | 3 |
+| FR-06 | 診断レポート生成（root_cause, diagnosis, recommended_action） | 3 |
+| FR-07 | POST /api/v1/triage エンドポイント（レガシー） | 4 |
+| FR-08 | POST /api/v1/triage/{run_id}/resume エンドポイント（レガシー） | 4 |
+| FR-09 | エージェント実行ステップのレスポンス埋め込み | 4 |
+| FR-10 | DB 永続化（PostgreSQL + Alembic） | 9 |
+| FR-11 | CRUD API（trades / counterparties / ssis / stp_exceptions / reference_data） | 15 |
+| FR-12 | 取引・カウンターパーティ・SSI・Ref Data 管理画面 | 17/18 |
+| FR-13 | アクセス制御（Nginx Basic Auth + API Key） | 25 |
+| FR-14 | CI/CD（GitHub Actions → Cloud Run + VM） | 20/22 |
+| FR-15 | 取引 WorkflowStatus 管理（12 ステータス遷移） | 26-A |
+| FR-16 | 取引バージョン管理（Amend/Cancel ごとにインクリメント） | 26-A |
+| FR-17 | FoCheck ルールエンジン（9 ルール） | 26-B |
+| FR-18 | BoCheck ルールエンジン（8 ルール、うち 2 はスタブ） | 26-B |
+| FR-19 | FoAgent 実装（FoCheck 結果トリアージ + 差し戻し対応 + ハイブリッド構造） | 26-D/31 |
+| FR-20 | BoAgent 実装（BoCheck 結果トリアージ + 差し戻し + ハイブリッド構造） | 26-C/31 |
+| FR-21 | BoAgent → FoAgent 差し戻し（最大 1 回、2 回目は BoUser にエスカレーション） | 26-C |
+| FR-22 | トレードイベント（Amend / Cancel）の作成・承認 | 26-E |
+| FR-23 | FoAgent による Amend/Cancel イベント作成（HITL） | 26-D |
+| FR-24 | チェックトリガー設定（auto / manual）の管理画面 | 26-B/F |
+| FR-25 | 取引詳細画面（バージョン履歴・チェック結果・イベント・トリアージボタン） | 26-F |
+| FR-26 | 取引入力画面（POST /api/v1/trades、日付/銘柄/通貨フォーム） | 27 |
+| FR-27 | ハイブリッドエージェント構造（決定論的パス + 自律 ReAct パス） | 31 |
+| FR-28 | LLM コスト計測・モデル自動選択・集計ダッシュボード | 30/35 |
+| FR-29 | ルール一覧確認画面（FO/BO 別、severity バッジ・stub フラグ） | 34 |
 
 ---
 
