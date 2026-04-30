@@ -4,14 +4,27 @@
 
 ## Current Status
 
-**Branch:** `claude/update-tasks-docs-ozjjb`
+**Branch:** `claude/phase-38-agent-deletion-XAXUh`
 **Last updated:** 2026-04-30
-**In Progress:** —
-**Next:** Phase 36（FO/BO エージェントのツール一覧確認画面）または Phase 38（agent.py 削除確認）
+**In Progress:** Phase 39（TradeDetailPage FoCheck 結果表示の不具合修正）
+**Next:** Phase 39 実装（FoCheck 未実行/合格/失敗の表示分岐修正）
 
 ---
 
 ## Step Log
+
+### Step 44 — chore: Phase 38 agent.py 要否確認 — 削除不可と判定 (2026-04-30)
+
+Files: `docs/tasks.md`, `docs/tasks_done.md`, `docs/progress.md`
+
+- **調査結果:** `src/infrastructure/agent.py` は旧 `/api/v1/triage` エンドポイント経由でまだ参照されている
+  - 依存チェーン: `agent.py` ← `triage_use_case.py` ← `src/presentation/router.py` ← `src/main.py`
+  - フロントエンド: `frontend/src/api/triage.ts` が `/api/v1/triage` を直接呼び出し中
+  - テスト: `tests/unit/test_output_parsing.py`・`tests/integration/test_triage_api.py` が依存
+- **判定:** 削除条件（テスト・ユースケース・ルーターから呼ばれていない）を満たさないため **削除見送り**
+- **今後の課題:** 旧エンドポイント廃止（`router.py` + `triage_use_case.py` + `agent.py` を一括削除）を別タスクで行う場合は、フロントエンドの `triage.ts` 移行も合わせて実施する必要あり
+
+---
 
 ### Step 43 — docs: Phase 37 ドキュメント最新化 + CLAUDE.md 更新ルール追記 (2026-04-30)
 
