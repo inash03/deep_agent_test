@@ -169,6 +169,9 @@ class TriageResult(BaseModel):
     cost_log: list[dict[str, Any]] = Field(default_factory=list)
     total_cost_usd: float = 0.0
 
+    # Which agent ran this triage: "fo", "bo", or "unknown"
+    agent_type: str = "unknown"
+
 
 # ---------------------------------------------------------------------------
 # Rule check result

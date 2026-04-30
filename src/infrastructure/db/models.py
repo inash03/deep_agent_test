@@ -63,6 +63,7 @@ class TriageRunModel(Base):
     root_cause: Mapped[str | None] = mapped_column(String(50), nullable=True)
     recommended_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     action_taken: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    agent_type: Mapped[str] = mapped_column(String(10), nullable=False, server_default="unknown")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

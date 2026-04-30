@@ -1,4 +1,4 @@
-"""STP Exception CRUD + start-triage endpoints."""
+"""STP Exception CRUD endpoints."""
 
 from __future__ import annotations
 
@@ -7,19 +7,14 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from src.domain.entities import STPFailure, StpExceptionStatus, TriageStatus
-from src.infrastructure.db.repository import TriageResultRepository
 from src.infrastructure.db.session import get_db
 from src.infrastructure.db.stp_exception_repository import StpExceptionRepository
 from src.infrastructure.db.trade_repository import TradeRepository
-from src.presentation.dependencies import verify_api_key
-from src.presentation.router import get_use_case
 from src.presentation.schemas import (
     StpExceptionCreateRequest,
     StpExceptionListResponse,
     StpExceptionOut,
     StpExceptionStatusUpdateRequest,
-    TriageResponse,
 )
 
 router = APIRouter(prefix="/api/v1/stp-exceptions", tags=["stp-exceptions"])
@@ -87,38 +82,3 @@ def update_stp_exception_status(
     if row is None:
         raise HTTPException(status_code=404, detail=f"STP Exception '{id}' not found")
     return _to_out(row)
-
-
-@router.post("/{id}/start-triage", response_model=TriageResponse)
-def start_triage_for_exception(
-    id: uuid.UUID,
-    db: Session = Depends(get_db),
-    use_case=Depends(get_use_case),
-    _: None = Depends(verify_api_key),
-) -> TriageResponse:
-    exc_repo = StpExceptionRepository(db)
-    exc = exc_repo.get_by_id(id)
-    if exc is None:
-        raise HTTPException(status_code=404, detail=f"STP Exception '{id}' not found")
-
-    failure = STPFailure(trade_id=exc.trade_id, error_message=exc.error_message)
-    result = use_case.start(failure)
-
-    # Save triage result to DB
-    TriageResultRepository(db).save(result)
-
-    # Update exception: status → IN_PROGRESS or RESOLVED; link triage run if available
-    new_status = (
-        StpExceptionStatus.IN_PROGRESS.value
-        if result.status == TriageStatus.PENDING_APPROVAL
-        else StpExceptionStatus.RESOLVED.value
-    )
-    exc_repo.update_status(id, new_status)
-
-    if result.run_id:
-        try:
-            exc_repo.link_triage_run(id, uuid.UUID(result.run_id))
-        except (ValueError, AttributeError):
-            pass  # run_id format mismatch — skip linking
-
-    return TriageResponse.from_domain(result)

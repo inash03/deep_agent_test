@@ -53,6 +53,7 @@ class TriageResponse(BaseModel):
     root_cause: str | None = None
     recommended_action: str | None = None
     action_taken: bool = False
+    agent_type: str = "unknown"
 
     steps: list[StepOut] = Field(default_factory=list)
 
@@ -68,6 +69,7 @@ class TriageResponse(BaseModel):
             root_cause=result.root_cause.value if result.root_cause else None,
             recommended_action=result.recommended_action,
             action_taken=result.action_taken,
+            agent_type=result.agent_type,
             steps=[
                 StepOut(
                     step_type=s.step_type,

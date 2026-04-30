@@ -4,12 +4,14 @@ import { refreshData } from '../api/admin'
 import { VERSION } from '../version'
 
 const LINKS = [
+  { to: '/', label: 'Home', end: true },
   { to: '/trades', label: 'Trades', end: true },
   { to: '/stp-exceptions', label: 'STP Exceptions', end: false },
   { to: '/counterparties', label: 'Counterparties', end: false },
   { to: '/ssis', label: 'SSIs', end: false },
   { to: '/reference-data', label: 'Ref Data', end: false },
   { to: '/rules', label: 'Rules', end: false },
+  { to: '/history', label: 'Triage History', end: false },
   { to: '/cost', label: 'Cost', end: false },
   { to: '/settings', label: 'Settings', end: false },
 ]

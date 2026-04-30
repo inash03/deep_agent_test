@@ -156,6 +156,7 @@ class BoTriageUseCase:
             steps=_extract_steps(state["messages"]),
             cost_log=list(state.get("cost_log") or []),
             total_cost_usd=float(state.get("total_cost_usd") or 0.0),
+            agent_type="bo",
         )
 
     def _completed_result(
@@ -184,6 +185,7 @@ class BoTriageUseCase:
             steps=steps,
             cost_log=list(state.get("cost_log") or []),
             total_cost_usd=float(state.get("total_cost_usd") or 0.0),
+            agent_type="bo",
         )
 
 

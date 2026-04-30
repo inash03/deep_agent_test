@@ -27,6 +27,7 @@ export function TriageHistoryPage() {
               <tr>
                 <th style={TH}>Trade ID</th>
                 <th style={TH}>Status</th>
+                <th style={TH}>Agent</th>
                 <th style={TH}>Root Cause</th>
                 <th style={TH}>Action Taken</th>
                 <th style={TH}>Diagnosis</th>
@@ -42,6 +43,9 @@ export function TriageHistoryPage() {
                   >
                     <td style={{ ...TD, fontWeight: 600 }}>{row.trade_id}</td>
                     <td style={TD}><StatusBadge status={row.status} /></td>
+                    <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                      {row.agent_type ?? '—'}
+                    </td>
                     <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem', color: '#b45309' }}>
                       {row.root_cause ?? '—'}
                     </td>
@@ -56,7 +60,7 @@ export function TriageHistoryPage() {
                   </tr>
                   {expanded === row.run_id && (
                     <tr key={`${row.run_id}-detail`} style={{ backgroundColor: '#f9fafb' }}>
-                      <td colSpan={5} style={{ padding: '1rem 1.5rem' }}>
+                      <td colSpan={6} style={{ padding: '1rem 1.5rem' }}>
                         <p style={{ fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.875rem' }}>Diagnosis</p>
                         <p style={{ fontSize: '0.875rem', marginBottom: '0.75rem', color: '#374151' }}>{row.diagnosis ?? '—'}</p>
                         <p style={{ fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.875rem' }}>Recommended Action</p>
@@ -70,7 +74,7 @@ export function TriageHistoryPage() {
                 </>
               ))}
               {items.length === 0 && (
-                <tr><td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: COLOR.textMuted }}>No triage history yet</td></tr>
+                <tr><td colSpan={6} style={{ padding: '1rem', textAlign: 'center', color: COLOR.textMuted }}>No triage history yet</td></tr>
               )}
             </tbody>
           </table>
