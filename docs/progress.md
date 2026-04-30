@@ -4,14 +4,35 @@
 
 ## Current Status
 
-**Branch:** `claude/add-cost-tracking-ceHhC`
-**Last updated:** 2026-04-29
+**Branch:** `claude/update-tasks-docs-ozjjb`
+**Last updated:** 2026-04-30
 **In Progress:** —
-**Next:** alembic upgrade head を本番 DB に適用してコスト確認画面を動作確認
+**Next:** Phase 36（FO/BO エージェントのツール一覧確認画面）または Phase 38（agent.py 削除確認）
 
 ---
 
 ## Step Log
+
+### Step 43 — docs: Phase 37 ドキュメント最新化 + CLAUDE.md 更新ルール追記 (2026-04-30)
+
+Files: `docs/tasks.md`, `docs/tasks_done.md` (新規), `docs/requirements.md`,
+       `docs/architecture.md`, `CLAUDE.md`, `docs/progress.md`
+
+- **tasks.md**: In Progress + Backlog のみに再設計。Done セクションを廃止し `tasks_done.md` に分離
+- **tasks_done.md**: 全完了タスクのアーカイブとして新設（Phase 1〜35 相当）
+- **requirements.md**: FR-01〜FR-14（Phase 1〜25 実装済み）に FR-15〜FR-29（Phase 26〜35）を追加。「新規（Phase 26）」セクションを「実装済み」テーブルに統合
+- **architecture.md**: 全セクションを Phase 35 相当に更新
+  - LangGraph フロー図: FoAgent / BoAgent のハイブリッド構造（model_router → gather_context → 決定論的パス or deep_investigation）
+  - HITL シーケンス図: bo/fo-triage エンドポイントに更新
+  - Clean Architecture 図: fo_agent.py / bo_agent.py / rule_engine.py / cost_tracker.py 等を追加
+  - ツール一覧: FO/BO エージェント別に分割（FO 12 ツール / BO 13 ツール）
+  - DB スキーマ: trade_events / app_settings / llm_cost_logs テーブル追加、stp_status 削除
+  - Alembic: 0001〜0006 に更新
+  - AgentState: FoAgentState / BoAgentState（cost_log / triage_path 等）に更新
+  - フロントエンド画面一覧: TradeDetailPage / TradeInputPage / SettingsPage / RuleListPage / CostPage 追加
+- **CLAUDE.md**: End-of-step checklist に手順 5〜6 を追加（architecture.md / requirements.md 更新ルール）。Tracking files に tasks_done.md と architecture.md を追記。Task state transitions を tasks_done.md アーカイブ方式に更新
+
+---
 
 ### Step 42 — feat: Phase 35 LLM コスト集計機能 (2026-04-29)
 
