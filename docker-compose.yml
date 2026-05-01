@@ -1,5 +1,6 @@
 services:
   frontend:
+    image: ${FRONTEND_IMAGE:-deep_agent_test-frontend:latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
