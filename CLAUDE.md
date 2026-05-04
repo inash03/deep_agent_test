@@ -173,6 +173,14 @@ deep_agent_test/
 
 ---
 
+## Frontend UI Language
+
+- **All UI text must be written in English** — labels, messages, placeholders, tooltips, error text, etc.
+- The only exception is the **Home screen** (`frontend/src/pages/HomePage.tsx`), which may use Japanese.
+- Do not write Japanese strings in any other page or component, even for temporary placeholder messages.
+
+---
+
 ## Frontend Versioning
 
 The frontend has a single source of truth for its version: `frontend/src/version.ts`.

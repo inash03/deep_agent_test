@@ -332,23 +332,23 @@ export function TradeDetailPage() {
           {/* FO Triage */}
           <div style={CARD}>
             <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', color: '#1d4ed8' }}>FO Triage</h3>
-            {!foTriage || foTriage.status === 'COMPLETED' ? (() => {
+            {!foTriage ? (() => {
               const foCheckRun = (trade.fo_check_results?.length ?? 0) > 0
               const foFails = (trade.fo_check_results ?? []).filter(r => !r.passed)
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {foFails.length > 0 ? (
                     <p style={{ margin: 0, fontSize: '0.82rem', color: '#4b5563' }}>
-                      <strong>{foFails.length} FoCheck failure(s)</strong> will be passed as agent input:{' '}
+                      Found <strong>{foFails.length} failed rule(s)</strong>. The triage agent will investigate:{' '}
                       <span style={{ fontFamily: 'monospace' }}>{foFails.map(r => r.rule_name).join(', ')}</span>
                     </p>
                   ) : foCheckRun ? (
                     <p style={{ margin: 0, fontSize: '0.82rem', color: '#15803d' }}>
-                      FoCheck の全ルールがパスしました。トリアージは不要です。
+                      All FoCheck rules passed. No triage required.
                     </p>
                   ) : (
                     <p style={{ margin: 0, fontSize: '0.82rem', color: COLOR.textMuted }}>
-                      FoCheck が未実行です。先に "Run FoCheck" を実行してください。
+                      FoCheck has not been run yet. Click "Run FoCheck" above first.
                     </p>
                   )}
                   <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -395,23 +395,23 @@ export function TradeDetailPage() {
           {/* BO Triage */}
           <div style={CARD}>
             <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', color: '#065f46' }}>BO Triage</h3>
-            {!boTriage || boTriage.status === 'COMPLETED' ? (() => {
+            {!boTriage ? (() => {
               const boCheckRun = (trade.bo_check_results?.length ?? 0) > 0
               const boFails = (trade.bo_check_results ?? []).filter(r => !r.passed)
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {boFails.length > 0 ? (
                     <p style={{ margin: 0, fontSize: '0.82rem', color: '#4b5563' }}>
-                      <strong>{boFails.length} BoCheck failure(s)</strong> will be passed as agent input:{' '}
+                      Found <strong>{boFails.length} failed rule(s)</strong>. The triage agent will investigate:{' '}
                       <span style={{ fontFamily: 'monospace' }}>{boFails.map(r => r.rule_name).join(', ')}</span>
                     </p>
                   ) : boCheckRun ? (
                     <p style={{ margin: 0, fontSize: '0.82rem', color: '#15803d' }}>
-                      BoCheck の全ルールがパスしました。トリアージは不要です。
+                      All BoCheck rules passed. No triage required.
                     </p>
                   ) : (
                     <p style={{ margin: 0, fontSize: '0.82rem', color: COLOR.textMuted }}>
-                      BoCheck が未実行です。先に "Run BoCheck" を実行してください。
+                      BoCheck has not been run yet. Click "Run BoCheck" above first.
                     </p>
                   )}
                   <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>

@@ -23,6 +23,23 @@ Completed tasks are archived in `docs/tasks_done.md`.
 
 ## Backlog
 
+#### Phase 42 — BO Triage 500 エラー調査
+
+**目的:** `POST /api/v1/trades/{trade_id}/bo-triage` が稀に 500 Internal Server Error を返すケースを調査・修正する。
+
+**既知情報:**
+- 再現手順は未確立（ユーザーが再現方法を確立次第共有予定）
+- 発生確認取引: TRD-009
+- 発生タイミング: "Start BO Triage" ボタン押下時
+
+**調査観点:**
+- バックエンドログで例外スタックトレースを確認
+- `bo_triage.py` の use_case.start() 内での未ハンドル例外の有無
+- DB 接続・MemorySaver 状態の整合性
+- レートリミット（5/minute）への抵触有無
+
+---
+
 #### Phase 36 — FO/BO エージェントのツール一覧確認画面
 
 **目的:** FO エージェントと BO エージェントがそれぞれ利用できるツールを一覧で確認できる画面を作成する。
