@@ -24,6 +24,8 @@ dependencies = [
     "psycopg2-binary==2.9.9",
     "psycopg[binary]==3.3.3",
     "slowapi==0.1.9",
+    "langchain-openai==0.3.16",
+    "pgvector==0.3.6",
 ]
 
 [project.optional-dependencies]

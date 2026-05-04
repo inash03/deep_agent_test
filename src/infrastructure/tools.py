@@ -815,6 +815,34 @@ def escalate(trade_id: str, reason: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# RAG tool — semantic search over past triage cases and SWIFT knowledge
+# ---------------------------------------------------------------------------
+
+
+@tool
+def search_similar_triage_cases(query: str) -> str:
+    """Search historical triage cases and SWIFT knowledge semantically similar to the query.
+
+    Use this when investigating an unfamiliar failure pattern to find past resolutions.
+    Provide a description combining the error code, failed rules, and symptoms.
+    Returns up to 3 similar past cases with their diagnoses, root causes, and outcomes.
+
+    Args:
+        query: Description of the current error (e.g. "AG01 counterparty inactive failed rule counterparty_active").
+    """
+    if not os.environ.get("OPENAI_API_KEY") or not os.environ.get("DATABASE_URL"):
+        return json.dumps({"found": False, "message": "RAG service not configured (OPENAI_API_KEY or DATABASE_URL missing)."})
+    try:
+        from src.infrastructure.rag_service import _rag_service
+        results = _rag_service.search_similar(query, k=3)
+        if not results:
+            return json.dumps({"found": False, "message": "No similar cases found in knowledge base."})
+        return json.dumps({"found": True, "count": len(results), "similar_cases": results})
+    except Exception as exc:
+        return json.dumps({"found": False, "error": str(exc)})
+
+
+# ---------------------------------------------------------------------------
 # Tool lists (exported for use in the LangGraph agents)
 # ---------------------------------------------------------------------------
 
@@ -862,6 +890,7 @@ FO_READ_ONLY_TOOLS = [
     get_trade_detail,
     get_counterparty,
     get_reference_data,
+    search_similar_triage_cases,  # RAG: semantic search over past cases and SWIFT knowledge
     provide_explanation,     # non-HITL write — executed immediately
     escalate_to_fo_user,     # non-HITL write — executed immediately
 ]

@@ -99,6 +99,7 @@ from src.infrastructure.utils.cost_tracker import (
     call_with_cost_tracking,
     select_model,
 )
+from src.infrastructure.rag_service import _rag_service as _bo_rag_service
 
 # Maps HITL tool name → deep_investigation path node (used by _route_after_agent)
 _BO_HITL_TOOL_TO_NODE: dict[str, str] = {
@@ -451,6 +452,26 @@ def build_bo_graph() -> Any:
         }
 
     # ------------------------------------------------------------------
+    # RAG context node — enriches state before deep_investigation
+    # ------------------------------------------------------------------
+
+    def rag_context_node(state: BoAgentState) -> dict[str, Any]:
+        """Retrieve similar past cases and inject them before deep investigation."""
+        error_msg = state.get("error_message", "")
+        failed_rules = state.get("failed_rules", [])
+        query = f"{error_msg} failed_rules={failed_rules}"
+        results = _bo_rag_service.search_similar(query, agent_type="bo", k=3)
+        if not results:
+            return {}
+        rag_content = "[RAG Context — Similar past cases]\n" + "\n---\n".join(results)
+        _logger.info(
+            "rag_context_node: injected %d similar cases",
+            len(results),
+            extra={"trade_id": state.get("trade_id")},
+        )
+        return {"messages": [HumanMessage(content=rag_content)]}
+
+    # ------------------------------------------------------------------
     # LLM nodes (shared implementation)
     # ------------------------------------------------------------------
 
@@ -543,6 +564,7 @@ def build_bo_graph() -> Any:
     builder.add_node("model_router",   model_router_node)
     builder.add_node("gather_context", gather_context_node)
     builder.add_node("agent",          agent_node)
+    builder.add_node("rag_context",    rag_context_node)
     builder.add_node("deep_investigation", deep_investigation_node)
     builder.add_node("read_tools",     read_tools_node)
 
@@ -576,9 +598,11 @@ def build_bo_graph() -> Any:
             "lookup_ssi":         "lookup_ssi",
             "be01_handler":       "be01_handler",
             "fo_side_handler":    "fo_side_handler",
-            "deep_investigation": "deep_investigation",
+            # COMPOUND/UNKNOWN: pass through RAG context enrichment before deep investigation
+            "deep_investigation": "rag_context",
         },
     )
+    builder.add_edge("rag_context", "deep_investigation")
 
     # AG01 deterministic path
     builder.add_edge("ag01_handler", "reactivate_counterparty_node")

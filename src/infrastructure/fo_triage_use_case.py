@@ -23,6 +23,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 
 from src.domain.entities import RootCause, Step, TriageResult, TriageStatus
 from src.infrastructure.fo_agent import _FO_HITL_TOOL_TO_NODE, build_fo_graph
+from src.infrastructure.rag_service import _rag_service as _fo_rag_service
 
 _FO_HITL_TOOL_NAMES: frozenset[str] = frozenset(_FO_HITL_TOOL_TO_NODE.keys())
 _FO_HITL_NODE_NAMES: frozenset[str] = frozenset(_FO_HITL_TOOL_TO_NODE.values())
@@ -164,7 +165,7 @@ class FoTriageUseCase:
                 "step_count": len(steps),
             },
         )
-        return TriageResult(
+        result = TriageResult(
             trade_id=trade_id,
             status=TriageStatus.COMPLETED,
             run_id=run_id,
@@ -177,6 +178,14 @@ class FoTriageUseCase:
             total_cost_usd=float(state.get("total_cost_usd") or 0.0),
             agent_type="fo",
         )
+        _fo_rag_service.store_triage_result(
+            result,
+            agent_type="fo",
+            error_message=state.get("error_message", ""),
+            failed_rules=state.get("failed_rules", []),
+            triage_path=state.get("triage_path", ""),
+        )
+        return result
 
 
 # ---------------------------------------------------------------------------
