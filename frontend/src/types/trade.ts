@@ -27,6 +27,7 @@ export interface Trade {
   trade_type: 'Spot' | 'Forward' | string
   value_date: string
   trade_date: string
+  input_date: string
   settlement_currency: string
   fo_check_results?: CheckResult[]
   bo_check_results?: CheckResult[]

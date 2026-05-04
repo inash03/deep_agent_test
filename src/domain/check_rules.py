@@ -54,10 +54,11 @@ class BoRule:
 
 
 def _trade_date_not_future(trade: "TradeModel") -> tuple[bool, str]:
-    today = date.today()
-    if trade.trade_date > today:
-        return False, f"Trade date {trade.trade_date} is in the future (today: {today})"
-    return True, f"Trade date {trade.trade_date} is not in the future"
+    if trade.trade_date > trade.input_date:
+        return False, (
+            f"Trade date {trade.trade_date} is after input date {trade.input_date}"
+        )
+    return True, f"Trade date {trade.trade_date} is not after input date {trade.input_date}"
 
 
 def _trade_date_not_weekend(trade: "TradeModel") -> tuple[bool, str]:

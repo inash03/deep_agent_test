@@ -311,6 +311,7 @@ export function TradeDetailPage() {
             ['Amount', Number(trade.amount).toLocaleString()],
             [rateLabel, Number(trade.fx_rate).toLocaleString(undefined, { maximumFractionDigits: 8 })],
             ['Trade Date', trade.trade_date],
+            ['Input Date', trade.input_date],
             ['Value Date', trade.value_date],
           ].map(([label, val]) => (
             <div key={label}>

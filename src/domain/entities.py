@@ -96,6 +96,7 @@ class TradeDetail(BaseModel):
     fx_rate: Decimal
     trade_type: str
     trade_date: date
+    input_date: date
     value_date: date
     settlement_currency: str
 

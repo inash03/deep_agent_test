@@ -108,6 +108,7 @@ class TradeOut(BaseModel):
     trade_type: str
     value_date: date
     trade_date: date
+    input_date: date
     settlement_currency: str
     fo_check_results: list[dict] | None = None
     bo_check_results: list[dict] | None = None
@@ -284,6 +285,7 @@ class TradeVersionOut(BaseModel):
     trade_type: str
     value_date: date
     trade_date: date
+    input_date: date
     settlement_currency: str
 
 
