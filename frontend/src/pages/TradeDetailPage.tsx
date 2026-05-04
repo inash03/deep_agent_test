@@ -197,6 +197,9 @@ export function TradeDetailPage() {
       : lines.join('\n')
     const res = await startFoTriage(trade_id!, errorMsg)
     setFoTriage(res)
+    if (res.status === 'COMPLETED' && res.root_cause !== null && res.root_cause !== 'UNKNOWN') {
+      await runFoCheck(trade_id!)
+    }
     await reload()
   })
 
@@ -204,6 +207,9 @@ export function TradeDetailPage() {
     if (!foTriage?.run_id) return
     const res = await resumeFoTriage(trade_id!, foTriage.run_id, approved)
     setFoTriage(res)
+    if (res.status === 'COMPLETED' && res.root_cause !== null && res.root_cause !== 'UNKNOWN') {
+      await runFoCheck(trade_id!)
+    }
     await reload()
   })
 
@@ -215,6 +221,9 @@ export function TradeDetailPage() {
       : lines.join('\n')
     const res = await startBoTriage(trade_id!, errorMsg)
     setBoTriage(res)
+    if (res.status === 'COMPLETED' && res.root_cause !== null && res.root_cause !== 'UNKNOWN') {
+      await runBoCheck(trade_id!)
+    }
     await reload()
   })
 
@@ -222,6 +231,9 @@ export function TradeDetailPage() {
     if (!boTriage?.run_id) return
     const res = await resumeBoTriage(trade_id!, boTriage.run_id, approved)
     setBoTriage(res)
+    if (res.status === 'COMPLETED' && res.root_cause !== null && res.root_cause !== 'UNKNOWN') {
+      await runBoCheck(trade_id!)
+    }
     await reload()
   })
 
@@ -356,9 +368,18 @@ export function TradeDetailPage() {
                       <label style={LABEL}>Additional context (optional)</label>
                       <input style={INPUT} value={foTriageMsg} onChange={e => setFoTriageMsg(e.target.value)} placeholder="Extra context for the agent" />
                     </div>
-                    <button style={BTN_PRIMARY} disabled={running === 'fo-triage' || foFails.length === 0} onClick={handleStartFoTriage}>
-                      {running === 'fo-triage' ? 'Investigating…' : 'Start FO Triage'}
-                    </button>
+                    {(() => {
+                      const disabled = running === 'fo-triage' || foFails.length === 0
+                      return (
+                        <button
+                          style={{ ...BTN_PRIMARY, ...(disabled ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }}
+                          disabled={disabled}
+                          onClick={handleStartFoTriage}
+                        >
+                          {running === 'fo-triage' ? 'Investigating…' : 'Start FO Triage'}
+                        </button>
+                      )
+                    })()}
                   </div>
                 </div>
               )
@@ -419,9 +440,18 @@ export function TradeDetailPage() {
                       <label style={LABEL}>Additional context (optional)</label>
                       <input style={INPUT} value={boTriageMsg} onChange={e => setBoTriageMsg(e.target.value)} placeholder="Extra context for the agent" />
                     </div>
-                    <button style={{ ...BTN_PRIMARY, backgroundColor: '#15803d' }} disabled={running === 'bo-triage' || boFails.length === 0} onClick={handleStartBoTriage}>
-                      {running === 'bo-triage' ? 'Investigating…' : 'Start BO Triage'}
-                    </button>
+                    {(() => {
+                      const disabled = running === 'bo-triage' || boFails.length === 0
+                      return (
+                        <button
+                          style={{ ...BTN_PRIMARY, backgroundColor: '#15803d', ...(disabled ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }}
+                          disabled={disabled}
+                          onClick={handleStartBoTriage}
+                        >
+                          {running === 'bo-triage' ? 'Investigating…' : 'Start BO Triage'}
+                        </button>
+                      )
+                    })()}
                   </div>
                 </div>
               )
