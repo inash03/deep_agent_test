@@ -3,12 +3,18 @@
 Uses OpenAI text-embedding-3-small (1536 dimensions) via langchain-openai.
 If OPENAI_API_KEY or DATABASE_URL is not set, all operations are silently no-ops
 so triage runs continue normally without RAG.
+
+Embedding API costs are recorded in llm_cost_logs (agent_type='rag') so that
+they appear alongside LLM generation costs in the cost dashboard.
 """
 
 from __future__ import annotations
 
 import logging
 import os
+import uuid
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -36,15 +42,69 @@ class RagService:
             )
         return self._embedder
 
+    # ------------------------------------------------------------------
+    # Cost tracking helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _estimate_tokens(text: str) -> int:
+        """Rough token estimate: 1 token ≈ 4 characters (English text)."""
+        return max(1, len(text) // 4)
+
+    @staticmethod
+    def _record_embedding_cost(
+        db,
+        *,
+        input_tokens: int,
+        operation: str,
+        run_id: str | None,
+        trade_id: str | None,
+    ) -> None:
+        from src.infrastructure.db.models import LlmCostLogModel
+        from src.infrastructure.utils.cost_tracker import MODEL_EMBEDDING, calc_cost
+
+        cost = calc_cost(MODEL_EMBEDDING, {"input_tokens": input_tokens, "output_tokens": 0})
+        db.add(LlmCostLogModel(
+            id=uuid.uuid4(),
+            run_id=run_id,
+            trade_id=trade_id,
+            agent_type="rag",
+            node=operation,
+            model=MODEL_EMBEDDING,
+            input_tokens=input_tokens,
+            output_tokens=0,
+            cost_usd=Decimal(str(cost)),
+            reason=f"embedding:{operation}",
+            created_at=datetime.now(timezone.utc),
+        ))
+        _logger.info(
+            "rag_service: embedding cost logged",
+            extra={
+                "operation": operation,
+                "input_tokens": input_tokens,
+                "cost_usd": cost,
+                "run_id": run_id,
+                "trade_id": trade_id,
+            },
+        )
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
     def search_similar(
         self,
         query: str,
         agent_type: str | None = None,
         k: int = 3,
+        *,
+        run_id: str | None = None,
+        trade_id: str | None = None,
     ) -> list[str]:
         """Return content strings of the k most similar RAG chunks.
 
         Returns an empty list when RAG is unavailable or on any error.
+        Embedding cost is recorded in llm_cost_logs.
         """
         if not self._is_available():
             return []
@@ -60,6 +120,14 @@ class RagService:
                 chunks = RagRepository(db).search_similar(
                     embedding, agent_type=agent_type, k=k
                 )
+                self._record_embedding_cost(
+                    db,
+                    input_tokens=self._estimate_tokens(query),
+                    operation="search_similar",
+                    run_id=run_id,
+                    trade_id=trade_id,
+                )
+                db.commit()
                 return [c.content for c in chunks]
             finally:
                 db.close()
@@ -75,7 +143,10 @@ class RagService:
         source_id: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Embed and persist a single RAG chunk."""
+        """Embed and persist a single RAG chunk.
+
+        Embedding cost is recorded in llm_cost_logs alongside the chunk write.
+        """
         if not self._is_available():
             return
         embedder = self._get_embedder()
@@ -94,6 +165,14 @@ class RagService:
                     source_id=source_id,
                     agent_type=agent_type,
                     metadata=metadata,
+                )
+                trade_id = (metadata or {}).get("trade_id")
+                self._record_embedding_cost(
+                    db,
+                    input_tokens=self._estimate_tokens(content),
+                    operation="store_chunk",
+                    run_id=source_id,
+                    trade_id=trade_id,
                 )
                 db.commit()
             finally:

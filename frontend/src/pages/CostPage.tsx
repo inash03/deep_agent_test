@@ -7,6 +7,14 @@ import type { CostSummary, LlmCostLog } from '../types/cost'
 const MODEL_SHORT: Record<string, string> = {
   'claude-sonnet-4-6': 'Sonnet 4.6',
   'claude-haiku-4-5-20251001': 'Haiku 4.5',
+  'text-embedding-3-small': 'Embed 3-small',
+}
+
+function agentColor(agentType: string): string {
+  if (agentType === 'fo') return '#2563eb'
+  if (agentType === 'bo') return '#16a34a'
+  if (agentType === 'rag') return '#9333ea'
+  return '#6b7280'
 }
 
 function fmt(usd: number): string {
@@ -80,7 +88,7 @@ export function CostPage() {
               )}
               {summary.by_agent.map(a => (
                 <tr key={a.agent_type}>
-                  <td style={TD}><span style={{ fontWeight: 600, textTransform: 'uppercase', color: a.agent_type === 'fo' ? '#2563eb' : '#16a34a' }}>{a.agent_type}</span></td>
+                  <td style={TD}><span style={{ fontWeight: 600, textTransform: 'uppercase', color: agentColor(a.agent_type) }}>{a.agent_type}</span></td>
                   <td style={{ ...TD, textAlign: 'right' }}>{a.run_count}</td>
                   <td style={{ ...TD, textAlign: 'right' }}>{a.call_count}</td>
                   <td style={{ ...TD, textAlign: 'right', fontFamily: 'monospace' }}>{fmt(a.cost_usd)}</td>
@@ -174,14 +182,16 @@ export function CostPage() {
                     </td>
                     <td style={TD}>{l.trade_id ?? '—'}</td>
                     <td style={TD}>
-                      <span style={{ fontWeight: 600, textTransform: 'uppercase', color: l.agent_type === 'fo' ? '#2563eb' : '#16a34a' }}>
+                      <span style={{ fontWeight: 600, textTransform: 'uppercase', color: agentColor(l.agent_type) }}>
                         {l.agent_type}
                       </span>
                     </td>
                     <td style={{ ...TD, fontSize: '0.8rem', color: COLOR.textMuted }}>{l.node}</td>
                     <td style={TD}>{MODEL_SHORT[l.model] ?? l.model}</td>
                     <td style={{ ...TD, textAlign: 'right' }}>{fmtTokens(l.input_tokens)}</td>
-                    <td style={{ ...TD, textAlign: 'right' }}>{fmtTokens(l.output_tokens)}</td>
+                    <td style={{ ...TD, textAlign: 'right', color: l.agent_type === 'rag' ? COLOR.textMuted : undefined }}>
+                      {l.agent_type === 'rag' ? '—' : fmtTokens(l.output_tokens)}
+                    </td>
                     <td style={{ ...TD, textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>{fmt(l.cost_usd)}</td>
                   </tr>
                 ))}
