@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from src.domain.trade_classification import calculate_trade_type
 from src.infrastructure.db.models import CounterpartyModel, TradeModel
 from src.infrastructure.db.session import get_db
 from src.infrastructure.db.trade_repository import TradeRepository
@@ -37,6 +38,8 @@ def _to_out(row, counterparty_name: str | None = None) -> TradeOut:
         instrument_id=row.instrument_id,
         currency=row.currency,
         amount=str(row.amount),
+        fx_rate=str(row.fx_rate),
+        trade_type=row.trade_type,
         value_date=row.value_date,
         trade_date=row.trade_date,
         settlement_currency=row.settlement_currency,
@@ -90,6 +93,8 @@ def create_trade(body: TradeCreateRequest, db: Session = Depends(get_db)) -> Tra
             instrument_id=body.instrument_id,
             currency=body.currency,
             amount=body.amount,
+            fx_rate=body.fx_rate,
+            trade_type=calculate_trade_type(body.trade_date, body.value_date),
             value_date=body.value_date,
             trade_date=body.trade_date,
             settlement_currency=body.currency,

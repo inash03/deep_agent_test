@@ -19,6 +19,9 @@ from src.domain.entities import (
     SettlementInstruction,
     TradeDetail,
 )
+from src.domain.trade_classification import calculate_trade_type
+
+_TRADE_DATE = date(2026, 4, 1)
 
 # ---------------------------------------------------------------------------
 # Counterparty master
@@ -59,6 +62,9 @@ _TRADES: dict[str, TradeDetail] = {
         instrument_id="USDJPY",
         currency="USD",
         amount=Decimal("1000000.00"),
+        fx_rate=Decimal("151.25000000"),
+        trade_type=calculate_trade_type(_TRADE_DATE, date(2026, 4, 8)),
+        trade_date=_TRADE_DATE,
         value_date=date(2026, 4, 8),
         settlement_currency="USD",
     ),
@@ -69,6 +75,9 @@ _TRADES: dict[str, TradeDetail] = {
         instrument_id="EURUSD",
         currency="EUR",
         amount=Decimal("500000.00"),
+        fx_rate=Decimal("1.08500000"),
+        trade_type=calculate_trade_type(_TRADE_DATE, date(2026, 4, 8)),
+        trade_date=_TRADE_DATE,
         value_date=date(2026, 4, 8),
         settlement_currency="EUR",
     ),
@@ -79,6 +88,9 @@ _TRADES: dict[str, TradeDetail] = {
         instrument_id="GBPUSD",
         currency="GBP",
         amount=Decimal("250000.00"),
+        fx_rate=Decimal("1.26500000"),
+        trade_type=calculate_trade_type(_TRADE_DATE, date(2026, 4, 8)),
+        trade_date=_TRADE_DATE,
         value_date=date(2026, 4, 8),
         settlement_currency="GBP",
     ),
@@ -89,6 +101,9 @@ _TRADES: dict[str, TradeDetail] = {
         instrument_id="AUDUSD",
         currency="AUD",
         amount=Decimal("750000.00"),
+        fx_rate=Decimal("0.65500000"),
+        trade_type=calculate_trade_type(_TRADE_DATE, date(2024, 1, 1)),
+        trade_date=_TRADE_DATE,
         value_date=date(2024, 1, 1),  # past date
         settlement_currency="AUD",
     ),
@@ -99,6 +114,9 @@ _TRADES: dict[str, TradeDetail] = {
         instrument_id="UNKNOWN_CCY_PAIR",
         currency="USD",
         amount=Decimal("100000.00"),
+        fx_rate=Decimal("1.00000000"),
+        trade_type=calculate_trade_type(_TRADE_DATE, date(2026, 4, 8)),
+        trade_date=_TRADE_DATE,
         value_date=date(2026, 4, 8),
         settlement_currency="USD",
     ),
@@ -109,6 +127,9 @@ _TRADES: dict[str, TradeDetail] = {
         instrument_id="USDJPY",
         currency="USD",
         amount=Decimal("2000000.00"),
+        fx_rate=Decimal("151.25000000"),
+        trade_type=calculate_trade_type(_TRADE_DATE, date(2026, 5, 1)),
+        trade_date=_TRADE_DATE,
         value_date=date(2026, 5, 1),
         settlement_currency="USD",
     ),

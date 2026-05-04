@@ -104,6 +104,8 @@ class TradeOut(BaseModel):
     instrument_id: str
     currency: str
     amount: str  # string to preserve decimal precision
+    fx_rate: str  # string to preserve decimal precision
+    trade_type: str
     value_date: date
     trade_date: date
     settlement_currency: str
@@ -127,6 +129,7 @@ class TradeCreateRequest(BaseModel):
     instrument_id: str = Field(..., min_length=1)
     currency: str = Field(..., min_length=3, max_length=10)
     amount: Decimal = Field(..., gt=Decimal("0"))
+    fx_rate: Decimal = Field(..., gt=Decimal("0"))
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +280,8 @@ class TradeVersionOut(BaseModel):
     instrument_id: str
     currency: str
     amount: str
+    fx_rate: str
+    trade_type: str
     value_date: date
     trade_date: date
     settlement_currency: str
@@ -307,8 +312,8 @@ class TradeEventCreateRequest(BaseModel):
     requested_by: str = Field(..., min_length=1, examples=["fo_user_01"])
     amended_fields: dict | None = Field(
         default=None,
-        description="Required for AMEND. Keys: value_date, trade_date, amount, currency, settlement_currency, instrument_id.",
-        examples=[{"value_date": "2026-05-01"}],
+        description="Required for AMEND. Keys: value_date, trade_date, amount, fx_rate, currency, settlement_currency, instrument_id.",
+        examples=[{"value_date": "2026-05-01", "fx_rate": "1.09250000"}],
     )
 
 

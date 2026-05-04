@@ -23,6 +23,8 @@ export interface Trade {
   instrument_id: string
   currency: string
   amount: string
+  fx_rate: string
+  trade_type: 'Spot' | 'Forward' | string
   value_date: string
   trade_date: string
   settlement_currency: string

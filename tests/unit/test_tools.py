@@ -50,6 +50,8 @@ class TestGetTradeDetail:
         assert result["counterparty_lei"] == "213800QILIUD4ROSUO03"
         assert result["currency"] == "USD"
         assert result["instrument_id"] == "USDJPY"
+        assert result["fx_rate"] == "151.25000000"
+        assert result["trade_type"] == "Forward"
 
     def test_unknown_trade_returns_error(self):
         result = invoke(get_trade_detail, trade_id="DOES-NOT-EXIST")

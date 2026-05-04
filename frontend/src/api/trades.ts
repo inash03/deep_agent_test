@@ -69,6 +69,7 @@ export interface TradeCreateRequest {
   instrument_id: string
   currency: string
   amount: number
+  fx_rate: number
 }
 
 export async function createTrade(body: TradeCreateRequest): Promise<Trade> {
