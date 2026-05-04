@@ -9,20 +9,36 @@ Completed tasks are archived in `docs/tasks_done.md`.
 
 ## In Progress
 
-#### Phase 39 — TradeDetailPage FoCheck 結果表示の不具合修正
+#### Phase 40 — EventPending ステータス時の Triage ボタン非活性化
 
-**目的:** `frontend/src/pages/TradeDetailPage.tsx` において、
-FoCheck が未実行のときも・実行済みでエラーなしのときも、
-同じメッセージ `"No FoCheck failures found. Run FoCheck first."` が表示される不具合を修正する。
+**目的:** `EventPending` ステータスの取引に対して FO Triage・BO Triage をマニュアル実行できないよう、
+`Start FO Triage` / `Start BO Triage` ボタンを disabled にする。
 
 **修正内容:**
-- FoCheck 未実行（`fo_check_results` が null / 未設定）の場合: `"FoCheck has not been run yet."` を表示
-- FoCheck 実行済みで全ルール合格の場合: `"All FoCheck rules passed."` を表示
-- FoCheck 実行済みで失敗あり: 失敗ルール一覧を表示（既存ロジック）
+- `frontend/src/pages/TradeDetailPage.tsx` の Triage 起動ボタンに
+  `workflow_status === 'EventPending'` のときは `disabled` 属性を付与
+- ボタン非活性時はツールチップ等で理由を表示（例: `"Cannot start triage while event is pending"`）
 
 ---
 
 ## Backlog
+
+#### Phase 42 — BO Triage 500 エラー調査
+
+**目的:** `POST /api/v1/trades/{trade_id}/bo-triage` が稀に 500 Internal Server Error を返すケースを調査・修正する。
+
+**既知情報:**
+- 再現手順は未確立（ユーザーが再現方法を確立次第共有予定）
+- 発生確認取引: TRD-009
+- 発生タイミング: "Start BO Triage" ボタン押下時
+
+**調査観点:**
+- バックエンドログで例外スタックトレースを確認
+- `bo_triage.py` の use_case.start() 内での未ハンドル例外の有無
+- DB 接続・MemorySaver 状態の整合性
+- レートリミット（5/minute）への抵触有無
+
+---
 
 #### Phase 36 — FO/BO エージェントのツール一覧確認画面
 
@@ -37,18 +53,6 @@ FoCheck が未実行のときも・実行済みでエラーなしのときも、
 **Backend:**
 - `GET /api/v1/agent-tools` エンドポイント追加
   - FO/BO エージェントが保持するツール定義（name, description, is_hitl）を返却
-
----
-
-#### Phase 40 — EventPending ステータス時の Triage ボタン非活性化
-
-**目的:** `EventPending` ステータスの取引に対して FO Triage・BO Triage をマニュアル実行できないよう、
-`Start FO Triage` / `Start BO Triage` ボタンを disabled にする。
-
-**修正内容:**
-- `frontend/src/pages/TradeDetailPage.tsx` の Triage 起動ボタンに
-  `workflow_status === 'EventPending'` のときは `disabled` 属性を付与
-- ボタン非活性時はツールチップ等で理由を表示（例: `"Cannot start triage while event is pending"`）
 
 ---
 

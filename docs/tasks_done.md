@@ -5,6 +5,7 @@
 ---
 
 - Phase 41 — RAG 導入（pgvector + OpenAI Embeddings）: rag_chunks テーブル・RagService・rag_context_node（BoAgent）・search_similar_triage_cases ツール（FoAgent）・トリアージ完了後の自動チャンク蓄積を実装
+- Phase 39 — TradeDetailPage FoCheck/BoCheck 結果表示の不具合修正: 未実行・全合格・失敗の3ケースを正しく分岐表示し、全合格時は緑メッセージ＋トリアージボタン非活性に統一
 
 ---
 
