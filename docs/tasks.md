@@ -9,18 +9,6 @@ Completed tasks are archived in `docs/tasks_done.md`.
 
 ## In Progress
 
-#### Phase 43 — BoValidated → Done ステータス自動遷移の欠落バグ修正
-
-**目的:** `run_bo_check` で全 BO ルールが合格した際、`BoValidated` で止まり `Done` に進まないバグを修正する。
-
-**修正内容:**
-- `src/infrastructure/rule_engine.py` の `run_bo_check` で `new_status` を `"BoValidated"` → `"Done"` に変更
-- ドキュメント冒頭コメントも同様に更新
-
----
-
-## Backlog
-
 #### Phase 40 — EventPending ステータス時の Triage ボタン非活性化
 
 **目的:** `EventPending` ステータスの取引に対して FO Triage・BO Triage をマニュアル実行できないよう、

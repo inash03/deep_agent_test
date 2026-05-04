@@ -4,7 +4,7 @@
 
 ## Current Status
 
-**Branch:** `claude/fix-triage-message-I9H4O`
+**Branch:** `claude/fix-validation-status-flow-ZqOC1`
 **Last updated:** 2026-05-04
 **In Progress:** Phase 40（EventPending ステータス時の Triage ボタン非活性化）
 **Next:** Phase 40 実装（workflow_status === 'EventPending' 時のボタン disabled 化）
@@ -12,6 +12,14 @@
 ---
 
 ## Step Log
+
+### Step 50 — fix: BoValidated → Done ステータス自動遷移の欠落バグ修正 (2026-05-04)
+
+Files: `src/infrastructure/rule_engine.py`, `docs/tasks.md`
+
+- `run_bo_check`: 全 BO ルール合格時の `new_status` を `"BoValidated"` → `"Done"` に変更
+- ファイル冒頭コメントの遷移表も同様に更新
+- 影響範囲: auto/manual どちらのモードでも BoCheck 全合格 → Done へ即座に進むようになった
 
 ### Step 49 — fix: English-only UI + triage panel display (2026-05-04)
 
