@@ -4,14 +4,25 @@
 
 ## Current Status
 
-**Branch:** `claude/plan-rag-integration-WJJNQ`
+**Branch:** `claude/fix-triage-message-I9H4O`
 **Last updated:** 2026-05-04
-**In Progress:** Phase 39（TradeDetailPage FoCheck 結果表示の不具合修正）
-**Next:** Phase 39 実装（FoCheck 未実行/合格/失敗の表示分岐修正）
+**In Progress:** Phase 40（EventPending ステータス時の Triage ボタン非活性化）
+**Next:** Phase 40 実装（workflow_status === 'EventPending' 時のボタン disabled 化）
 
 ---
 
 ## Step Log
+
+### Step 48 — fix: TradeDetailPage FoCheck/BoCheck トリアージメッセージ分岐修正 (2026-05-04)
+
+Files: `frontend/src/pages/TradeDetailPage.tsx`, `frontend/src/version.ts`
+
+- FoCheck/BoCheck の3状態（未実行・全合格・失敗あり）を正しく分岐
+- 未実行: グレー文字で "〜が未実行です。先に Run を実行してください。"
+- 全合格: 緑文字で "全ルールがパスしました。トリアージは不要です。"
+- 失敗あり: 既存の青文字＋ルール一覧表示（変更なし）
+- トリアージボタンは失敗ルールがない場合は引き続き disabled
+- frontend バージョン: 0.8.0 → 0.8.1
 
 ### Step 47 — feat: RAG 導入（pgvector + OpenAI Embeddings）(2026-05-04)
 
