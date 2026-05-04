@@ -4,14 +4,31 @@
 
 ## Current Status
 
-**Branch:** `claude/standardize-docker-pipeline-cVzbH`
-**Last updated:** 2026-04-30
+**Branch:** `claude/plan-rag-integration-WJJNQ`
+**Last updated:** 2026-05-04
 **In Progress:** Phase 39（TradeDetailPage FoCheck 結果表示の不具合修正）
 **Next:** Phase 39 実装（FoCheck 未実行/合格/失敗の表示分岐修正）
 
 ---
 
 ## Step Log
+
+### Step 47 — feat: RAG 導入（pgvector + OpenAI Embeddings）(2026-05-04)
+
+Files: `alembic/versions/0008_add_rag_chunks.py` (新規),
+       `src/infrastructure/db/models.py`, `src/infrastructure/db/rag_repository.py` (新規),
+       `src/infrastructure/rag_service.py` (新規), `src/infrastructure/rag_seed.py` (新規),
+       `src/infrastructure/tools.py`, `src/infrastructure/bo_agent.py`,
+       `src/infrastructure/fo_triage_use_case.py`, `src/infrastructure/bo_triage_use_case.py`,
+       `pyproject.toml`, `.env.example`
+
+- pgvector on Neon: `CREATE EXTENSION IF NOT EXISTS vector` + `rag_chunks` テーブル（vector(1536) + IVFFlat インデックス）
+- `RagChunk` ORM モデル・`RagRepository`（cosine_distance 検索）・`RagService`（lazy init、OPENAI_API_KEY 未設定時はノーオプ）
+- 静的知識シード: AG01/AM04/AC01/BE01 の意味・解決テンプレート 6 件
+- FoAgent: `search_similar_triage_cases` ツールを `FO_READ_ONLY_TOOLS` に追加（LLMが必要と判断した際に呼び出す）
+- BoAgent: `rag_context_node` を COMPOUND/UNKNOWN パスに挿入（`gather_context → rag_context → deep_investigation`）
+- トリアージ完了後: `store_triage_result()` で `rag_chunks` に自動蓄積（知識ベースが時間とともに成長）
+- `langchain-openai==0.3.16` + `pgvector==0.3.6` を `pyproject.toml` に追加
 
 ### Step 46 — chore: フロントエンド Docker パイプライン統一 (2026-04-30)
 

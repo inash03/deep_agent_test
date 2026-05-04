@@ -16,6 +16,7 @@ from typing import Any
 
 MODEL_HAIKU = "claude-haiku-4-5-20251001"
 MODEL_SONNET = "claude-sonnet-4-6"
+MODEL_EMBEDDING = "text-embedding-3-small"
 
 # Cost threshold: if total_cost_usd exceeds this, force Haiku
 COST_THRESHOLD_USD = 0.10
@@ -23,11 +24,13 @@ COST_THRESHOLD_USD = 0.10
 # ---------------------------------------------------------------------------
 # Pricing table  (USD per 1M tokens)
 # Note: Opus is listed for reference only — this system does not use it.
+# Embeddings have no output tokens; output_per_1m is 0.
 # ---------------------------------------------------------------------------
 
 _PRICE_TABLE: dict[str, dict[str, float]] = {
-    MODEL_HAIKU: {"input_per_1m": 0.80, "output_per_1m": 4.00},
-    MODEL_SONNET: {"input_per_1m": 3.00, "output_per_1m": 15.00},
+    MODEL_HAIKU:     {"input_per_1m": 0.80,  "output_per_1m": 4.00},
+    MODEL_SONNET:    {"input_per_1m": 3.00,  "output_per_1m": 15.00},
+    MODEL_EMBEDDING: {"input_per_1m": 0.02,  "output_per_1m": 0.00},
 }
 
 _DEFAULT_PRICES = _PRICE_TABLE[MODEL_SONNET]

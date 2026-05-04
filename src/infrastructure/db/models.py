@@ -29,6 +29,14 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+try:
+    from pgvector.sqlalchemy import Vector as _Vector
+    _VECTOR_1536 = _Vector(1536)
+    _HAS_PGVECTOR = True
+except ImportError:
+    _VECTOR_1536 = JSONB  # type: ignore[assignment]  # fallback for envs without pgvector
+    _HAS_PGVECTOR = False
+
 
 class Base(DeclarativeBase):
     """全モデルの共通基底クラス。Alembic がこの metadata を参照する。"""
@@ -336,6 +344,27 @@ class LlmCostLogModel(Base):
     output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cost_usd: Mapped[Decimal] = mapped_column(Numeric(12, 8), nullable=False, default=0)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
+class RagChunk(Base):
+    """RAG 知識ベース — 過去トリアージ事例・SWIFTコード知識のベクトルストア。"""
+
+    __tablename__ = "rag_chunks"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    source_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    source_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    agent_type: Mapped[str | None] = mapped_column(String(10), nullable=True, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    rag_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
+    embedding: Mapped[list | None] = mapped_column(_VECTOR_1536, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

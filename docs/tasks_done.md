@@ -4,6 +4,10 @@
 
 ---
 
+- Phase 41 — RAG 導入（pgvector + OpenAI Embeddings）: rag_chunks テーブル・RagService・rag_context_node（BoAgent）・search_similar_triage_cases ツール（FoAgent）・トリアージ完了後の自動チャンク蓄積を実装
+
+---
+
 - Ops: フロントエンド Docker パイプライン統一 — frontend/Dockerfile をマルチステージビルド化、docker-compose.yml に FRONTEND_IMAGE 対応、deploy.yml の deploy-frontend ジョブを npm build/SCP/VM build → GCP Auth/docker build+push(Artifact Registry)/SSH pull に変更
 - Phase 38: 旧 /api/v1/triage チェーン削除 + TriageHistory 修正 + ナビゲーション整備 — agent.py/triage_use_case.py/router.py を削除、FO/BO ルーターに TriageResultRepository.save() 追加、agent_type フィールド導入（Alembic 0007）、HomePage.tsx 新設、NavBar に Home/Triage History リンク追加、version 0.6.0 → 0.7.0
 - Phase 37: ドキュメント最新化 + CLAUDE.md 自動更新ルール追加 — tasks/requirements/architecture を Phase 35 相当に最新化、tasks_done.md 新設、CLAUDE.md の End-of-step checklist に architecture.md/requirements.md 更新ルール追記

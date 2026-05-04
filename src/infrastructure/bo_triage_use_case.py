@@ -22,6 +22,7 @@ import uuid
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 
 from src.domain.entities import RootCause, Step, TriageResult, TriageStatus
+from src.infrastructure.rag_service import _rag_service as _bo_rag_svc
 from src.infrastructure.bo_agent import (
     _BO_ALL_HITL_NODE_NAMES,
     _BO_HITL_TOOL_TO_NODE,
@@ -174,7 +175,7 @@ class BoTriageUseCase:
                 "step_count": len(steps),
             },
         )
-        return TriageResult(
+        result = TriageResult(
             trade_id=trade_id,
             status=TriageStatus.COMPLETED,
             run_id=run_id,
@@ -187,6 +188,14 @@ class BoTriageUseCase:
             total_cost_usd=float(state.get("total_cost_usd") or 0.0),
             agent_type="bo",
         )
+        _bo_rag_svc.store_triage_result(
+            result,
+            agent_type="bo",
+            error_message=state.get("error_message", ""),
+            failed_rules=state.get("failed_rules", []),
+            triage_path=state.get("triage_path", ""),
+        )
+        return result
 
 
 # ---------------------------------------------------------------------------

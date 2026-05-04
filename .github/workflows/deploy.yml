@@ -63,6 +63,7 @@ jobs:
             ANTHROPIC_API_KEY=anthropic-api-key:latest
             DATABASE_URL=database-url:latest
             API_KEY=api-key:latest
+            OPENAI_API_KEY=openai-api-key:latest
           env_vars: |
             SECRET_BACKEND=env
             CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}

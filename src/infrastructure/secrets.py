@@ -42,6 +42,7 @@ _logger = logging.getLogger("stp_triage.secrets")
 _SECRET_MAP: dict[str, str] = {
     "ANTHROPIC_API_KEY": "anthropic-api-key",
     "DATABASE_URL": "database-url",
+    "OPENAI_API_KEY": "openai-api-key",
 }
 
 
