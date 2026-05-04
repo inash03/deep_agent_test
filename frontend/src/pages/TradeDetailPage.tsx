@@ -333,6 +333,7 @@ export function TradeDetailPage() {
           <div style={CARD}>
             <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', color: '#1d4ed8' }}>FO Triage</h3>
             {!foTriage || foTriage.status === 'COMPLETED' ? (() => {
+              const foCheckRun = (trade.fo_check_results?.length ?? 0) > 0
               const foFails = (trade.fo_check_results ?? []).filter(r => !r.passed)
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -341,9 +342,13 @@ export function TradeDetailPage() {
                       <strong>{foFails.length} FoCheck failure(s)</strong> will be passed as agent input:{' '}
                       <span style={{ fontFamily: 'monospace' }}>{foFails.map(r => r.rule_name).join(', ')}</span>
                     </p>
+                  ) : foCheckRun ? (
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#15803d' }}>
+                      FoCheck の全ルールがパスしました。トリアージは不要です。
+                    </p>
                   ) : (
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#dc2626' }}>
-                      No FoCheck failures found. Run FoCheck first.
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: COLOR.textMuted }}>
+                      FoCheck が未実行です。先に "Run FoCheck" を実行してください。
                     </p>
                   )}
                   <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -391,6 +396,7 @@ export function TradeDetailPage() {
           <div style={CARD}>
             <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', color: '#065f46' }}>BO Triage</h3>
             {!boTriage || boTriage.status === 'COMPLETED' ? (() => {
+              const boCheckRun = (trade.bo_check_results?.length ?? 0) > 0
               const boFails = (trade.bo_check_results ?? []).filter(r => !r.passed)
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -399,9 +405,13 @@ export function TradeDetailPage() {
                       <strong>{boFails.length} BoCheck failure(s)</strong> will be passed as agent input:{' '}
                       <span style={{ fontFamily: 'monospace' }}>{boFails.map(r => r.rule_name).join(', ')}</span>
                     </p>
+                  ) : boCheckRun ? (
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#15803d' }}>
+                      BoCheck の全ルールがパスしました。トリアージは不要です。
+                    </p>
                   ) : (
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#dc2626' }}>
-                      No BoCheck failures found. Run BoCheck first.
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: COLOR.textMuted }}>
+                      BoCheck が未実行です。先に "Run BoCheck" を実行してください。
                     </p>
                   )}
                   <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
