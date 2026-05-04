@@ -7,7 +7,7 @@ Workflow transitions:
   FoCheck: any ERROR failure  → FoAgentToCheck
            only WARNINGs / all pass → FoValidated
   BoCheck: any failure        → BoAgentToCheck
-           all pass           → BoValidated
+           all pass           → Done
 """
 
 from __future__ import annotations
@@ -172,7 +172,7 @@ def run_bo_check(trade_id: str, db: Session) -> tuple[list[CheckResult], str]:
         )
 
     has_errors = any(not r.passed for r in results)
-    new_status = "BoAgentToCheck" if has_errors else "BoValidated"
+    new_status = "BoAgentToCheck" if has_errors else "Done"
 
     repo.update_workflow_status(
         trade_id,
