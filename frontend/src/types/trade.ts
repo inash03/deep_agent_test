@@ -19,6 +19,7 @@ export interface Trade {
   workflow_status: string
   is_current: boolean
   counterparty_lei: string
+  counterparty_name?: string
   instrument_id: string
   currency: string
   amount: string

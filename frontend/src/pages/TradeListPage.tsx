@@ -241,7 +241,7 @@ export function TradeListPage() {
                   >
                     Trade Date{sortIndicator(primarySort?.key === 'trade_date', primarySort?.key === 'trade_date' ? primarySort.dir : 'asc')}
                   </th>
-                  <th style={TH}>Counterparty LEI</th>
+                  <th style={TH}>Counterparty</th>
                   <th style={TH}>Instrument</th>
                   <th style={TH}>CCY</th>
                   <th
@@ -312,7 +312,7 @@ export function TradeListPage() {
                     <td style={{ ...STICKY_TRADE_ID_TD, fontWeight: 600, fontFamily: 'monospace' }}>{t.trade_id}</td>
                     <td style={{ ...TD, textAlign: 'center', color: COLOR.textMuted, fontSize: '0.82rem' }}>v{t.version}</td>
                     <td style={TD}>{t.trade_date}</td>
-                    <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.8rem' }}>{t.counterparty_lei}</td>
+                    <td style={TD}>{t.counterparty_name ?? t.counterparty_lei}</td>
                     <td style={TD}>{t.instrument_id}</td>
                     <td style={TD}>{t.currency}</td>
                     <td style={{ ...TD, textAlign: 'right', fontFamily: 'monospace' }}>

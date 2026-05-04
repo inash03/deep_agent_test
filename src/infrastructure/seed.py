@@ -63,10 +63,10 @@ def _upsert_counterparties(db: Session) -> None:
 
 
 _REFERENCE_DATA = [
-    {"instrument_id": "USDJPY", "description": "US Dollar / Japanese Yen",          "asset_class": "FX", "is_active": True},
-    {"instrument_id": "EURUSD", "description": "Euro / US Dollar",                   "asset_class": "FX", "is_active": True},
-    {"instrument_id": "GBPUSD", "description": "British Pound / US Dollar",          "asset_class": "FX", "is_active": True},
-    {"instrument_id": "AUDUSD", "description": "Australian Dollar / US Dollar",      "asset_class": "FX", "is_active": True},
+    {"instrument_id": "USD/JPY", "description": "US Dollar / Japanese Yen",          "asset_class": "FX", "is_active": True},
+    {"instrument_id": "EUR/USD", "description": "Euro / US Dollar",                   "asset_class": "FX", "is_active": True},
+    {"instrument_id": "GBP/USD", "description": "British Pound / US Dollar",          "asset_class": "FX", "is_active": True},
+    {"instrument_id": "AUD/USD", "description": "Australian Dollar / US Dollar",      "asset_class": "FX", "is_active": True},
 ]
 
 
@@ -308,7 +308,7 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
     fo_failing = [
         {
             "trade_id": "TRD-004",
-            "cp_lei": "9695005MSX1OYEMGDF46", "instr": "AUDUSD", "ccy": "AUD",
+            "cp_lei": "9695005MSX1OYEMGDF46", "instr": "AUD/USD", "ccy": "AUD",
             "amt": Decimal("750000.00"), "vd": date(2024, 1, 1), "sc": "AUD",
             "err": "Value date 2024-01-01 is in the past",
             "fo_results": _TRD_004_FO_RESULTS,
@@ -349,56 +349,56 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
     bo_failing = [
         {
             "trade_id": "TRD-001",
-            "cp_lei": "213800QILIUD4ROSUO03", "instr": "USDJPY", "ccy": "USD",
+            "cp_lei": "213800QILIUD4ROSUO03", "instr": "USD/JPY", "ccy": "USD",
             "amt": Decimal("1000000.00"), "vd": date(2026, 4, 8), "sc": "USD",
             "err": "SSI not registered for counterparty 213800QILIUD4ROSUO03 / USD",
             "bo_results": _TRD_001_BO_RESULTS,
         },
         {
             "trade_id": "TRD-002",
-            "cp_lei": "5493001KJTIIGC8Y1R12", "instr": "EURUSD", "ccy": "EUR",
+            "cp_lei": "5493001KJTIIGC8Y1R12", "instr": "EUR/USD", "ccy": "EUR",
             "amt": Decimal("500000.00"), "vd": date(2026, 4, 8), "sc": "EUR",
             "err": "Invalid BIC format in settlement instructions for 5493001KJTIIGC8Y1R12 / EUR",
             "bo_results": _TRD_002_BO_RESULTS,
         },
         {
             "trade_id": "TRD-003",
-            "cp_lei": "UNKNOWNLEI000000001", "instr": "GBPUSD", "ccy": "GBP",
+            "cp_lei": "UNKNOWNLEI000000001", "instr": "GBP/USD", "ccy": "GBP",
             "amt": Decimal("250000.00"), "vd": date(2026, 4, 8), "sc": "GBP",
             "err": "Counterparty LEI UNKNOWNLEI000000001 not found in master data",
             "bo_results": _TRD_003_BO_RESULTS,
         },
         {
             "trade_id": "TRD-008",
-            "cp_lei": "213800QILIUD4ROSUO03", "instr": "EURUSD", "ccy": "EUR",
+            "cp_lei": "213800QILIUD4ROSUO03", "instr": "EUR/USD", "ccy": "EUR",
             "amt": Decimal("800000.00"), "vd": date(2026, 4, 8), "sc": "EUR",
             "err": "MT103 rejected by SWIFT. Reason code: AC01. Sender BIC: ACMEGB2L.",
             "bo_results": _TRD_008_BO_RESULTS,
         },
         {
             "trade_id": "TRD-009",
-            "cp_lei": "213800XYZINACTIVE001", "instr": "USDJPY", "ccy": "USD",
+            "cp_lei": "213800XYZINACTIVE001", "instr": "USD/JPY", "ccy": "USD",
             "amt": Decimal("1200000.00"), "vd": date(2026, 4, 8), "sc": "USD",
             "err": "MT103 rejected by SWIFT. Reason code: AG01. Counterparty LEI: 213800XYZINACTIVE001.",
             "bo_results": _TRD_009_BO_RESULTS,
         },
         {
             "trade_id": "TRD-010",
-            "cp_lei": "213800XYZINACTIVE001", "instr": "GBPUSD", "ccy": "GBP",
+            "cp_lei": "213800XYZINACTIVE001", "instr": "GBP/USD", "ccy": "GBP",
             "amt": Decimal("600000.00"), "vd": date(2026, 4, 8), "sc": "GBP",
             "err": "Pre-settlement validation failed for TRD-010. Multiple checks not passed.",
             "bo_results": _TRD_010_BO_RESULTS,
         },
         {
             "trade_id": "TRD-011",
-            "cp_lei": "254900CUSTBANK000001", "instr": "GBPUSD", "ccy": "GBP",
+            "cp_lei": "254900CUSTBANK000001", "instr": "GBP/USD", "ccy": "GBP",
             "amt": Decimal("450000.00"), "vd": date(2026, 4, 8), "sc": "GBP",
             "err": "Custodian HSBC rejected settlement instruction for TRD-011. No further details provided.",
             "bo_results": _TRD_011_BO_RESULTS,
         },
         {
             "trade_id": "TRD-012",
-            "cp_lei": "529900ATLANTIC000001", "instr": "USDJPY", "ccy": "JPY",
+            "cp_lei": "529900ATLANTIC000001", "instr": "USD/JPY", "ccy": "JPY",
             "amt": Decimal("90000000.00"), "vd": date(2026, 4, 8), "sc": "JPY",
             "err": "Settlement confirmation not received within SLA window for TRD-012. Status unknown.",
             "bo_results": _TRD_012_BO_RESULTS,
@@ -431,8 +431,8 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
     # Initial trades — no checks run yet
     # ------------------------------------------------------------------
     new_trades = [
-        ("TRD-006", "213800QILIUD4ROSUO03", "EURUSD", "EUR", Decimal("200000.00"), date(2026, 4, 20), "EUR"),
-        ("TRD-007", "9695005MSX1OYEMGDF46", "GBPUSD", "GBP", Decimal("350000.00"), date(2026, 4, 20), "GBP"),
+        ("TRD-006", "213800QILIUD4ROSUO03", "EUR/USD", "EUR", Decimal("200000.00"), date(2026, 4, 20), "EUR"),
+        ("TRD-007", "9695005MSX1OYEMGDF46", "GBP/USD", "GBP", Decimal("350000.00"), date(2026, 4, 20), "GBP"),
     ]
     for trade_id, cp_lei, instr, ccy, amt, vd, sc in new_trades:
         if trade_id not in existing_trades:
@@ -453,7 +453,7 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
         db.add(TradeModel(
             trade_id="TRD-013", version=1, is_current=True,
             workflow_status="BoAgentToCheck",
-            counterparty_lei="9695005MSX1OYEMGDF46", instrument_id="USDJPY",
+            counterparty_lei="9695005MSX1OYEMGDF46", instrument_id="USD/JPY",
             currency="USD", amount=Decimal("2000000.00"),
             value_date=date(2026, 5, 1), trade_date=_TRADE_DATE,
             settlement_currency="USD",

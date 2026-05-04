@@ -9,9 +9,11 @@ import type { Counterparty } from '../types/counterparty'
 import type { ReferenceData } from '../types/referenceData'
 
 function deriveCurrencies(instrumentId: string): string[] {
-  if (instrumentId.length === 6) {
-    return [instrumentId.slice(0, 3), instrumentId.slice(3, 6)]
+  if (instrumentId.includes('/')) {
+    const parts = instrumentId.split('/')
+    if (parts.length === 2 && parts[0].length > 0 && parts[1].length > 0) return parts
   }
+  if (instrumentId.length === 6) return [instrumentId.slice(0, 3), instrumentId.slice(3, 6)]
   return []
 }
 
