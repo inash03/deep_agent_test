@@ -100,6 +100,7 @@ class TradeOut(BaseModel):
     workflow_status: str
     is_current: bool
     counterparty_lei: str
+    counterparty_name: str | None = None
     instrument_id: str
     currency: str
     amount: str  # string to preserve decimal precision

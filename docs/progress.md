@@ -4,14 +4,38 @@
 
 ## Current Status
 
-**Branch:** `claude/fix-triage-message-I9H4O`
+**Branch:** `claude/fix-validation-status-flow-ZqOC1`
 **Last updated:** 2026-05-04
-**In Progress:** Phase 40（EventPending ステータス時の Triage ボタン非活性化）
-**Next:** Phase 40 実装（workflow_status === 'EventPending' 時のボタン disabled 化）
+**In Progress:** Phase 44（Counterparty name 表示・Instrument ID スラッシュ形式化）→ 完了済み
+**Next:** Phase 40（EventPending ステータス時の Triage ボタン非活性化）
 
 ---
 
 ## Step Log
+
+### Step 51 — feat: Counterparty name 表示・Instrument ID スラッシュ形式化 (2026-05-04)
+
+Files: `src/presentation/schemas.py`, `src/presentation/routers/trades.py`,
+       `src/infrastructure/seed.py`,
+       `frontend/src/types/trade.ts`, `frontend/src/pages/TradeListPage.tsx`,
+       `frontend/src/pages/TradeDetailPage.tsx`, `frontend/src/pages/TradeInputPage.tsx`,
+       `frontend/src/version.ts`
+
+- **schemas.py**: `TradeOut` に `counterparty_name: str | None = None` を追加
+- **trades.py**: list エンドポイントで CounterpartyModel を一括 JOIN して N+1 を回避。get / create エンドポイントも単一クエリで名前を取得
+- **seed.py**: Instrument ID を `USDJPY` → `USD/JPY` 等スラッシュ形式に変更（`_REFERENCE_DATA` + 全トレードレコード）。`UNKNOWN_CCY_PAIR` は意図的に維持
+- **TradeListPage**: ヘッダ "Counterparty LEI" → "Counterparty"、値を `counterparty_name ?? counterparty_lei` に変更
+- **TradeDetailPage**: 同様にラベル・値を更新
+- **TradeInputPage**: `deriveCurrencies` を `'/'` 区切り対応に更新（旧 6 文字形式は fallback として残存）
+- **version**: 0.8.3 → 0.9.0
+
+### Step 50 — fix: BoValidated → Done ステータス自動遷移の欠落バグ修正 (2026-05-04)
+
+Files: `src/infrastructure/rule_engine.py`, `docs/tasks.md`
+
+- `run_bo_check`: 全 BO ルール合格時の `new_status` を `"BoValidated"` → `"Done"` に変更
+- ファイル冒頭コメントの遷移表も同様に更新
+- 影響範囲: auto/manual どちらのモードでも BoCheck 全合格 → Done へ即座に進むようになった
 
 ### Step 49 — fix: English-only UI + triage panel display (2026-05-04)
 

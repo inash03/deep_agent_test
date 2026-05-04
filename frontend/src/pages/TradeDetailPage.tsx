@@ -302,7 +302,7 @@ export function TradeDetailPage() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem 1.5rem', fontSize: '0.875rem' }}>
           {[
-            ['Counterparty LEI', trade.counterparty_lei],
+            ['Counterparty', trade.counterparty_name ?? trade.counterparty_lei],
             ['Instrument', trade.instrument_id],
             ['Currency', trade.currency],
             ['Settlement CCY', trade.settlement_currency],

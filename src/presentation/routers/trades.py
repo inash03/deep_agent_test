@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from src.infrastructure.db.models import TradeModel
+from src.infrastructure.db.models import CounterpartyModel, TradeModel
 from src.infrastructure.db.session import get_db
 from src.infrastructure.db.trade_repository import TradeRepository
 from src.infrastructure.rule_engine import maybe_run_bo_check, maybe_run_fo_check, run_bo_check, run_fo_check
@@ -26,13 +26,14 @@ router = APIRouter(prefix="/api/v1/trades", tags=["trades"])
 _logger = logging.getLogger("stp_triage.trades")
 
 
-def _to_out(row) -> TradeOut:
+def _to_out(row, counterparty_name: str | None = None) -> TradeOut:
     return TradeOut(
         trade_id=row.trade_id,
         version=row.version,
         workflow_status=row.workflow_status,
         is_current=row.is_current,
         counterparty_lei=row.counterparty_lei,
+        counterparty_name=counterparty_name,
         instrument_id=row.instrument_id,
         currency=row.currency,
         amount=str(row.amount),
@@ -58,7 +59,15 @@ def list_trades(
         trade_id=trade_id, workflow_status=workflow_status,
         trade_date=trade_date, limit=limit, offset=offset,
     )
-    return TradeListResponse(items=[_to_out(r) for r in items], total=total)
+    leis = {r.counterparty_lei for r in items}
+    cp_map = {
+        cp.lei: cp.name
+        for cp in db.query(CounterpartyModel).filter(CounterpartyModel.lei.in_(leis)).all()
+    }
+    return TradeListResponse(
+        items=[_to_out(r, counterparty_name=cp_map.get(r.counterparty_lei)) for r in items],
+        total=total,
+    )
 
 
 @router.post("", response_model=TradeOut, status_code=201)
@@ -115,7 +124,8 @@ def create_trade(body: TradeCreateRequest, db: Session = Depends(get_db)) -> Tra
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Trade was created but could not be reloaded.",
         )
-    return _to_out(row)
+    cp = db.query(CounterpartyModel).filter(CounterpartyModel.lei == row.counterparty_lei).first()
+    return _to_out(row, counterparty_name=cp.name if cp else None)
 
 
 @router.get("/{trade_id}", response_model=TradeOut)
@@ -123,7 +133,8 @@ def get_trade(trade_id: str, db: Session = Depends(get_db)) -> TradeOut:
     row = TradeRepository(db).get_by_trade_id(trade_id)
     if row is None:
         raise HTTPException(status_code=404, detail=f"Trade '{trade_id}' not found")
-    return _to_out(row)
+    cp = db.query(CounterpartyModel).filter(CounterpartyModel.lei == row.counterparty_lei).first()
+    return _to_out(row, counterparty_name=cp.name if cp else None)
 
 
 @router.post("/{trade_id}/fo-check", response_model=CheckResultsResponse)
