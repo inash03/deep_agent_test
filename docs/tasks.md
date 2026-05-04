@@ -9,24 +9,6 @@ Completed tasks are archived in `docs/tasks_done.md`.
 
 ## In Progress
 
-#### Phase 41 — RAG 導入（pgvector + OpenAI Embeddings）
-
-**目的:** FoAgent / BoAgent に RAG（Retrieval-Augmented Generation）を導入し、
-過去トリアージ事例・SWIFTエラーコード知識を参照することで推論精度向上とLLMコスト削減を図る。
-
-**実装範囲:**
-- pgvector on Neon 拡張有効化 + `rag_chunks` テーブル追加（Alembic migration 0008）
-- `RagChunk` ORM モデル追加（`src/infrastructure/db/models.py`）
-- `RagRepository` 新規作成（`src/infrastructure/db/rag_repository.py`）
-- `RagService` 新規作成（`src/infrastructure/rag_service.py`）
-- 静的知識シード（`src/infrastructure/rag_seed.py`）
-- `search_similar_triage_cases` ツール追加（`tools.py` → `FO_READ_ONLY_TOOLS`）
-- BoAgent: `rag_context_node` を COMPOUND/UNKNOWN パスに挿入（`bo_agent.py`）
-- トリアージ完了後の自動RAGチャンク蓄積（`fo_triage_use_case.py` / `bo_triage_use_case.py`）
-- `langchain-openai` + `pgvector` 依存関係追加
-
----
-
 #### Phase 39 — TradeDetailPage FoCheck 結果表示の不具合修正
 
 **目的:** `frontend/src/pages/TradeDetailPage.tsx` において、
