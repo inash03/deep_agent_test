@@ -64,7 +64,7 @@ def get_trade_detail(trade_id: str) -> str:
     """Retrieve trade details from the trade system by trade ID.
 
     Returns trade information including counterparty LEI, instrument ID,
-    currency, amount, value date, settlement currency, workflow_status,
+    currency, amount, FX rate, trade type, value date, settlement currency, workflow_status,
     and sendback_count.
     Returns an error message if the trade is not found.
     """
@@ -83,6 +83,8 @@ def get_trade_detail(trade_id: str) -> str:
                 "instrument_id": row.instrument_id,
                 "currency": row.currency,
                 "amount": str(row.amount),
+                "fx_rate": str(row.fx_rate),
+                "trade_type": row.trade_type,
                 "trade_date": row.trade_date.isoformat(),
                 "value_date": row.value_date.isoformat(),
                 "settlement_currency": row.settlement_currency,
@@ -98,6 +100,9 @@ def get_trade_detail(trade_id: str) -> str:
         "instrument_id": trade.instrument_id,
         "currency": trade.currency,
         "amount": str(trade.amount),
+        "fx_rate": str(trade.fx_rate),
+        "trade_type": trade.trade_type,
+        "trade_date": trade.trade_date.isoformat(),
         "value_date": trade.value_date.isoformat(),
         "settlement_currency": trade.settlement_currency,
     })
@@ -536,8 +541,9 @@ def create_amend_event(trade_id: str, reason: str, amended_fields: str) -> str:
         reason: Why the amendment is needed.
         amended_fields: JSON string of field:new_value pairs to change.
             Supported fields: value_date (YYYY-MM-DD), trade_date (YYYY-MM-DD),
-            amount (decimal string), currency, settlement_currency, instrument_id.
-            Example: '{"value_date": "2026-05-01", "amount": "1000000.00"}'
+            amount (decimal string), fx_rate (decimal string), currency,
+            settlement_currency, instrument_id.
+            Example: '{"value_date": "2026-05-01", "amount": "1000000.00", "fx_rate": "1.09250000"}'
     """
     import json as _json
     if isinstance(amended_fields, dict):

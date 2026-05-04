@@ -22,6 +22,7 @@ from decimal import Decimal
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from src.domain.trade_classification import calculate_trade_type
 from src.infrastructure.db.models import (
     AppSettingModel,
     CounterpartyModel,
@@ -35,9 +36,24 @@ from src.infrastructure.db.trade_repository import TradeRepository
 
 _TRADE_DATE = date(2026, 4, 1)
 
+_FX_RATE_BY_INSTRUMENT = {
+    "USD/JPY": Decimal("151.25000000"),
+    "USDJPY": Decimal("151.25000000"),
+    "EUR/USD": Decimal("1.08500000"),
+    "EURUSD": Decimal("1.08500000"),
+    "GBP/USD": Decimal("1.26500000"),
+    "GBPUSD": Decimal("1.26500000"),
+    "AUD/USD": Decimal("0.65500000"),
+    "AUDUSD": Decimal("0.65500000"),
+}
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _fx_rate_for(instrument_id: str) -> Decimal:
+    return _FX_RATE_BY_INSTRUMENT.get(instrument_id, Decimal("1.00000000"))
 
 
 # ---------------------------------------------------------------------------
@@ -329,6 +345,8 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
                 workflow_status="FoAgentToCheck",
                 counterparty_lei=t["cp_lei"], instrument_id=t["instr"],
                 currency=t["ccy"], amount=t["amt"],
+                fx_rate=_fx_rate_for(t["instr"]),
+                trade_type=calculate_trade_type(_TRADE_DATE, t["vd"]),
                 value_date=t["vd"], trade_date=_TRADE_DATE,
                 settlement_currency=t["sc"],
                 sendback_count=0,
@@ -413,6 +431,8 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
                 workflow_status="BoAgentToCheck",
                 counterparty_lei=t["cp_lei"], instrument_id=t["instr"],
                 currency=t["ccy"], amount=t["amt"],
+                fx_rate=_fx_rate_for(t["instr"]),
+                trade_type=calculate_trade_type(_TRADE_DATE, t["vd"]),
                 value_date=t["vd"], trade_date=_TRADE_DATE,
                 settlement_currency=t["sc"],
                 sendback_count=0,
@@ -440,7 +460,10 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
                 trade_id=trade_id, version=1, is_current=True,
                 workflow_status="Initial",
                 counterparty_lei=cp_lei, instrument_id=instr,
-                currency=ccy, amount=amt, value_date=vd, trade_date=_TRADE_DATE,
+                currency=ccy, amount=amt,
+                fx_rate=_fx_rate_for(instr),
+                trade_type=calculate_trade_type(_TRADE_DATE, vd),
+                value_date=vd, trade_date=_TRADE_DATE,
                 settlement_currency=sc,
                 sendback_count=0,
                 created_at=_now(), updated_at=_now(),
@@ -455,6 +478,8 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
             workflow_status="BoAgentToCheck",
             counterparty_lei="9695005MSX1OYEMGDF46", instrument_id="USD/JPY",
             currency="USD", amount=Decimal("2000000.00"),
+            fx_rate=_fx_rate_for("USD/JPY"),
+            trade_type=calculate_trade_type(_TRADE_DATE, date(2026, 5, 1)),
             value_date=date(2026, 5, 1), trade_date=_TRADE_DATE,
             settlement_currency="USD",
             sendback_count=0,

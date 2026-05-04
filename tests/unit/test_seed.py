@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from src.infrastructure.seed import _maybe_auto_run_fo_check
+from src.infrastructure.seed import _fx_rate_for, _maybe_auto_run_fo_check
 
 
 def _mock_db_with_trigger(value: str | None) -> MagicMock:
@@ -46,3 +46,9 @@ def test_maybe_auto_run_fo_check_skips_when_trigger_is_manual() -> None:
 
         repo_cls.assert_not_called()
         run_fo_check.assert_not_called()
+
+
+def test_seed_fx_rate_defaults_cover_known_pairs_and_fallback() -> None:
+    assert str(_fx_rate_for("USD/JPY")) == "151.25000000"
+    assert str(_fx_rate_for("EUR/USD")) == "1.08500000"
+    assert str(_fx_rate_for("UNKNOWN_CCY_PAIR")) == "1.00000000"

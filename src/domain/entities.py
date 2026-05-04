@@ -93,6 +93,9 @@ class TradeDetail(BaseModel):
     instrument_id: str
     currency: str
     amount: Decimal
+    fx_rate: Decimal
+    trade_type: str
+    trade_date: date
     value_date: date
     settlement_currency: str
 

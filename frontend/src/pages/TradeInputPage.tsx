@@ -17,6 +17,23 @@ function deriveCurrencies(instrumentId: string): string[] {
   return []
 }
 
+function calculateTradeTypeLabel(tradeDate: string, valueDate: string): 'Spot rate' | 'Forward rate' {
+  if (!tradeDate || !valueDate) return 'Spot rate'
+  const start = new Date(`${tradeDate}T00:00:00`)
+  const end = new Date(`${valueDate}T00:00:00`)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return 'Spot rate'
+
+  let count = 0
+  const current = new Date(start)
+  current.setDate(current.getDate() + 1)
+  while (current <= end) {
+    const day = current.getDay()
+    if (day !== 0 && day !== 6) count += 1
+    current.setDate(current.getDate() + 1)
+  }
+  return count > 2 ? 'Forward rate' : 'Spot rate'
+}
+
 export function TradeInputPage() {
   const navigate = useNavigate()
 
@@ -26,6 +43,7 @@ export function TradeInputPage() {
   const [instrumentId, setInstrumentId] = useState('')
   const [currency, setCurrency] = useState('')
   const [amount, setAmount] = useState('')
+  const [fxRate, setFxRate] = useState('')
 
   const [counterparties, setCounterparties] = useState<Counterparty[]>([])
   const [instruments, setInstruments] = useState<ReferenceData[]>([])
@@ -43,15 +61,21 @@ export function TradeInputPage() {
   }, [instrumentId])
 
   const currencyOptions = deriveCurrencies(instrumentId)
+  const rateLabel = calculateTradeTypeLabel(tradeDate, valueDate)
 
   const handleCreate = async () => {
-    if (!tradeDate || !valueDate || !counterpartyLei || !instrumentId || !currency || !amount) {
+    if (!tradeDate || !valueDate || !counterpartyLei || !instrumentId || !currency || !amount || !fxRate) {
       setError('All fields are required.')
       return
     }
     const amountNum = parseFloat(amount)
     if (isNaN(amountNum) || amountNum <= 0) {
       setError('Amount must be a positive number.')
+      return
+    }
+    const fxRateNum = parseFloat(fxRate)
+    if (isNaN(fxRateNum) || fxRateNum <= 0) {
+      setError('FxRate must be a positive number.')
       return
     }
     setError('')
@@ -64,6 +88,7 @@ export function TradeInputPage() {
         instrument_id: instrumentId,
         currency,
         amount: amountNum,
+        fx_rate: fxRateNum,
       })
       navigate(`/trades/${trade.trade_id}`)
     } catch (err: unknown) {
@@ -162,6 +187,19 @@ export function TradeInputPage() {
               placeholder="1000000"
               min="0.00001"
               step="0.00001"
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={LABEL}>{rateLabel}</label>
+            <input
+              type="number"
+              style={INPUT}
+              value={fxRate}
+              onChange={e => setFxRate(e.target.value)}
+              placeholder="1.085"
+              min="0.00000001"
+              step="0.00000001"
             />
           </div>
 

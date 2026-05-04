@@ -19,7 +19,7 @@ const WORKFLOW_STATUS_ORDER: Record<string, number> = Object.fromEntries(
   WORKFLOW_STATUSES.map((s, i) => [s, i]),
 )
 
-type SortKey = 'workflow_status' | 'trade_id' | 'trade_date' | 'value_date' | 'amount' | 'version'
+type SortKey = 'workflow_status' | 'trade_id' | 'trade_date' | 'value_date' | 'amount' | 'fx_rate' | 'trade_type' | 'version'
 type SortDir = 'asc' | 'desc'
 type SortSpec = { key: SortKey; dir: SortDir }
 
@@ -46,6 +46,10 @@ function compareBy(spec: SortSpec, a: Trade, b: Trade) {
       return mul * compareText(a.value_date ?? '', b.value_date ?? '')
     case 'amount':
       return mul * ((Number(a.amount) || 0) - (Number(b.amount) || 0))
+    case 'fx_rate':
+      return mul * ((Number(a.fx_rate) || 0) - (Number(b.fx_rate) || 0))
+    case 'trade_type':
+      return mul * compareText(a.trade_type ?? '', b.trade_type ?? '')
     case 'version':
       return mul * ((Number(a.version) || 0) - (Number(b.version) || 0))
     default:
@@ -245,11 +249,25 @@ export function TradeListPage() {
                   <th style={TH}>Instrument</th>
                   <th style={TH}>CCY</th>
                   <th
+                    style={{ ...TH, ...SORTABLE_TH }}
+                    onClick={() => toggleSort('trade_type')}
+                    title="Sort"
+                  >
+                    Type{sortIndicator(primarySort?.key === 'trade_type', primarySort?.key === 'trade_type' ? primarySort.dir : 'asc')}
+                  </th>
+                  <th
                     style={{ ...TH, ...SORTABLE_TH, textAlign: 'right' }}
                     onClick={() => toggleSort('amount')}
                     title="Sort"
                   >
                     Amount{sortIndicator(primarySort?.key === 'amount', primarySort?.key === 'amount' ? primarySort.dir : 'asc')}
+                  </th>
+                  <th
+                    style={{ ...TH, ...SORTABLE_TH, textAlign: 'right' }}
+                    onClick={() => toggleSort('fx_rate')}
+                    title="Sort"
+                  >
+                    Rate{sortIndicator(primarySort?.key === 'fx_rate', primarySort?.key === 'fx_rate' ? primarySort.dir : 'asc')}
                   </th>
                   <th
                     style={{ ...TH, ...SORTABLE_TH }}
@@ -283,6 +301,8 @@ export function TradeListPage() {
                   <th style={TH} />
                   <th style={TH} />
                   <th style={TH} />
+                  <th style={TH} />
+                  <th style={TH} />
                   <th style={TH}>
                     <select
                       style={{ ...INPUT, width: '100%' }}
@@ -300,7 +320,7 @@ export function TradeListPage() {
               </thead>
               <tbody>
                 {visibleItems.length === 0 ? (
-                  <tr><td colSpan={9} style={{ ...TD, textAlign: 'center', color: COLOR.textMuted, padding: '2rem' }}>No trades found.</td></tr>
+                  <tr><td colSpan={11} style={{ ...TD, textAlign: 'center', color: COLOR.textMuted, padding: '2rem' }}>No trades found.</td></tr>
                 ) : visibleItems.map(t => (
                   <tr
                     key={t.trade_id}
@@ -315,8 +335,12 @@ export function TradeListPage() {
                     <td style={TD}>{t.counterparty_name ?? t.counterparty_lei}</td>
                     <td style={TD}>{t.instrument_id}</td>
                     <td style={TD}>{t.currency}</td>
+                    <td style={TD}>{t.trade_type}</td>
                     <td style={{ ...TD, textAlign: 'right', fontFamily: 'monospace' }}>
                       {Number(t.amount).toLocaleString()}
+                    </td>
+                    <td style={{ ...TD, textAlign: 'right', fontFamily: 'monospace' }}>
+                      {Number(t.fx_rate).toLocaleString(undefined, { maximumFractionDigits: 8 })}
                     </td>
                     <td style={TD}>{t.value_date}</td>
                     <td style={TD}>

@@ -147,7 +147,7 @@ export function TradeDetailPage() {
   const [evtType, setEvtType] = useState<'AMEND' | 'CANCEL'>('AMEND')
   const [evtReason, setEvtReason] = useState('')
   const [evtRequester, setEvtRequester] = useState('fo_user_01')
-  const [evtFields, setEvtFields] = useState('{"value_date": "2026-05-01"}')
+  const [evtFields, setEvtFields] = useState('{"value_date": "2026-05-01", "fx_rate": "1.09250000"}')
 
   const reload = async () => {
     if (!trade_id) return
@@ -250,7 +250,7 @@ export function TradeDetailPage() {
     })
     setShowEventForm(false)
     setEvtReason('')
-    setEvtFields('{"value_date": "2026-05-01"}')
+    setEvtFields('{"value_date": "2026-05-01", "fx_rate": "1.09250000"}')
     await reload()
   })
 
@@ -279,6 +279,7 @@ export function TradeDetailPage() {
     fontSize: '0.9rem',
     cursor: 'pointer',
   })
+  const rateLabel = trade.trade_type === 'Forward' ? 'Forward rate' : 'Spot rate'
 
   return (
     <PageLayout title={`Trade ${trade.trade_id}`}>
@@ -306,7 +307,9 @@ export function TradeDetailPage() {
             ['Instrument', trade.instrument_id],
             ['Currency', trade.currency],
             ['Settlement CCY', trade.settlement_currency],
+            ['Type', trade.trade_type],
             ['Amount', Number(trade.amount).toLocaleString()],
+            [rateLabel, Number(trade.fx_rate).toLocaleString(undefined, { maximumFractionDigits: 8 })],
             ['Trade Date', trade.trade_date],
             ['Value Date', trade.value_date],
           ].map(([label, val]) => (
@@ -512,7 +515,7 @@ export function TradeDetailPage() {
                         style={{ ...INPUT, height: 80, fontFamily: 'monospace', resize: 'vertical' }}
                         value={evtFields}
                         onChange={e => setEvtFields(e.target.value)}
-                        placeholder='{"value_date": "2026-05-01"}'
+                        placeholder='{"value_date": "2026-05-01", "fx_rate": "1.09250000"}'
                       />
                     </div>
                   )}

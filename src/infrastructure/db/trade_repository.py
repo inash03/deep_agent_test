@@ -5,14 +5,32 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from src.domain.entities import TradeDetail
+from src.domain.trade_classification import calculate_trade_type
 from src.infrastructure.db.models import TradeModel
 
 _TRD_NUMERIC_ID = re.compile(r"^TRD-(\d+)$", re.IGNORECASE)
+
+
+def _coerce_date(value: Any) -> date:
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        return date.fromisoformat(value)
+    raise TypeError(f"Expected date or ISO date string, got {type(value).__name__}")
+
+
+def _coerce_decimal(value: Any) -> Decimal:
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, (int, float, str)):
+        return Decimal(str(value))
+    raise TypeError(f"Expected decimal-compatible value, got {type(value).__name__}")
 
 
 class TradeRepository:
@@ -92,6 +110,10 @@ class TradeRepository:
 
         new_version = current.version + 1
         fields = amended_fields or {}
+        trade_date = _coerce_date(fields.get("trade_date", current.trade_date))
+        value_date = _coerce_date(fields.get("value_date", current.value_date))
+        amount = _coerce_decimal(fields.get("amount", current.amount))
+        fx_rate = _coerce_decimal(fields.get("fx_rate", current.fx_rate))
         new_row = TradeModel(
             trade_id=trade_id,
             version=new_version,
@@ -100,9 +122,11 @@ class TradeRepository:
             counterparty_lei=fields.get("counterparty_lei", current.counterparty_lei),
             instrument_id=fields.get("instrument_id", current.instrument_id),
             currency=fields.get("currency", current.currency),
-            amount=fields.get("amount", current.amount),
-            value_date=fields.get("value_date", current.value_date),
-            trade_date=fields.get("trade_date", current.trade_date),
+            amount=amount,
+            fx_rate=fx_rate,
+            trade_type=calculate_trade_type(trade_date, value_date),
+            value_date=value_date,
+            trade_date=trade_date,
             settlement_currency=fields.get("settlement_currency", current.settlement_currency),
             sendback_count=0,
             created_at=datetime.now(timezone.utc),
@@ -156,6 +180,9 @@ class TradeRepository:
             instrument_id=row.instrument_id,
             currency=row.currency,
             amount=row.amount,
+            fx_rate=row.fx_rate,
+            trade_type=row.trade_type,
+            trade_date=row.trade_date,
             value_date=row.value_date,
             settlement_currency=row.settlement_currency,
         )

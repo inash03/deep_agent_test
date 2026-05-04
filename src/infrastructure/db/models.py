@@ -152,6 +152,8 @@ class TradeModel(Base):
     instrument_id: Mapped[str] = mapped_column(String(50), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(20, 5), nullable=False)
+    fx_rate: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    trade_type: Mapped[str] = mapped_column(String(10), nullable=False)
     value_date: Mapped[date] = mapped_column(Date, nullable=False)
     trade_date: Mapped[date] = mapped_column(Date, nullable=False)
     settlement_currency: Mapped[str] = mapped_column(String(10), nullable=False)
