@@ -13,6 +13,17 @@
 
 ## Step Log
 
+### Step 49 — fix: English-only UI + triage panel display (2026-05-04)
+
+Files: `CLAUDE.md`, `docs/tasks.md`, `frontend/src/pages/TradeDetailPage.tsx`, `frontend/src/version.ts`
+
+- CLAUDE.md: added "Frontend UI Language" rule — all UI text must be English (Home screen exempt)
+- Japanese messages from Step 48 converted to English
+- "N failure(s) will be passed as agent input" → "Found N failed rule(s). The triage agent will investigate: …"
+- Triage start form is now hidden once triage is running or completed (condition `!foTriage || COMPLETED` → `!foTriage`)
+- Phase 42 (bo-triage 500 error) added to Backlog
+- frontend version: 0.8.1 → 0.8.2
+
 ### Step 48 — fix: TradeDetailPage FoCheck/BoCheck トリアージメッセージ分岐修正 (2026-05-04)
 
 Files: `frontend/src/pages/TradeDetailPage.tsx`, `frontend/src/version.ts`
