@@ -64,7 +64,8 @@ def get_trade_detail(trade_id: str) -> str:
     """Retrieve trade details from the trade system by trade ID.
 
     Returns trade information including counterparty LEI, instrument ID,
-    currency, amount, FX rate, trade type, value date, settlement currency, workflow_status,
+    currency, amount, FX rate, trade type, trade/input/value dates,
+    settlement currency, workflow_status,
     and sendback_count.
     Returns an error message if the trade is not found.
     """
@@ -86,6 +87,7 @@ def get_trade_detail(trade_id: str) -> str:
                 "fx_rate": str(row.fx_rate),
                 "trade_type": row.trade_type,
                 "trade_date": row.trade_date.isoformat(),
+                "input_date": row.input_date.isoformat(),
                 "value_date": row.value_date.isoformat(),
                 "settlement_currency": row.settlement_currency,
             })
@@ -103,6 +105,7 @@ def get_trade_detail(trade_id: str) -> str:
         "fx_rate": str(trade.fx_rate),
         "trade_type": trade.trade_type,
         "trade_date": trade.trade_date.isoformat(),
+        "input_date": trade.input_date.isoformat(),
         "value_date": trade.value_date.isoformat(),
         "settlement_currency": trade.settlement_currency,
     })

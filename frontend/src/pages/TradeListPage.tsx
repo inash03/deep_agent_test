@@ -19,7 +19,7 @@ const WORKFLOW_STATUS_ORDER: Record<string, number> = Object.fromEntries(
   WORKFLOW_STATUSES.map((s, i) => [s, i]),
 )
 
-type SortKey = 'workflow_status' | 'trade_id' | 'trade_date' | 'value_date' | 'amount' | 'fx_rate' | 'trade_type' | 'version'
+type SortKey = 'workflow_status' | 'trade_id' | 'trade_date' | 'input_date' | 'value_date' | 'amount' | 'fx_rate' | 'trade_type' | 'version'
 type SortDir = 'asc' | 'desc'
 type SortSpec = { key: SortKey; dir: SortDir }
 
@@ -42,6 +42,8 @@ function compareBy(spec: SortSpec, a: Trade, b: Trade) {
       return mul * compareText(a.trade_id, b.trade_id)
     case 'trade_date':
       return mul * compareText(a.trade_date ?? '', b.trade_date ?? '')
+    case 'input_date':
+      return mul * compareText(a.input_date ?? '', b.input_date ?? '')
     case 'value_date':
       return mul * compareText(a.value_date ?? '', b.value_date ?? '')
     case 'amount':
@@ -245,6 +247,13 @@ export function TradeListPage() {
                   >
                     Trade Date{sortIndicator(primarySort?.key === 'trade_date', primarySort?.key === 'trade_date' ? primarySort.dir : 'asc')}
                   </th>
+                  <th
+                    style={{ ...TH, ...SORTABLE_TH }}
+                    onClick={() => toggleSort('input_date')}
+                    title="Sort"
+                  >
+                    Input Date{sortIndicator(primarySort?.key === 'input_date', primarySort?.key === 'input_date' ? primarySort.dir : 'asc')}
+                  </th>
                   <th style={TH}>Counterparty</th>
                   <th style={TH}>Instrument</th>
                   <th style={TH}>CCY</th>
@@ -303,6 +312,7 @@ export function TradeListPage() {
                   <th style={TH} />
                   <th style={TH} />
                   <th style={TH} />
+                  <th style={TH} />
                   <th style={TH}>
                     <select
                       style={{ ...INPUT, width: '100%' }}
@@ -320,7 +330,7 @@ export function TradeListPage() {
               </thead>
               <tbody>
                 {visibleItems.length === 0 ? (
-                  <tr><td colSpan={11} style={{ ...TD, textAlign: 'center', color: COLOR.textMuted, padding: '2rem' }}>No trades found.</td></tr>
+                  <tr><td colSpan={12} style={{ ...TD, textAlign: 'center', color: COLOR.textMuted, padding: '2rem' }}>No trades found.</td></tr>
                 ) : visibleItems.map(t => (
                   <tr
                     key={t.trade_id}
@@ -332,6 +342,7 @@ export function TradeListPage() {
                     <td style={{ ...STICKY_TRADE_ID_TD, fontWeight: 600, fontFamily: 'monospace' }}>{t.trade_id}</td>
                     <td style={{ ...TD, textAlign: 'center', color: COLOR.textMuted, fontSize: '0.82rem' }}>v{t.version}</td>
                     <td style={TD}>{t.trade_date}</td>
+                    <td style={TD}>{t.input_date}</td>
                     <td style={TD}>{t.counterparty_name ?? t.counterparty_lei}</td>
                     <td style={TD}>{t.instrument_id}</td>
                     <td style={TD}>{t.currency}</td>

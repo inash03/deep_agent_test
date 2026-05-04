@@ -156,6 +156,7 @@ class TradeModel(Base):
     trade_type: Mapped[str] = mapped_column(String(10), nullable=False)
     value_date: Mapped[date] = mapped_column(Date, nullable=False)
     trade_date: Mapped[date] = mapped_column(Date, nullable=False)
+    input_date: Mapped[date] = mapped_column(Date, nullable=False, default=date.today)
     settlement_currency: Mapped[str] = mapped_column(String(10), nullable=False)
     sendback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     fo_check_results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

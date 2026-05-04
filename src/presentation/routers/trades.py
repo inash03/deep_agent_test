@@ -42,6 +42,7 @@ def _to_out(row, counterparty_name: str | None = None) -> TradeOut:
         trade_type=row.trade_type,
         value_date=row.value_date,
         trade_date=row.trade_date,
+        input_date=row.input_date,
         settlement_currency=row.settlement_currency,
         fo_check_results=row.fo_check_results,
         bo_check_results=row.bo_check_results,
@@ -97,6 +98,7 @@ def create_trade(body: TradeCreateRequest, db: Session = Depends(get_db)) -> Tra
             trade_type=calculate_trade_type(body.trade_date, body.value_date),
             value_date=body.value_date,
             trade_date=body.trade_date,
+            input_date=date.today(),
             settlement_currency=body.currency,
             sendback_count=0,
         )

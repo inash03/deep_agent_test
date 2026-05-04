@@ -164,7 +164,7 @@ def _upsert_app_settings(db: Session) -> None:
 def _fo_all_pass() -> list[dict]:
     """FoCheck results for a trade where all FO rules passed."""
     return [
-        {"rule_name": "trade_date_not_future",           "passed": True, "severity": "error",   "message": f"Trade date {_TRADE_DATE} is not in the future"},
+        {"rule_name": "trade_date_not_future",           "passed": True, "severity": "error",   "message": f"Trade date {_TRADE_DATE} is not after input date {_TRADE_DATE}"},
         {"rule_name": "trade_date_not_weekend",          "passed": True, "severity": "error",   "message": f"Trade date {_TRADE_DATE} is a business day"},
         {"rule_name": "value_date_after_trade_date",     "passed": True, "severity": "error",   "message": "Value date 2026-04-08 is after trade date 2026-04-01"},
         {"rule_name": "value_date_not_past",             "passed": True, "severity": "error",   "message": "Value date 2026-04-08 is not in the past"},
@@ -178,7 +178,7 @@ def _fo_all_pass() -> list[dict]:
 
 # TRD-004: value_date=2024-01-01 predates trade_date=2026-04-01 and is in the past
 _TRD_004_FO_RESULTS: list[dict] = [
-    {"rule_name": "trade_date_not_future",           "passed": True,  "severity": "error",   "message": f"Trade date {_TRADE_DATE} is not in the future"},
+    {"rule_name": "trade_date_not_future",           "passed": True,  "severity": "error",   "message": f"Trade date {_TRADE_DATE} is not after input date {_TRADE_DATE}"},
     {"rule_name": "trade_date_not_weekend",          "passed": True,  "severity": "error",   "message": f"Trade date {_TRADE_DATE} is a business day"},
     {"rule_name": "value_date_after_trade_date",     "passed": False, "severity": "error",   "message": "Value date 2024-01-01 must be strictly after trade date 2026-04-01"},
     {"rule_name": "value_date_not_past",             "passed": False, "severity": "error",   "message": "Value date 2024-01-01 is in the past (today: 2026-04-01)"},
@@ -191,7 +191,7 @@ _TRD_004_FO_RESULTS: list[dict] = [
 
 # TRD-005: instrument=UNKNOWN_CCY_PAIR — settlement currency mismatch + unknown instrument
 _TRD_005_FO_RESULTS: list[dict] = [
-    {"rule_name": "trade_date_not_future",           "passed": True,  "severity": "error",   "message": f"Trade date {_TRADE_DATE} is not in the future"},
+    {"rule_name": "trade_date_not_future",           "passed": True,  "severity": "error",   "message": f"Trade date {_TRADE_DATE} is not after input date {_TRADE_DATE}"},
     {"rule_name": "trade_date_not_weekend",          "passed": True,  "severity": "error",   "message": f"Trade date {_TRADE_DATE} is a business day"},
     {"rule_name": "value_date_after_trade_date",     "passed": True,  "severity": "error",   "message": "Value date 2026-04-08 is after trade date 2026-04-01"},
     {"rule_name": "value_date_not_past",             "passed": True,  "severity": "error",   "message": "Value date 2026-04-08 is not in the past"},
@@ -348,6 +348,7 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
                 fx_rate=_fx_rate_for(t["instr"]),
                 trade_type=calculate_trade_type(_TRADE_DATE, t["vd"]),
                 value_date=t["vd"], trade_date=_TRADE_DATE,
+                input_date=_TRADE_DATE,
                 settlement_currency=t["sc"],
                 sendback_count=0,
                 fo_check_results=t["fo_results"],
@@ -434,6 +435,7 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
                 fx_rate=_fx_rate_for(t["instr"]),
                 trade_type=calculate_trade_type(_TRADE_DATE, t["vd"]),
                 value_date=t["vd"], trade_date=_TRADE_DATE,
+                input_date=_TRADE_DATE,
                 settlement_currency=t["sc"],
                 sendback_count=0,
                 fo_check_results=fo_pass,
@@ -464,6 +466,7 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
                 fx_rate=_fx_rate_for(instr),
                 trade_type=calculate_trade_type(_TRADE_DATE, vd),
                 value_date=vd, trade_date=_TRADE_DATE,
+                input_date=_TRADE_DATE,
                 settlement_currency=sc,
                 sendback_count=0,
                 created_at=_now(), updated_at=_now(),
@@ -481,6 +484,7 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
             fx_rate=_fx_rate_for("USD/JPY"),
             trade_type=calculate_trade_type(_TRADE_DATE, date(2026, 5, 1)),
             value_date=date(2026, 5, 1), trade_date=_TRADE_DATE,
+            input_date=_TRADE_DATE,
             settlement_currency="USD",
             sendback_count=0,
             fo_check_results=fo_pass,

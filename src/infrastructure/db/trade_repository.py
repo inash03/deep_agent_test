@@ -127,6 +127,7 @@ class TradeRepository:
             trade_type=calculate_trade_type(trade_date, value_date),
             value_date=value_date,
             trade_date=trade_date,
+            input_date=date.today(),
             settlement_currency=fields.get("settlement_currency", current.settlement_currency),
             sendback_count=0,
             created_at=datetime.now(timezone.utc),
@@ -183,6 +184,7 @@ class TradeRepository:
             fx_rate=row.fx_rate,
             trade_type=row.trade_type,
             trade_date=row.trade_date,
+            input_date=row.input_date,
             value_date=row.value_date,
             settlement_currency=row.settlement_currency,
         )
