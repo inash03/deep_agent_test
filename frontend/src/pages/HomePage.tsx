@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageLayout } from '../components/PageLayout'
 import { CARD, COLOR, BTN_PRIMARY, BTN_SECONDARY } from '../styles/theme'
+import { WORKFLOW_STATUS_COLORS, WORKFLOW_STATUS_LABELS } from '../types/trade'
 
 type Language = 'en' | 'ja'
 
@@ -188,13 +189,28 @@ const statusPillStyle = {
   minHeight: 30,
   padding: '0.25rem 0.6rem',
   borderRadius: 6,
-  border: `1px solid ${COLOR.borderDark}`,
-  backgroundColor: COLOR.bg,
-  color: COLOR.text,
   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
   fontSize: '0.78rem',
   fontWeight: 700,
 } satisfies React.CSSProperties
+
+function WorkflowStatusPill({ status }: { status: string }) {
+  return (
+    <span
+      style={{
+        ...statusPillStyle,
+        ...(WORKFLOW_STATUS_COLORS[status] ?? {
+          backgroundColor: COLOR.bg,
+          color: COLOR.text,
+          border: `1px solid ${COLOR.borderDark}`,
+        }),
+      }}
+      title={status}
+    >
+      {WORKFLOW_STATUS_LABELS[status] ?? status}
+    </span>
+  )
+}
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -290,7 +306,7 @@ export function HomePage() {
               {copy.statuses.map(([status, description, owner]) => (
                 <tr key={status}>
                   <td style={{ padding: '0.65rem 0.75rem', borderBottom: `1px solid ${COLOR.border}`, verticalAlign: 'top' }}>
-                    <span style={statusPillStyle}>{status}</span>
+                    <WorkflowStatusPill status={status} />
                   </td>
                   <td style={{ padding: '0.65rem 0.75rem', borderBottom: `1px solid ${COLOR.border}`, color: COLOR.text, verticalAlign: 'top', lineHeight: 1.55 }}>
                     {description}
@@ -316,9 +332,9 @@ export function HomePage() {
           <div style={{ minWidth: 760 }}>
             {copy.transitionRows.map(([from, to, condition]) => (
               <div key={`${from}-${to}-${condition}`} style={diagramLineStyle}>
-                <span style={statusPillStyle}>{from}</span>
+                <WorkflowStatusPill status={from} />
                 <span style={{ color: COLOR.primary, fontWeight: 800 }}>→</span>
-                <span style={statusPillStyle}>{to}</span>
+                <WorkflowStatusPill status={to} />
                 <span style={{ color: COLOR.textMuted, fontSize: '0.82rem', lineHeight: 1.45 }}>{condition}</span>
               </div>
             ))}
