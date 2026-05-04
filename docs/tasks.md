@@ -9,6 +9,22 @@ Completed tasks are archived in `docs/tasks_done.md`.
 
 ## In Progress
 
+#### Phase 44 — Counterparty name 表示・Instrument ID スラッシュ形式化
+
+**目的:** TradeListPage / TradeDetailPage で counterparty LEI の代わりに名前を表示し、
+Instrument ID を `USDJPY` → `USD/JPY` 形式に変更する。
+
+**修正内容（完了済み）:**
+- `src/presentation/schemas.py`: `TradeOut` に `counterparty_name` 追加
+- `src/presentation/routers/trades.py`: CounterpartyModel JOIN で名前を取得
+- `src/infrastructure/seed.py`: Instrument ID をスラッシュ形式に変更
+- Frontend: `trade.ts` 型追加、TradeListPage / TradeDetailPage 表示変更、TradeInputPage 通貨導出ロジック更新
+- version: 0.8.3 → 0.9.0
+
+---
+
+## Backlog
+
 #### Phase 40 — EventPending ステータス時の Triage ボタン非活性化
 
 **目的:** `EventPending` ステータスの取引に対して FO Triage・BO Triage をマニュアル実行できないよう、
