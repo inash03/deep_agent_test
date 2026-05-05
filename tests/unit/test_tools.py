@@ -5,12 +5,14 @@ Tools return JSON strings; we parse and assert on the contents.
 """
 
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.infrastructure import mock_store
 from src.infrastructure.tools import (
     get_counterparty,
+    get_market_fx_rate,
     get_reference_data,
     get_settlement_instructions,
     get_trade_detail,
@@ -192,3 +194,68 @@ class TestRegisterSSI:
         )
         assert lookup["found"] is True
         assert lookup["bic"] == "ACMEGB2L"
+
+
+# ---------------------------------------------------------------------------
+# get_market_fx_rate (ECB API — mocked to avoid network calls)
+# ---------------------------------------------------------------------------
+
+
+def _ecb_mock_response(ccy: str, rate: float) -> MagicMock:
+    """Build a minimal ECB JSON response mock for the given currency and rate."""
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.json.return_value = {
+        "dataSets": [{"series": {"0:0:0:0:0": {"observations": {"0": [rate]}}}}]
+    }
+    return mock_resp
+
+
+class TestGetMarketFxRate:
+    def test_usd_eur_rate_returned(self):
+        # USD/EUR: EUR/USD = 1.10 → USD/EUR = 1/1.10 ≈ 0.909
+        with patch("httpx.get", return_value=_ecb_mock_response("USD", 1.10)):
+            result = invoke(get_market_fx_rate, base_currency="USD", quote_currency="EUR")
+        assert "rate" in result
+        assert result["base"] == "USD"
+        assert result["quote"] == "EUR"
+        assert abs(result["rate"] - (1.0 / 1.10)) < 0.01
+
+    def test_cross_rate_usd_jpy(self):
+        # EUR/USD=1.10, EUR/JPY=165.0 → USD/JPY = 165.0/1.10 = 150.0
+        call_count = [0]
+
+        def side_effect(url, timeout):
+            mock = MagicMock()
+            mock.raise_for_status = MagicMock()
+            if "USD" in url:
+                rate = 1.10
+            else:
+                rate = 165.0
+            call_count[0] += 1
+            mock.json.return_value = {
+                "dataSets": [{"series": {"0:0:0:0:0": {"observations": {"0": [rate]}}}}]
+            }
+            return mock
+
+        with patch("httpx.get", side_effect=side_effect):
+            result = invoke(get_market_fx_rate, base_currency="USD", quote_currency="JPY")
+
+        assert "rate" in result
+        assert abs(result["rate"] - 150.0) < 0.01
+        assert call_count[0] == 2  # two ECB calls made
+
+    def test_eur_base_skips_api_call(self):
+        # EUR/JPY: base is EUR (rate=1.0 by definition), only JPY call needed
+        with patch("httpx.get", return_value=_ecb_mock_response("JPY", 165.0)) as mock_get:
+            result = invoke(get_market_fx_rate, base_currency="EUR", quote_currency="JPY")
+        assert "rate" in result
+        assert abs(result["rate"] - 165.0) < 0.01
+        mock_get.assert_called_once()  # only the JPY call
+
+    def test_api_error_returns_error_key(self):
+        with patch("httpx.get", side_effect=Exception("connection timeout")):
+            result = invoke(get_market_fx_rate, base_currency="USD", quote_currency="EUR")
+        assert "error" in result
+        assert result["base"] == "USD"
+        assert result["quote"] == "EUR"
