@@ -4,14 +4,35 @@
 
 ## Current Status
 
-**Branch:** `claude/fix-validation-status-flow-ZqOC1`
-**Last updated:** 2026-05-04
-**In Progress:** Phase 44（Counterparty name 表示・Instrument ID スラッシュ形式化）→ 完了済み
+**Branch:** `claude/setup-playwright-mcp-SFcOO`
+**Last updated:** 2026-05-05
+**In Progress:** Phase 45（Playwright スモークテスト導入）→ 完了済み
 **Next:** Phase 40（EventPending ステータス時の Triage ボタン非活性化）
 
 ---
 
 ## Step Log
+
+### Step 52 — feat: Playwright スモークテスト導入 + post-deploy CI ジョブ (2026-05-05)
+
+Files: `frontend/playwright.config.ts` (新規),
+       `frontend/tests/e2e/smoke.spec.ts` (新規),
+       `frontend/package.json`, `frontend/src/version.ts`,
+       `.github/workflows/deploy.yml`
+
+- **playwright.config.ts**: `PLAYWRIGHT_BASE_URL` / `APP_USERNAME` / `APP_PASSWORD` を env から取得。失敗時のみ screenshot & video 保存。Chromium のみ使用
+- **smoke.spec.ts**: 読み取り専用スモークテスト 5 本（Home 表示・Trade List 表示・Trade ID 確認・Trade Detail 遷移・ナビゲーション全リンク）。本番 DB を汚染しない
+- **package.json**: `test:e2e` / `test:e2e:ui` / `test:e2e:headed` スクリプト追加
+- **deploy.yml**: `smoke-test` ジョブを `deploy-frontend` の後続に追加。`VM_HOST` / `APP_USERNAME` / `APP_PASSWORD` secrets を使用。失敗時に HTML レポートを artifact として 7 日間保存
+- **version**: 0.9.0 → 0.9.1（patch: dev tooling 追加）
+
+**ローカル実行方法:**
+```bash
+cd frontend
+PLAYWRIGHT_BASE_URL=http://<VM_IP>:5173 APP_USERNAME=xxx APP_PASSWORD=xxx npm run test:e2e:headed
+```
+
+---
 
 ### Step 51 — feat: Counterparty name 表示・Instrument ID スラッシュ形式化 (2026-05-04)
 
