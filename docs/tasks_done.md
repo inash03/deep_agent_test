@@ -7,6 +7,7 @@
 - Phase 44: Counterparty name 表示（TradeList/DetailPage）・Instrument ID スラッシュ形式化（USD/JPY）、version 0.8.3 → 0.9.0
 - Phase 45: Playwright スモークテスト導入（post-deploy CI ジョブ + ローカル headed 実行対応）、version 0.9.0 → 0.9.1
 - Phase 46: IBAN mod-97 checksum 検証（schwifty）+ ECB FX レートツール（get_market_fx_rate）+ BoAgent システムプロンプト拡張
+- Phase 12 Step 1: get_market_fx_rate を MCP External Data Server（HTTP/SSE, mcp_server/）に外部化。external_data_service.py（純粋 ECB ロジック）+ external_data_mcp_client.py（asyncio.run ラッパー）+ tools.py プロキシ化。28 テスト全通過
 
 - Phase 44 — Counterparty name 表示・Instrument ID スラッシュ形式化: TradeOut に counterparty_name を追加、seed.py の Instrument ID を USD/JPY 形式に変更、Frontend の表示・通貨導出ロジックを更新
 - Phase 43 — BoValidated→Done ステータス遷移バグ修正: run_bo_check で全 BO ルール合格時に Done へ直接遷移するよう rule_engine.py を修正

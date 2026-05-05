@@ -6,12 +6,29 @@
 
 **Branch:** `claude/setup-playwright-mcp-SFcOO`
 **Last updated:** 2026-05-05
-**In Progress:** Phase 46（IBAN mod-97 検証 + ECB FX レートツール）→ 完了済み
+**In Progress:** —（Phase 12 Step 1 完了）
 **Next:** Phase 40（EventPending ステータス時の Triage ボタン非活性化）
 
 ---
 
 ## Step Log
+
+### Step 54 — feat: get_market_fx_rate を MCP サーバに外部化（Phase 12 Step 1）(2026-05-05)
+
+Files: `mcp_server/external_data_server.py`, `mcp_server/Dockerfile`,
+       `src/infrastructure/external_data_service.py`,
+       `src/infrastructure/external_data_mcp_client.py`,
+       `src/infrastructure/tools.py`, `tests/unit/test_external_data_service.py`,
+       `.env.example`, `docs/architecture.md`
+
+- **mcp_server/**: 新規ディレクトリ。Cloud Run Service B（HTTP/SSE）として独立デプロイ可能
+- **external_data_server.py**: FastMCP SSE サーバ。`get_market_fx_rate` ツールを公開
+- **external_data_service.py**: ECB HTTP ロジックを純粋関数として抽出（calendar_service.py パターン踏襲）
+- **external_data_mcp_client.py**: asyncio.run() ラッパー。MCP_EXTERNAL_DATA_DISABLE=1 で直接呼び出しに fallback
+- **tools.py**: `get_market_fx_rate` 実装を MCP クライアント経由に置換。インターフェース・tool リスト変更なし
+- **テスト**: 28 件全通過（新規 9 本: test_external_data_service.py）
+
+---
 
 ### Step 53 — feat: IBAN mod-97 検証 + ECB FX レートツール (2026-05-05)
 
