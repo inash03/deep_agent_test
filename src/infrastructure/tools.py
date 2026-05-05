@@ -883,51 +883,9 @@ def get_market_fx_rate(base_currency: str, quote_currency: str) -> str:
 
     Returns JSON with 'rate', 'base', 'quote', 'source', 'date', or 'error'.
     """
-    import httpx  # production dep since Phase 45
-
-    ECB_URL = (
-        "https://data-api.ecb.europa.eu/service/data/EXR/"
-        "D.{ccy}.EUR.SP00.A?lastNObservations=1&format=jsondata"
-    )
-
-    def _fetch_eur_rate(ccy: str) -> float | None:
-        """Return how many units of `ccy` equal 1 EUR, or None on failure."""
-        if ccy.upper() == "EUR":
-            return 1.0
-        try:
-            resp = httpx.get(ECB_URL.format(ccy=ccy.upper()), timeout=5.0)
-            resp.raise_for_status()
-            data = resp.json()
-            obs = data["dataSets"][0]["series"]["0:0:0:0:0"]["observations"]
-            latest_key = max(obs.keys(), key=int)
-            return float(obs[latest_key][0])
-        except Exception:
-            return None
-
-    base = base_currency.upper()
-    quote = quote_currency.upper()
-
-    base_rate = _fetch_eur_rate(base)
-    quote_rate = _fetch_eur_rate(quote)
-
-    if base_rate is None or quote_rate is None:
-        failed = base if base_rate is None else quote
-        return json.dumps({
-            "error": f"ECB API unavailable or currency '{failed}' not supported",
-            "base": base,
-            "quote": quote,
-        })
-
-    # base/quote = (base/EUR) / (quote/EUR) inverted: EUR/base gives 1/base_rate
-    # rate = how many quote units per 1 base unit
-    rate = quote_rate / base_rate
-    return json.dumps({
-        "rate": round(rate, 6),
-        "base": base,
-        "quote": quote,
-        "source": "ECB Statistical Data Warehouse",
-        "note": "Reference rate — indicative, not a dealing rate",
-    })
+    from src.infrastructure.external_data_mcp_client import fetch_fx_rate_via_mcp
+    result = fetch_fx_rate_via_mcp(base_currency, quote_currency)
+    return json.dumps(result)
 
 
 # ---------------------------------------------------------------------------

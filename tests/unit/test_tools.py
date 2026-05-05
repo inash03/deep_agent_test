@@ -240,6 +240,13 @@ def _ecb_mock_response(ccy: str, rate: float) -> MagicMock:
 
 
 class TestGetMarketFxRate:
+    """Tests for the get_market_fx_rate @tool (MCP disabled via env var)."""
+
+    @pytest.fixture(autouse=True)
+    def disable_mcp(self, monkeypatch):
+        # Route through the direct ECB path so httpx mocks work without MCP server
+        monkeypatch.setenv("MCP_EXTERNAL_DATA_DISABLE", "1")
+
     def test_usd_eur_rate_returned(self):
         # USD/EUR: EUR/USD = 1.10 → USD/EUR = 1/1.10 ≈ 0.909
         with patch("httpx.get", return_value=_ecb_mock_response("USD", 1.10)):
