@@ -15,6 +15,8 @@ dependencies = [
     "langgraph==1.1.6",
     "langgraph-checkpoint-postgres==3.0.5",
     "langchain-anthropic==1.4.0",
+    "langchain-mcp-adapters==0.2.2",
+    "mcp[cli]==1.27.0",
     "fastapi==0.135.3",
     "uvicorn==0.43.0",
     "pydantic==2.12.5",

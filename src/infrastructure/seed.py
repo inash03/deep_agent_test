@@ -455,6 +455,9 @@ def _upsert_trades_and_exceptions(db: Session) -> None:
     new_trades = [
         ("TRD-006", "213800QILIUD4ROSUO03", "EUR/USD", "EUR", Decimal("200000.00"), date(2026, 4, 20), "EUR"),
         ("TRD-007", "9695005MSX1OYEMGDF46", "GBP/USD", "GBP", Decimal("350000.00"), date(2026, 4, 20), "GBP"),
+        # MCP calendar demo: 2026-05-05 is Children's Day in Japan, so USD/JPY
+        # should fail the external value-date business-calendar check.
+        ("TRD-014", "9695005MSX1OYEMGDF46", "USD/JPY", "USD", Decimal("1250000.00"), date(2026, 5, 5), "USD"),
     ]
     for trade_id, cp_lei, instr, ccy, amt, vd, sc in new_trades:
         if trade_id not in existing_trades:
