@@ -7,6 +7,7 @@ on:
     paths:
       - 'src/**'
       - 'frontend/**'
+      - 'mcp_server/**'
       - 'docker-compose.yml'
       - 'Dockerfile'
       - 'alembic/**'
@@ -21,9 +22,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  deploy-mcp-server:
+    runs-on: ubuntu-latest
+    environment: GCP_VM
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      REGION: us-central1
+      SERVICE_NAME: stp-mcp-external-data
+      IMAGE: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/stp-agent/mcp-external-data
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Build and push image
+        run: |
+          docker build \
+            -f mcp_server/Dockerfile \
+            -t $IMAGE:${{ github.sha }} \
+            -t $IMAGE:latest \
+            .
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE }}:${{ github.sha }}
+          flags: --min-instances=0 --memory=256Mi --allow-unauthenticated --port=8080
+
   deploy-backend:
     runs-on: ubuntu-latest
     environment: GCP_VM
+    needs: deploy-mcp-server
     outputs:
       url: ${{ steps.deploy.outputs.url }}
     env:
@@ -67,6 +108,7 @@ jobs:
           env_vars: |
             SECRET_BACKEND=env
             CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
+            MCP_EXTERNAL_DATA_URL=${{ needs.deploy-mcp-server.outputs.url }}/sse
 
   deploy-frontend:
     runs-on: ubuntu-latest
