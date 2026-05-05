@@ -34,7 +34,7 @@ from langchain_core.tools import tool
 
 from src.domain.entities import SettlementInstruction
 from src.infrastructure import mock_store
-
+from src.infrastructure.calendar_mcp_client import check_fx_value_date_via_mcp
 
 # ---------------------------------------------------------------------------
 # Data source context manager
@@ -178,6 +178,16 @@ def get_reference_data(instrument_id: str) -> str:
         "description": ref.description, "asset_class": ref.asset_class,
         "is_active": ref.is_active,
     })
+
+
+@tool
+def check_fx_value_date_calendar(instrument_id: str, value_date: str) -> str:
+    """Check an FX value date against external market holiday calendars via MCP.
+
+    The underlying MCP server calls a public holiday API and verifies that both
+    currencies' representative markets are open on the value date.
+    """
+    return json.dumps(check_fx_value_date_via_mcp(instrument_id, value_date))
 
 
 @tool
@@ -562,8 +572,8 @@ def create_amend_event(trade_id: str, reason: str, amended_fields: str) -> str:
     with _db_session() as db:
         if db is None:
             return json.dumps({"success": False, "error": "Database not available."})
-        from src.infrastructure.db.trade_repository import TradeRepository
         from src.infrastructure.db.trade_event_repository import TradeEventRepository
+        from src.infrastructure.db.trade_repository import TradeRepository
         repo = TradeRepository(db)
         try:
             current = repo.get_current(trade_id)
@@ -610,8 +620,8 @@ def create_cancel_event(trade_id: str, reason: str) -> str:
     with _db_session() as db:
         if db is None:
             return json.dumps({"success": False, "error": "Database not available."})
-        from src.infrastructure.db.trade_repository import TradeRepository
         from src.infrastructure.db.trade_event_repository import TradeEventRepository
+        from src.infrastructure.db.trade_repository import TradeRepository
         repo = TradeRepository(db)
         current = repo.get_current(trade_id)
         if current is None:
@@ -899,6 +909,7 @@ FO_READ_ONLY_TOOLS = [
     get_trade_detail,
     get_counterparty,
     get_reference_data,
+    check_fx_value_date_calendar,
     search_similar_triage_cases,  # RAG: semantic search over past cases and SWIFT knowledge
     provide_explanation,     # non-HITL write — executed immediately
     escalate_to_fo_user,     # non-HITL write — executed immediately

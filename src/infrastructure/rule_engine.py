@@ -12,17 +12,18 @@ Workflow transitions:
 
 from __future__ import annotations
 
+import json
 import logging
 
 from sqlalchemy.orm import Session
 
 from src.domain.check_rules import BO_RULES, FO_RULES
 from src.domain.entities import CheckResult
+from src.infrastructure.bo_triage_use_case import BoTriageUseCase
 from src.infrastructure.db.app_setting_repository import AppSettingRepository
 from src.infrastructure.db.models import CounterpartyModel, SettlementInstructionModel
-from src.infrastructure.bo_triage_use_case import BoTriageUseCase
-from src.infrastructure.fo_triage_use_case import FoTriageUseCase
 from src.infrastructure.db.trade_repository import TradeRepository
+from src.infrastructure.fo_triage_use_case import FoTriageUseCase
 
 _logger = logging.getLogger("stp_triage.rule_engine")
 _fo_triage_use_case: FoTriageUseCase | None = None
@@ -34,6 +35,49 @@ def _build_error_context(results: list[CheckResult]) -> str:
     if not failed:
         return ""
     return "\n".join(f"[{r.rule_name}] {r.message}" for r in failed)
+
+
+def _run_fx_calendar_check(trade) -> CheckResult | None:
+    from src.infrastructure.tools import check_fx_value_date_calendar
+
+    if not getattr(trade, "instrument_id", None) or not getattr(trade, "value_date", None):
+        return None
+
+    raw = check_fx_value_date_calendar.invoke(
+        {
+            "instrument_id": trade.instrument_id,
+            "value_date": trade.value_date.isoformat(),
+        }
+    )
+    data = json.loads(raw)
+    status = data.get("status")
+    is_business_day = data.get("is_business_day")
+    reason = data.get("reason", "No calendar reason returned.")
+
+    if status == "ok" and is_business_day is True:
+        return CheckResult(
+            rule_name="value_date_business_calendar",
+            passed=True,
+            severity="error",
+            message=reason,
+        )
+    if status == "ok" and is_business_day is False:
+        message = (
+            f"Value date {trade.value_date} is not open for "
+            f"{trade.instrument_id}: {reason}"
+        )
+        return CheckResult(
+            rule_name="value_date_business_calendar",
+            passed=False,
+            severity="error",
+            message=message,
+        )
+    return CheckResult(
+        rule_name="value_date_business_calendar",
+        passed=False,
+        severity="warning",
+        message=f"External calendar unavailable for {trade.instrument_id}: {reason}",
+    )
 
 
 def _get_fo_triage_use_case() -> FoTriageUseCase:
@@ -82,12 +126,20 @@ def run_fo_check(trade_id: str, db: Session) -> tuple[list[CheckResult], str]:
             extra={"trade_id": trade_id, "rule": rule.rule_name, "passed": passed},
         )
 
+    calendar_result = _run_fx_calendar_check(trade)
+    if calendar_result is not None:
+        results.append(calendar_result)
+        _logger.debug(
+            "fo_check external calendar rule executed",
+            extra={
+                "trade_id": trade_id,
+                "rule": calendar_result.rule_name,
+                "passed": calendar_result.passed,
+            },
+        )
+
     # Only ERROR-severity failures trigger FoAgentToCheck
-    has_errors = any(
-        not r.passed
-        for r, rule in zip(results, FO_RULES)
-        if rule.severity == "error"
-    )
+    has_errors = any(not r.passed and r.severity == "error" for r in results)
     new_status = "FoAgentToCheck" if has_errors else "FoValidated"
 
     repo.update_workflow_status(
