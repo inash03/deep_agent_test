@@ -11,6 +11,7 @@ import pytest
 
 from src.infrastructure import mock_store
 from src.infrastructure.tools import (
+    check_fx_value_date_calendar,
     get_counterparty,
     get_market_fx_rate,
     get_reference_data,
@@ -19,7 +20,6 @@ from src.infrastructure.tools import (
     lookup_external_ssi,
     register_ssi,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -117,6 +117,34 @@ class TestGetReferenceData:
         # TRD-005 scenario
         result = invoke(get_reference_data, instrument_id="UNKNOWN_CCY_PAIR")
         assert result["found"] is False
+
+
+# ---------------------------------------------------------------------------
+# check_fx_value_date_calendar
+# ---------------------------------------------------------------------------
+
+
+def test_check_fx_value_date_calendar_returns_mcp_result(monkeypatch):
+    monkeypatch.setattr(
+        "src.infrastructure.tools.check_fx_value_date_via_mcp",
+        lambda instrument_id, value_date: {
+            "status": "ok",
+            "is_business_day": False,
+            "instrument_id": instrument_id,
+            "value_date": value_date,
+            "reason": "JPY holiday: Children's Day",
+        },
+    )
+
+    result = invoke(
+        check_fx_value_date_calendar,
+        instrument_id="USD/JPY",
+        value_date="2026-05-05",
+    )
+
+    assert result["status"] == "ok"
+    assert result["is_business_day"] is False
+    assert "JPY holiday" in result["reason"]
 
 
 # ---------------------------------------------------------------------------
