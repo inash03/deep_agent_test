@@ -9,6 +9,19 @@ Completed tasks are archived in `docs/tasks_done.md`.
 
 ## In Progress
 
+#### Phase 46 — IBAN mod-97 検証 + ECB FX レートツール
+
+**目的:** BoAgent に外部データを活用させる第一歩として、IBAN の本格的な checksum 検証と
+ECB 公式 REST API による市場 FX レート取得機能を追加する。
+
+**修正内容（完了済み）:**
+- `src/domain/check_rules.py`: `_iban_format_valid` を schwifty ISO 13616 mod-97 版に強化
+- `src/infrastructure/tools.py`: `get_market_fx_rate` ツール追加、`BO_READ_ONLY_TOOLS` に登録
+- `src/infrastructure/bo_agent.py`: システムプロンプトに FX レート異常時の調査アクション追加
+- `src/presentation/routers/rules.py`: `iban_format_valid` 説明文を mod-97 反映に更新
+- `pyproject.toml`: `schwifty==2024.1.1.post0` 追加、`httpx` を prod deps に昇格
+- `tests/unit/`: 10 本のテスト追加（IBAN checksum 6 本 + FX レートツール 4 本）
+
 
 ---
 

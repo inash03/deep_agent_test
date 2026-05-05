@@ -6,12 +6,26 @@
 
 **Branch:** `claude/setup-playwright-mcp-SFcOO`
 **Last updated:** 2026-05-05
-**In Progress:** Phase 45（Playwright スモークテスト導入）→ 完了済み
+**In Progress:** Phase 46（IBAN mod-97 検証 + ECB FX レートツール）→ 完了済み
 **Next:** Phase 40（EventPending ステータス時の Triage ボタン非活性化）
 
 ---
 
 ## Step Log
+
+### Step 53 — feat: IBAN mod-97 検証 + ECB FX レートツール (2026-05-05)
+
+Files: `pyproject.toml`, `src/domain/check_rules.py`, `src/infrastructure/tools.py`,
+       `src/infrastructure/bo_agent.py`, `src/presentation/routers/rules.py`,
+       `tests/unit/test_check_rules.py`, `tests/unit/test_tools.py`
+
+- **check_rules.py**: `_iban_format_valid` を schwifty ISO 13616 mod-97 版に強化。形式 regex → mod-97 + 国別 BBAN 構造の 2 段階検証。`ImportError` フォールバックで schwifty 未インストール環境でも動作
+- **tools.py**: `get_market_fx_rate(base_currency, quote_currency)` 追加。ECB Statistical Data Warehouse 無料 API 経由で参照レート取得。EUR ベース時は API 1 回、クロスレートは 2 回呼び出して除算。API 障害時は `{"error": ...}` を返しエージェントが graceful に処理
+- **bo_agent.py**: システムプロンプトに「FX レート異常」アクション追加（ECB レートから ±5% 超の逸脱で send_back or escalate）
+- **pyproject.toml**: `schwifty==2024.1.1.post0` 追加、`httpx` を dev→prod 昇格
+- **テスト**: 105 件全通過（IBAN checksum 6 本 + FX レートツール 4 本 追加）
+
+---
 
 ### Step 52 — feat: Playwright スモークテスト導入 + post-deploy CI ジョブ (2026-05-05)
 
