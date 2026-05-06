@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   getTrade, runBoCheck, runFoCheck,
+  operatorApproveTrade,
   resumeBoTriage, resumeFoTriage,
   startBoTriage, startFoTriage,
 } from '../api/trades'
@@ -124,6 +125,19 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'bo-check', label: 'BoCheck' },
   { id: 'events', label: 'Events' },
 ]
+
+const OPERATOR_APPROVAL: Record<string, { label: string; nextStatus: string; color: string }> = {
+  FoUserToValidate: {
+    label: 'FO Operator Approve',
+    nextStatus: 'FoValidated',
+    color: COLOR.primary,
+  },
+  BoUserToValidate: {
+    label: 'BO Operator Approve',
+    nextStatus: 'BoValidated',
+    color: '#15803d',
+  },
+}
 
 export function TradeDetailPage() {
   const { trade_id } = useParams<{ trade_id: string }>()
@@ -266,6 +280,11 @@ export function TradeDetailPage() {
       await reload()
     })
 
+  const handleOperatorApprove = () => wrap('operator-approve', async () => {
+    await operatorApproveTrade(trade_id!)
+    await reload()
+  })
+
   if (loading) return <PageLayout title="Trade Detail"><p style={{ color: COLOR.textMuted }}>Loading…</p></PageLayout>
   if (!trade) return <PageLayout title="Trade Detail"><p style={{ color: COLOR.danger }}>Trade not found.</p></PageLayout>
 
@@ -280,6 +299,7 @@ export function TradeDetailPage() {
     cursor: 'pointer',
   })
   const rateLabel = trade.trade_type === 'Forward' ? 'Forward rate' : 'Spot rate'
+  const operatorApproval = OPERATOR_APPROVAL[trade.workflow_status]
 
   return (
     <PageLayout title={`Trade ${trade.trade_id}`}>
@@ -296,11 +316,32 @@ export function TradeDetailPage() {
 
       {/* Trade header */}
       <div style={{ ...CARD, marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 700, fontSize: '1.1rem', fontFamily: 'monospace' }}>{trade.trade_id}</span>
-          <span style={{ fontSize: '0.82rem', color: COLOR.textMuted }}>v{trade.version}</span>
-          <WorkflowBadge status={trade.workflow_status} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 700, fontSize: '1.1rem', fontFamily: 'monospace' }}>{trade.trade_id}</span>
+            <span style={{ fontSize: '0.82rem', color: COLOR.textMuted }}>v{trade.version}</span>
+            <WorkflowBadge status={trade.workflow_status} />
+          </div>
+          {operatorApproval && (
+            <button
+              style={{
+                ...BTN_PRIMARY,
+                backgroundColor: operatorApproval.color,
+                opacity: running === 'operator-approve' ? 0.65 : 1,
+              }}
+              disabled={running === 'operator-approve'}
+              onClick={handleOperatorApprove}
+              title={`Force transition to ${operatorApproval.nextStatus}`}
+            >
+              {running === 'operator-approve' ? 'Approving…' : operatorApproval.label}
+            </button>
+          )}
         </div>
+        {operatorApproval && (
+          <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#f8fafc', border: `1px solid ${COLOR.border}`, borderRadius: 6, color: COLOR.textMuted, fontSize: '0.82rem' }}>
+            Human judgment is required. Approval will force this trade to <strong style={{ color: COLOR.text }}>{operatorApproval.nextStatus}</strong>.
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem 1.5rem', fontSize: '0.875rem' }}>
           {[
             ['Counterparty', trade.counterparty_name ?? trade.counterparty_lei],

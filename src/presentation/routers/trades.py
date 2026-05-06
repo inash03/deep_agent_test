@@ -14,7 +14,12 @@ from src.domain.trade_classification import calculate_trade_type
 from src.infrastructure.db.models import CounterpartyModel, TradeModel
 from src.infrastructure.db.session import get_db
 from src.infrastructure.db.trade_repository import TradeRepository
-from src.infrastructure.rule_engine import maybe_run_bo_check, maybe_run_fo_check, run_bo_check, run_fo_check
+from src.infrastructure.rule_engine import (
+    maybe_run_bo_check,
+    maybe_run_fo_check,
+    run_bo_check,
+    run_fo_check,
+)
 from src.presentation.schemas import (
     CheckResultOut,
     CheckResultsResponse,
@@ -142,6 +147,41 @@ def get_trade(trade_id: str, db: Session = Depends(get_db)) -> TradeOut:
         raise HTTPException(status_code=404, detail=f"Trade '{trade_id}' not found")
     cp = db.query(CounterpartyModel).filter(CounterpartyModel.lei == row.counterparty_lei).first()
     return _to_out(row, counterparty_name=cp.name if cp else None)
+
+
+@router.post("/{trade_id}/operator-approve", response_model=TradeOut)
+def operator_approve_trade(trade_id: str, db: Session = Depends(get_db)) -> TradeOut:
+    """Approve a trade that was escalated from agent triage to a human operator."""
+    repo = TradeRepository(db)
+    row = repo.get_by_trade_id(trade_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Trade '{trade_id}' not found")
+
+    next_status_by_current = {
+        "FoUserToValidate": "FoValidated",
+        "BoUserToValidate": "BoValidated",
+    }
+    next_status = next_status_by_current.get(row.workflow_status)
+    if next_status is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Trade is in '{row.workflow_status}', not FoUserToValidate or "
+                "BoUserToValidate."
+            ),
+        )
+
+    updated = repo.update_workflow_status(trade_id, next_status)
+    if updated is None:
+        raise HTTPException(status_code=404, detail=f"Trade '{trade_id}' not found")
+    db.commit()
+
+    cp = (
+        db.query(CounterpartyModel)
+        .filter(CounterpartyModel.lei == updated.counterparty_lei)
+        .first()
+    )
+    return _to_out(updated, counterparty_name=cp.name if cp else None)
 
 
 @router.post("/{trade_id}/fo-check", response_model=CheckResultsResponse)

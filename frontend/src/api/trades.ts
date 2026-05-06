@@ -30,6 +30,11 @@ export async function runBoCheck(tradeId: string): Promise<CheckResultsResponse>
   return data
 }
 
+export async function operatorApproveTrade(tradeId: string): Promise<Trade> {
+  const { data } = await apiClient.post<Trade>(`/api/v1/trades/${tradeId}/operator-approve`)
+  return data
+}
+
 export async function startFoTriage(tradeId: string, errorMessage = ''): Promise<TriageResponse> {
   const { data } = await apiClient.post<TriageResponse>(`/api/v1/trades/${tradeId}/fo-triage`, {
     trade_id: tradeId,
