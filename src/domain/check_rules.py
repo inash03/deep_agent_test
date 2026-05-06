@@ -209,7 +209,14 @@ def _iban_format_valid(
         return False, (
             f"IBAN {ssi.iban!r} does not match [A-Z]{{2}}[0-9]{{2}}[A-Z0-9]{{1,30}}"
         )
-    return True, f"IBAN {ssi.iban!r} has valid format"
+    try:
+        from schwifty import IBAN  # type: ignore[import-untyped]
+        IBAN(ssi.iban)
+        return True, f"IBAN {ssi.iban!r} is valid (mod-97 checksum verified)"
+    except ValueError as exc:
+        return False, f"IBAN {ssi.iban!r} failed checksum/structure validation: {exc}"
+    except ImportError:
+        return True, f"IBAN {ssi.iban!r} has valid format (schwifty unavailable, checksum not verified)"
 
 
 def _risk_limit_check(
