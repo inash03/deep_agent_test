@@ -9,10 +9,6 @@ Completed tasks are archived in `docs/tasks_done.md`.
 
 ## In Progress
 
-#### Hotfix — MCP Server Cloud Run ポートバインド修正
-
-`server.run(transport="sse")` が `PORT` 環境変数を読まずデフォルトポートで起動するため
-Cloud Run のヘルスチェックに失敗する問題を修正。
 
 ---
 

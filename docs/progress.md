@@ -4,14 +4,24 @@
 
 ## Current Status
 
-**Branch:** `claude/setup-playwright-mcp-SFcOO`
-**Last updated:** 2026-05-05
-**In Progress:** —（Phase 12 Step 1 完了）
+**Branch:** `claude/fix-cloudrun-port-issue-mIyu4`
+**Last updated:** 2026-05-06
+**In Progress:** —（Hotfix 完了）
 **Next:** Phase 40（EventPending ステータス時の Triage ボタン非活性化）
 
 ---
 
 ## Step Log
+
+### Step 55 — fix: MCP Server Cloud Run ポートバインド修正 (2026-05-06)
+
+Files: `mcp_server/external_data_server.py`
+
+- `server.run(transport="sse")` がデフォルトポートと `127.0.0.1` でバインドしていた
+- Cloud Run は `PORT=8080` を注入し、そのポートへのリクエストを期待するため起動タイムアウトが発生
+- `host="0.0.0.0"` と `port=int(os.environ.get("PORT", 8080))` を追加して修正
+
+---
 
 ### Step 54 — feat: get_market_fx_rate を MCP サーバに外部化（Phase 12 Step 1）(2026-05-05)
 
