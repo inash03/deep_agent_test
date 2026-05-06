@@ -7,6 +7,8 @@ Run locally with:
 
 from __future__ import annotations
 
+import os
+
 from src.infrastructure.external_data_service import fetch_fx_rate as _fetch_fx_rate
 
 
@@ -25,7 +27,8 @@ def _build_server():
 
 def main() -> None:
     server = _build_server()
-    server.run(transport="sse")
+    port = int(os.environ.get("PORT", 8080))
+    server.run(transport="sse", host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
