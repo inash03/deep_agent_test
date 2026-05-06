@@ -15,7 +15,8 @@ from src.infrastructure.external_data_service import fetch_fx_rate as _fetch_fx_
 def _build_server():
     from mcp.server.fastmcp import FastMCP
 
-    server = FastMCP("stp-external-data", json_response=True)
+    port = int(os.environ.get("PORT", 8080))
+    server = FastMCP("stp-external-data", json_response=True, host="0.0.0.0", port=port)
 
     @server.tool()
     def get_market_fx_rate(base_currency: str, quote_currency: str) -> dict:
@@ -27,8 +28,7 @@ def _build_server():
 
 def main() -> None:
     server = _build_server()
-    port = int(os.environ.get("PORT", 8080))
-    server.run(transport="sse", host="0.0.0.0", port=port)
+    server.run(transport="sse")
 
 
 if __name__ == "__main__":
