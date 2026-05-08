@@ -3,6 +3,7 @@ import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/login',
@@ -14,17 +15,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        const expectedUser = process.env.APP_USERNAME
-        const passwordHash = process.env.APP_PASSWORD_HASH
-        const username = String(credentials?.username ?? '')
+        const expectedUser = process.env.APP_USERNAME?.trim()
+        const passwordHash = process.env.APP_PASSWORD_HASH?.trim()
+        const username = String(credentials?.username ?? '').trim()
         const password = String(credentials?.password ?? '')
 
-        if (!expectedUser || !passwordHash || username !== expectedUser || !password) {
+        if (!expectedUser || !passwordHash) {
+          console.warn('Credentials sign-in is not configured: APP_USERNAME or APP_PASSWORD_HASH is missing.')
+          return null
+        }
+
+        if (!passwordHash.startsWith('$2')) {
+          console.warn('Credentials sign-in is not configured: APP_PASSWORD_HASH does not look like a bcrypt hash.')
+          return null
+        }
+
+        if (username !== expectedUser || !password) {
+          console.warn('Credentials sign-in rejected: username mismatch or empty password.')
           return null
         }
 
         const ok = await bcrypt.compare(password, passwordHash)
-        if (!ok) return null
+        if (!ok) {
+          console.warn('Credentials sign-in rejected: password hash comparison failed.')
+          return null
+        }
 
         return {
           id: expectedUser,
