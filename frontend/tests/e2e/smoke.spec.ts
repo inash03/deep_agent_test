@@ -1,7 +1,20 @@
 import { test, expect } from '@playwright/test'
 
-// Read-only smoke tests — safe to run against production.
+// Read-only smoke tests; safe to run against production.
 // Do NOT create, update, or delete any data here.
+
+const username = process.env.APP_USERNAME
+const password = process.env.APP_PASSWORD
+
+test.beforeEach(async ({ page }) => {
+  test.skip(!username || !password, 'APP_USERNAME and APP_PASSWORD are required for authenticated smoke tests.')
+
+  await page.goto('/login')
+  await page.getByLabel('Username').fill(username!)
+  await page.getByLabel('Password').fill(password!)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page).toHaveURL(/\/$/)
+})
 
 test.describe('Home', () => {
   test('page loads and shows app title', async ({ page }) => {
@@ -14,7 +27,6 @@ test.describe('Home', () => {
 test.describe('Trade List', () => {
   test('page loads and shows trade table', async ({ page }) => {
     await page.goto('/trades')
-    // Wait for at least one row to appear (seeded data exists)
     await expect(page.locator('table tbody tr').first()).toBeVisible()
   })
 
@@ -29,7 +41,6 @@ test.describe('Trade Detail', () => {
     await page.goto('/trades')
     const firstRow = page.locator('table tbody tr').first()
     await firstRow.click()
-    // Detail page URL contains the trade_id segment
     await expect(page).toHaveURL(/\/trades\/.+/)
     await expect(page.getByRole('navigation')).toBeVisible()
   })
@@ -39,7 +50,6 @@ test.describe('Navigation', () => {
   test('all nav links are reachable', async ({ page }) => {
     await page.goto('/')
 
-    // Each link should navigate without a 404 / error boundary
     const links: [string, RegExp][] = [
       ['Trades', /\/trades/],
       ['History', /\/history/],

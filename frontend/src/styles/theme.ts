@@ -19,11 +19,17 @@ export const COLOR = {
   textLight: '#9ca3af',
 } as const
 
+export const FONT = {
+  sans: 'var(--font-sans)',
+  mono: 'var(--font-mono)',
+} as const
+
 // ---------------------------------------------------------------------------
 // Shared style objects
 // ---------------------------------------------------------------------------
 
 export const CARD: React.CSSProperties = {
+  fontFamily: FONT.sans,
   backgroundColor: COLOR.bgWhite,
   border: `1px solid ${COLOR.border}`,
   borderRadius: 8,
@@ -32,6 +38,7 @@ export const CARD: React.CSSProperties = {
 }
 
 export const BTN_BASE: React.CSSProperties = {
+  fontFamily: FONT.sans,
   display: 'inline-flex',
   alignItems: 'center',
   gap: '0.25rem',
@@ -64,6 +71,7 @@ export const BTN_SECONDARY: React.CSSProperties = {
 }
 
 export const INPUT: React.CSSProperties = {
+  fontFamily: FONT.sans,
   padding: '0.45rem 0.75rem',
   border: `1px solid ${COLOR.borderDark}`,
   borderRadius: 6,
@@ -74,6 +82,7 @@ export const INPUT: React.CSSProperties = {
 }
 
 export const LABEL: React.CSSProperties = {
+  fontFamily: FONT.sans,
   display: 'block',
   fontSize: '0.8rem',
   fontWeight: 600,
@@ -84,6 +93,7 @@ export const LABEL: React.CSSProperties = {
 }
 
 export const TABLE: React.CSSProperties = {
+  fontFamily: FONT.sans,
   width: '100%',
   borderCollapse: 'collapse',
   fontSize: '0.875rem',

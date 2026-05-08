@@ -13,11 +13,11 @@ LangGraph の ReAct エージェントが証券 STP（Straight-Through Processin
 | レイヤー | 技術 |
 |---------|------|
 | Backend | Python 3.12 / FastAPI / LangGraph / LangChain-Anthropic |
-| Frontend | React 18 / TypeScript / Vite / React Router v6 |
+| Frontend | Next.js / React / TypeScript / App Router / Auth.js |
 | Database | Neon PostgreSQL（外部マネージド） + SQLAlchemy 2.0 / Alembic |
 | AI モデル | Claude claude-sonnet-4-6 |
-| Hosting | Cloud Run（バックエンド）+ GCP VM / Nginx（フロントエンド） |
-| CI/CD | GitHub Actions（Cloud Run デプロイ + VM SSH） |
+| Hosting | Vercel (frontend) + Cloud Run (backend) |
+| CI/CD | Vercel Git Integration (frontend) + GitHub Actions (Cloud Run backend) |
 
 **設計の特徴:**
 - **ReAct パターン**: LLM が 11 個のツールを動的に選択しながら診断ループを実行
@@ -117,7 +117,7 @@ npm install
 npm run dev
 ```
 
-http://localhost:5173
+http://localhost:3000
 
 ### Docker Compose（フロントエンドのみ）
 
@@ -131,7 +131,7 @@ docker compose up --build -d
 docker compose down
 ```
 
-フロントエンド: http://localhost:5173
+フロントエンド: http://localhost:3000
 
 ### テストサービス（ユニットテストのみ）
 

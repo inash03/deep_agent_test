@@ -22,14 +22,14 @@ export function Pagination({ total, limit, offset, onChange }: Props) {
         disabled={offset === 0}
         onClick={() => onChange(Math.max(0, offset - limit))}
       >
-        ← Prev
+        Prev
       </button>
       <button
         style={BTN_SECONDARY}
         disabled={offset + limit >= total}
         onClick={() => onChange(offset + limit)}
       >
-        Next →
+        Next
       </button>
     </div>
   )

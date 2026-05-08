@@ -1,5 +1,13 @@
 # Architecture
 
+## Current frontend deployment note
+
+The frontend has migrated from Vite + React Router + VM/Nginx static hosting to
+Next.js App Router hosted on Vercel. Next.js owns login (Auth.js), server-side
+BFF proxying under `/api/backend/[...path]`, and all browser-facing routing.
+The FastAPI backend remains on Cloud Run and keeps the existing `/api/v1/*`
+contract, database access, LLM calls, and HITL workflow execution.
+
 ## LangGraph StateGraph — エージェントフロー
 
 FoAgent と BoAgent はそれぞれ独立した LangGraph StateGraph を持つ。
