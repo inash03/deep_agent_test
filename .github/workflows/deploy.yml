@@ -1,4 +1,4 @@
-name: Deploy to GCP # Phase 25: Basic Auth + API key protection
+name: Deploy backend to GCP
 
 on:
   push:
@@ -6,18 +6,15 @@ on:
       - 'main'
     paths:
       - 'src/**'
-      - 'frontend/**'
-      - 'docker-compose.yml'
       - 'Dockerfile'
       - 'alembic/**'
       - 'pyproject.toml'
       - 'scripts/**'
       - '.github/workflows/**'
-  # Actions タブから手動実行（ブランチは UI で選択可能）
   workflow_dispatch:
 
 concurrency:
-  group: deploy
+  group: deploy-backend
   cancel-in-progress: true
 
 jobs:
@@ -67,68 +64,3 @@ jobs:
           env_vars: |
             SECRET_BACKEND=env
             CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
-
-  deploy-frontend:
-    runs-on: ubuntu-latest
-    environment: GCP_VM
-    needs: deploy-backend
-    env:
-      IMAGE: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/stp-agent/frontend
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
-
-      - name: Build and push image
-        working-directory: frontend
-        run: |
-          docker build \
-            -t $IMAGE:${{ github.sha }} \
-            -t $IMAGE:latest \
-            .
-          docker push $IMAGE:${{ github.sha }}
-          docker push $IMAGE:latest
-
-      - name: Deploy frontend to VM via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          CLOUD_RUN_URL: ${{ needs.deploy-backend.outputs.url }}
-          APP_USERNAME: ${{ secrets.APP_USERNAME }}
-          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
-          DEPLOY_IMAGE: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/stp-agent/frontend:${{ github.sha }}
-          DEPLOY_REF: ${{ github.sha }}
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          command_timeout: 10m
-          envs: CLOUD_RUN_URL,APP_USERNAME,APP_PASSWORD,DEPLOY_IMAGE,DEPLOY_REF
-          script: |
-            set -e
-            cd ~/deep_agent_test
-            git fetch origin "$DEPLOY_REF"
-            git reset --hard "$DEPLOY_REF"
-            # .env に必要な値を更新
-            for var in VITE_API_URL APP_USERNAME APP_PASSWORD FRONTEND_IMAGE; do
-              case $var in
-                VITE_API_URL)    val="$CLOUD_RUN_URL" ;;
-                FRONTEND_IMAGE)  val="$DEPLOY_IMAGE" ;;
-                *)               eval "val=\$$var" ;;
-              esac
-              if grep -q "^${var}=" .env; then
-                sed -i "s|^${var}=.*|${var}=$val|" .env
-              else
-                echo "${var}=$val" >> .env
-              fi
-            done
-            # GitHub Runner でビルド済みのイメージを pull して起動
-            gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-            docker pull "$DEPLOY_IMAGE"
-            docker compose up -d
-            docker compose ps

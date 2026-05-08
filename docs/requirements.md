@@ -295,8 +295,8 @@ trade_id=TRD-001, version=1, workflow_status=FoValidated, is_current=True
 | LLM | Claude claude-sonnet-4-6 (Anthropic) |
 | API Framework | FastAPI |
 | Database | Neon PostgreSQL + SQLAlchemy 2.0 / Alembic |
-| Frontend | React 18 / TypeScript / Vite / React Router v6 |
-| Hosting | Cloud Run（バックエンド）+ GCP VM / Nginx（フロントエンド） |
+| Frontend | Next.js / React / TypeScript / App Router / Auth.js |
+| Hosting | Vercel (frontend) + Cloud Run (backend) |
 | CI/CD | GitHub Actions |
 | Validation | Pydantic v2 |
 | Package Manager | uv |

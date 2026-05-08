@@ -1,7 +1,11 @@
+'use client'
+
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { refreshData } from '../api/admin'
-import { VERSION } from '../version'
+import { COMMIT_SHA, VERSION } from '../version'
 
 const LINKS = [
   { to: '/', label: 'Home', end: true },
@@ -17,6 +21,7 @@ const LINKS = [
 ]
 
 export function NavBar() {
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -37,7 +42,6 @@ export function NavBar() {
 
   return (
     <>
-      {/* ── Top bar ── */}
       <nav style={{
         backgroundColor: '#1e293b',
         display: 'flex',
@@ -51,7 +55,6 @@ export function NavBar() {
         padding: '0 1.25rem',
         gap: '0.75rem',
       }}>
-        {/* Hamburger */}
         <button
           onClick={() => setOpen(v => !v)}
           aria-label="Open menu"
@@ -67,21 +70,19 @@ export function NavBar() {
             flexShrink: 0,
           }}
         >
-          ☰
+          Menu
         </button>
 
-        {/* Logo + version */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em' }}>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>
             STP Triage
           </span>
           <span style={{ color: '#475569', fontSize: '0.72rem', fontFamily: 'monospace' }}>
-            v{VERSION}
+            v{VERSION}{COMMIT_SHA ? ` (${COMMIT_SHA})` : ''}
           </span>
         </div>
       </nav>
 
-      {/* ── Backdrop ── */}
       {open && (
         <div
           onClick={close}
@@ -94,7 +95,6 @@ export function NavBar() {
         />
       )}
 
-      {/* ── Side panel ── */}
       <aside style={{
         position: 'fixed',
         top: 0,
@@ -109,7 +109,6 @@ export function NavBar() {
         transition: 'transform 0.22s ease',
         boxShadow: open ? '4px 0 24px rgba(0,0,0,0.3)' : 'none',
       }}>
-        {/* Panel header */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -121,45 +120,45 @@ export function NavBar() {
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
             <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>STP Triage</span>
-            <span style={{ color: '#475569', fontSize: '0.72rem', fontFamily: 'monospace' }}>v{VERSION}</span>
+            <span style={{ color: '#475569', fontSize: '0.72rem', fontFamily: 'monospace' }}>v{VERSION}{COMMIT_SHA ? ` (${COMMIT_SHA})` : ''}</span>
           </div>
           <button
             onClick={close}
             aria-label="Close menu"
             style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '1.2rem', cursor: 'pointer', padding: '0.2rem' }}
           >
-            ✕
+            x
           </button>
         </div>
 
-        {/* Nav links */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
-          {LINKS.map(({ to, label, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              onClick={close}
-              style={({ isActive }) => ({
-                display: 'block',
-                padding: '0.65rem 1.25rem',
-                color: isActive ? '#fff' : '#94a3b8',
-                backgroundColor: isActive ? '#2563eb' : 'transparent',
-                textDecoration: 'none',
-                fontWeight: isActive ? 600 : 400,
-                fontSize: '0.9rem',
-                borderRadius: '0 6px 6px 0',
-                marginRight: '0.75rem',
-                transition: 'background-color 0.12s, color 0.12s',
-              })}
-            >
-              {label}
-            </NavLink>
-          ))}
+          {LINKS.map(({ to, label, end }) => {
+            const isActive = end ? pathname === to : pathname.startsWith(to)
+            return (
+              <Link
+                key={to}
+                href={to}
+                onClick={close}
+                style={{
+                  display: 'block',
+                  padding: '0.65rem 1.25rem',
+                  color: isActive ? '#fff' : '#94a3b8',
+                  backgroundColor: isActive ? '#2563eb' : 'transparent',
+                  textDecoration: 'none',
+                  fontWeight: isActive ? 600 : 400,
+                  fontSize: '0.9rem',
+                  borderRadius: '0 6px 6px 0',
+                  marginRight: '0.75rem',
+                  transition: 'background-color 0.12s, color 0.12s',
+                }}
+              >
+                {label}
+              </Link>
+            )
+          })}
         </nav>
 
-        {/* Reset data button */}
-        <div style={{ padding: '1rem', borderTop: '1px solid #334155', flexShrink: 0 }}>
+        <div style={{ padding: '1rem', borderTop: '1px solid #334155', flexShrink: 0, display: 'grid', gap: '0.5rem' }}>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -174,7 +173,22 @@ export function NavBar() {
               cursor: refreshing ? 'not-allowed' : 'pointer',
             }}
           >
-            {refreshing ? 'Resetting…' : '↺ Reset Data'}
+            {refreshing ? 'Resetting...' : 'Reset Data'}
+          </button>
+          <button
+            onClick={() => signOut({ redirectTo: '/login' })}
+            style={{
+              width: '100%',
+              backgroundColor: 'transparent',
+              border: '1px solid #475569',
+              color: '#cbd5e1',
+              borderRadius: 6,
+              padding: '0.45rem',
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+            }}
+          >
+            Sign out
           </button>
         </div>
       </aside>
