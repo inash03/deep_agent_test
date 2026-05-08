@@ -226,15 +226,19 @@ graph LR
     nginx -->|"API リクエスト\nX-API-Key ヘッダー"| CloudRun
 
     subgraph CloudRun["Cloud Run (us-central1)"]
-        fastapi["FastAPI\n+ LangGraph Agent\nport 8000"]
+        fastapi["Cloud Run A\nFastAPI + LangGraph Agent\nport 8000"]
+        mcp_server["Cloud Run B\nMCP External Data Server\n(FastMCP SSE)\nport 8080"]
     end
 
+    fastapi -->|"HTTP/SSE\nMCP_EXTERNAL_DATA_URL"| mcp_server
     fastapi -->|"DATABASE_URL"| Neon
     fastapi -->|"ANTHROPIC_API_KEY"| Anthropic
+    mcp_server -->|"ECB REST API"| ECB
 
     subgraph External["外部サービス"]
         Neon[("Neon PostgreSQL")]
         Anthropic["Anthropic API\n(Claude claude-sonnet-4-6)"]
+        ECB["ECB Statistical\nData Warehouse"]
     end
 
     subgraph CICD["CI/CD (GitHub Actions)"]

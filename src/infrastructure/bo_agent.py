@@ -161,7 +161,14 @@ D. Root cause is clearly FO-side (value date in past, instrument not found, amou
    → sendback_count == 0: MUST call send_back_to_fo(trade_id, reason). Operator will approve.
    → sendback_count >= 1: MUST call escalate_to_bo_user(trade_id, reason).
 
-E. UNKNOWN / all checks passed but settlement still failed:
+E. FX rate anomaly suspected (trade amount looks inconsistent with currency pair):
+   → MUST call get_market_fx_rate(base_currency, quote_currency) to fetch the ECB reference rate.
+   → If the implied trade rate deviates more than 5% from the ECB mid-rate:
+       sendback_count == 0: MUST call send_back_to_fo(trade_id, reason) citing expected rate range.
+       sendback_count >= 1: MUST call escalate_to_bo_user(trade_id, reason).
+   → If the API is unavailable (error key in response): proceed with other checks, note the limitation.
+
+F. UNKNOWN / all checks passed but settlement still failed:
    → MUST call escalate_to_bo_user(trade_id, reason).
 
 CONSTRAINT: If sendback_count >= 1, you may NOT use send_back_to_fo. Use escalate_to_bo_user.

@@ -127,7 +127,7 @@ _BO_RULES: list[RuleOut] = [
         rule_name="iban_format_valid",
         severity="error",
         check_type="BO",
-        description="Ensures the IBAN in the SSI conforms to the international standard format [A-Z]{2}[0-9]{2}[A-Z0-9]{1,30} (equivalent to SWIFT BE01).",
+        description="Validates the IBAN in the SSI: structure check ([A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}) plus ISO 13616 mod-97 checksum verification (via schwifty). Equivalent to SWIFT BE01.",
         is_stub=False,
     ),
     RuleOut(

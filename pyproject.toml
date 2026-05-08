@@ -28,12 +28,13 @@ dependencies = [
     "slowapi==0.1.9",
     "langchain-openai==1.2.1",
     "pgvector==0.3.6",
+    "schwifty==2024.1.1.post0",
+    "httpx==0.28.1",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest==9.0.2",
-    "httpx==0.28.1",
     "ruff==0.15.9",
     "mypy==1.20.0",
 ]

@@ -862,6 +862,33 @@ def search_similar_triage_cases(query: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Market data tool (ECB REST API — no auth required)
+# ---------------------------------------------------------------------------
+
+
+@tool
+def get_market_fx_rate(base_currency: str, quote_currency: str) -> str:
+    """Fetch the current ECB (European Central Bank) reference FX rate.
+
+    Use this to verify whether the fx_rate on a trade is within a reasonable
+    market range. A deviation of more than 5% from the ECB mid-rate is unusual
+    and may indicate a keying error or stale rate.
+
+    ECB publishes rates against EUR only. For cross-rates (e.g. USD/JPY) both
+    legs (USD/EUR and JPY/EUR) are fetched and divided.
+
+    Args:
+        base_currency: ISO 4217 code of the currency being sold (e.g. 'USD').
+        quote_currency: ISO 4217 code of the currency being bought (e.g. 'JPY').
+
+    Returns JSON with 'rate', 'base', 'quote', 'source', 'date', or 'error'.
+    """
+    from src.infrastructure.external_data_mcp_client import fetch_fx_rate_via_mcp
+    result = fetch_fx_rate_via_mcp(base_currency, quote_currency)
+    return json.dumps(result)
+
+
+# ---------------------------------------------------------------------------
 # Tool lists (exported for use in the LangGraph agents)
 # ---------------------------------------------------------------------------
 
@@ -890,6 +917,7 @@ BO_READ_ONLY_TOOLS = [
     get_counterparty_exception_history,
     get_bo_check_results,
     get_fo_explanation,
+    get_market_fx_rate,
     escalate_to_bo_user,  # non-HITL write — executed immediately
 ]
 
