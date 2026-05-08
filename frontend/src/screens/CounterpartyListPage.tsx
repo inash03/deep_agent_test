@@ -64,7 +64,7 @@ export function CounterpartyListPage() {
 
       <div style={CARD}>
         {loading ? (
-          <p style={{ color: COLOR.textMuted, textAlign: 'center', padding: '2rem' }}>Loading遯ｶ・ｦ</p>
+          <p style={{ color: COLOR.textMuted, textAlign: 'center', padding: '2rem' }}>Loading...</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={TABLE}>

@@ -58,8 +58,8 @@ function CheckResultsTable({ results }: { results: CheckResult[] }) {
               <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.82rem' }}>{r.rule_name}</td>
               <td style={TD}>
                 {r.passed
-                  ? <span style={{ color: '#15803d', fontWeight: 700 }}>隨ｨ繝ｻPass</span>
-                  : <span style={{ color: r.severity === 'warning' ? '#d97706' : '#dc2626', fontWeight: 700 }}>隨ｨ繝ｻ{r.severity === 'warning' ? 'Warn' : 'Fail'}</span>
+                  ? <span style={{ color: '#15803d', fontWeight: 700 }}>Pass</span>
+                  : <span style={{ color: r.severity === 'warning' ? '#d97706' : '#dc2626', fontWeight: 700 }}>{r.severity === 'warning' ? 'Warn' : 'Fail'}</span>
                 }
               </td>
               <td style={{ ...TD, fontSize: '0.82rem', color: r.severity === 'warning' ? '#d97706' : COLOR.textMuted }}>
@@ -90,17 +90,17 @@ function TriagePanel({
   if (result.status === 'PENDING_APPROVAL') {
     return (
       <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8 }}>
-        <p style={{ fontWeight: 700, color: '#9a3412', marginBottom: '0.5rem' }}>{label} 遯ｶ繝ｻAwaiting Approval</p>
+        <p style={{ fontWeight: 700, color: '#9a3412', marginBottom: '0.5rem' }}>{label} - Awaiting Approval</p>
         <p style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '0.75rem' }}>
           <strong>Action:</strong> {result.pending_action_type}<br />
           {result.pending_action_description}
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button style={{ ...BTN_PRIMARY, backgroundColor: '#16a34a' }} disabled={running} onClick={onApprove}>
-            {running ? 'Processing遯ｶ・ｦ' : 'Approve'}
+            {running ? 'Processing...' : 'Approve'}
           </button>
           <button style={BTN_DANGER} disabled={running} onClick={onReject}>
-            {running ? 'Processing遯ｶ・ｦ' : 'Reject'}
+            {running ? 'Processing...' : 'Reject'}
           </button>
         </div>
       </div>
@@ -108,7 +108,7 @@ function TriagePanel({
   }
   return (
     <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8 }}>
-      <p style={{ fontWeight: 700, color: '#15803d', marginBottom: '0.5rem' }}>{label} 遯ｶ繝ｻCompleted</p>
+      <p style={{ fontWeight: 700, color: '#15803d', marginBottom: '0.5rem' }}>{label} - Completed</p>
       {result.diagnosis && <p style={{ fontSize: '0.875rem', color: COLOR.text, marginBottom: '0.5rem' }}><strong>Diagnosis:</strong> {result.diagnosis}</p>}
       {result.root_cause && <p style={{ fontSize: '0.875rem' }}><strong>Root cause:</strong> {result.root_cause}</p>}
       {result.recommended_action && <p style={{ fontSize: '0.875rem' }}><strong>Next steps:</strong> {result.recommended_action}</p>}
@@ -287,7 +287,7 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
     await reload()
   })
 
-  if (loading) return <PageLayout title="Trade Detail"><p style={{ color: COLOR.textMuted }}>Loading遯ｶ・ｦ</p></PageLayout>
+  if (loading) return <PageLayout title="Trade Detail"><p style={{ color: COLOR.textMuted }}>Loading...</p></PageLayout>
   if (!trade) return <PageLayout title="Trade Detail"><p style={{ color: COLOR.danger }}>Trade not found.</p></PageLayout>
 
   const tabStyle = (id: Tab): React.CSSProperties => ({
@@ -307,7 +307,7 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
     <PageLayout title={`Trade ${trade.trade_id}`}>
       {/* Breadcrumb */}
       <button onClick={() => router.push('/trades')} style={{ ...BTN_SECONDARY, marginBottom: '1rem', fontSize: '0.82rem' }}>
-        遶翫・Back to Trades
+        Back to Trades
       </button>
 
       {error && (
@@ -335,7 +335,7 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
               onClick={handleOperatorApprove}
               title={`Force transition to ${operatorApproval.nextStatus}`}
             >
-              {running === 'operator-approve' ? 'Approving遯ｶ・ｦ' : operatorApproval.label}
+              {running === 'operator-approve' ? 'Approving...' : operatorApproval.label}
             </button>
           )}
         </div>
@@ -372,14 +372,14 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
         ))}
       </div>
 
-      {/* 隨渉隨渉隨渉 FoCheck tab 隨渉隨渉隨渉 */}
+      {/* FoCheck tab */}
       {activeTab === 'fo-check' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={CARD}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
               <h3 style={{ margin: 0, fontSize: '1rem' }}>FoCheck Results</h3>
               <button style={BTN_PRIMARY} disabled={running === 'fo-check'} onClick={handleRunFoCheck}>
-                {running === 'fo-check' ? 'Running遯ｶ・ｦ' : 'Run FoCheck'}
+                {running === 'fo-check' ? 'Running...' : 'Run FoCheck'}
               </button>
             </div>
             {trade.fo_check_results?.length
@@ -423,7 +423,7 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
                           disabled={disabled}
                           onClick={handleStartFoTriage}
                         >
-                          {running === 'fo-triage' ? 'Investigating遯ｶ・ｦ' : 'Start FO Triage'}
+                          {running === 'fo-triage' ? 'Investigating...' : 'Start FO Triage'}
                         </button>
                       )
                     })()}
@@ -444,14 +444,14 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
         </div>
       )}
 
-      {/* 隨渉隨渉隨渉 BoCheck tab 隨渉隨渉隨渉 */}
+      {/* BoCheck tab */}
       {activeTab === 'bo-check' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={CARD}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
               <h3 style={{ margin: 0, fontSize: '1rem' }}>BoCheck Results</h3>
               <button style={{ ...BTN_PRIMARY, backgroundColor: '#15803d' }} disabled={running === 'bo-check'} onClick={handleRunBoCheck}>
-                {running === 'bo-check' ? 'Running遯ｶ・ｦ' : 'Run BoCheck'}
+                {running === 'bo-check' ? 'Running...' : 'Run BoCheck'}
               </button>
             </div>
             {trade.bo_check_results?.length
@@ -495,7 +495,7 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
                           disabled={disabled}
                           onClick={handleStartBoTriage}
                         >
-                          {running === 'bo-triage' ? 'Investigating遯ｶ・ｦ' : 'Start BO Triage'}
+                          {running === 'bo-triage' ? 'Investigating...' : 'Start BO Triage'}
                         </button>
                       )
                     })()}
@@ -516,7 +516,7 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
         </div>
       )}
 
-      {/* 隨渉隨渉隨渉 Events tab 隨渉隨渉隨渉 */}
+      {/* Events tab */}
       {activeTab === 'events' && (
         <div>
           <div style={CARD}>
@@ -565,7 +565,7 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
                   )}
                   {error && (
                     <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#fee2e2', borderRadius: 4, color: '#991b1b', fontSize: '0.82rem' }}>
-                      隨橸｣ｰ {error}
+                      Error: {error}
                     </div>
                   )}
                   <button
@@ -573,7 +573,7 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
                     disabled={running === 'event-create' || !evtReason}
                     onClick={handleCreateEvent}
                   >
-                    {running === 'event-create' ? 'Creating遯ｶ・ｦ' : 'Create Event'}
+                    {running === 'event-create' ? 'Creating...' : 'Create Event'}
                   </button>
                 </div>
               </div>
@@ -598,7 +598,7 @@ export function TradeDetailPage({ tradeId }: { tradeId: string }) {
                         <td style={{ ...TD, fontWeight: 600 }}>{ev.event_type}</td>
                         <td style={TD}><EventBadge status={ev.workflow_status} /></td>
                         <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.82rem' }}>
-                          v{ev.from_version} 遶翫・v{ev.to_version}
+                          v{ev.from_version} {'->'} v{ev.to_version}
                         </td>
                         <td style={{ ...TD, fontSize: '0.82rem' }}>{ev.requested_by}</td>
                         <td style={{ ...TD, fontSize: '0.82rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

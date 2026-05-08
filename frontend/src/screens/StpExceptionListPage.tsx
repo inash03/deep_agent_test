@@ -76,18 +76,20 @@ function ViolationsModal({
             onClick={onClose}
             style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: COLOR.textMuted, lineHeight: 1, padding: '0 4px' }}
           >
-            ・・・          </button>
+            x
+          </button>
         </div>
 
         {/* Body */}
         {loading ? (
-          <p style={{ color: COLOR.textMuted, textAlign: 'center', padding: '2rem 0' }}>Loading遯ｶ・ｦ</p>
+          <p style={{ color: COLOR.textMuted, textAlign: 'center', padding: '2rem 0' }}>Loading...</p>
         ) : !hasAnyChecks ? (
           <div>
             <p style={{ fontSize: '0.875rem', color: COLOR.textMuted, marginBottom: '0.75rem' }}>
-              FO/BO 郢昶・縺臥ｹ昴・縺醍ｸｺ・ｯ邵ｺ・ｾ邵ｺ・ｰ陞ｳ貅ｯ・｡蠕鯉ｼ・ｹｧ蠕娯ｻ邵ｺ繝ｻ竏ｪ邵ｺ蟶呻ｽ鍋ｸｲ繝ｻ            </p>
+              FO/BO check results are not available for this trade. Showing the original STP exception message instead.
+            </p>
             <p style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: 4, color: '#374151' }}>
-              陷医・繝ｻ STP 郢ｧ・ｨ郢晢ｽｩ郢晢ｽｼ郢晢ｽ｡郢昴・縺晉ｹ晢ｽｼ郢ｧ・ｸ:
+              Original STP exception message:
             </p>
             <pre style={{
               fontFamily: 'monospace', fontSize: '0.78rem',
@@ -116,7 +118,8 @@ function ViolationsModal({
               </section>
             ) : (
               <p style={{ fontSize: '0.8rem', color: '#15803d', marginBottom: '0.75rem' }}>
-                隨ｨ繝ｻFO Check: violations 邵ｺ・ｪ邵ｺ繝ｻ              </p>
+                FO Check: no violations.
+              </p>
             )}
 
             {boFailed.length > 0 ? (
@@ -136,7 +139,8 @@ function ViolationsModal({
               </section>
             ) : (
               <p style={{ fontSize: '0.8rem', color: '#15803d' }}>
-                隨ｨ繝ｻBO Check: violations 邵ｺ・ｪ邵ｺ繝ｻ              </p>
+                BO Check: no violations.
+              </p>
             )}
           </>
         )}
@@ -218,7 +222,7 @@ export function StpExceptionListPage() {
       const trade = await getTrade(ex.trade_id)
       setSelectedTrade(trade)
     } catch {
-      // trade not found 遯ｶ繝ｻmodal will show fallback error_message
+      // Trade not found; the modal will show the fallback error_message.
     } finally {
       setLoadingViolations(false)
     }
@@ -279,7 +283,7 @@ export function StpExceptionListPage() {
       {/* Table */}
       <div style={CARD}>
         {loading ? (
-          <p style={{ color: COLOR.textMuted, textAlign: 'center', padding: '2rem' }}>Loading遯ｶ・ｦ</p>
+          <p style={{ color: COLOR.textMuted, textAlign: 'center', padding: '2rem' }}>Loading...</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={TABLE}>

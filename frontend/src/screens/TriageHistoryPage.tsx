@@ -21,7 +21,7 @@ export function TriageHistoryPage() {
     <PageLayout title="Triage History">
       <div style={CARD}>
         {loading ? (
-          <p style={{ color: COLOR.textMuted }}>Loading遯ｶ・ｦ</p>
+          <p style={{ color: COLOR.textMuted }}>Loading...</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
           <table style={TABLE}>

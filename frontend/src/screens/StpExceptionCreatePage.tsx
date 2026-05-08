@@ -67,7 +67,7 @@ export function StpExceptionCreatePage() {
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button onClick={handleCreate} disabled={saving} style={BTN_PRIMARY}>
-              {saving ? 'Creating遯ｶ・ｦ' : 'Create'}
+              {saving ? 'Creating...' : 'Create'}
             </button>
             <button onClick={() => router.push('/stp-exceptions')} style={BTN_SECONDARY}>
               Cancel

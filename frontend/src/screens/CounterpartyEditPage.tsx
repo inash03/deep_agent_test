@@ -63,11 +63,11 @@ export function CounterpartyEditPage({ lei }: { lei: string }) {
   }
 
   if (!cp && !error) {
-    return <PageLayout title="Edit Counterparty"><p style={{ color: COLOR.textMuted }}>Loading遯ｶ・ｦ</p></PageLayout>
+    return <PageLayout title="Edit Counterparty"><p style={{ color: COLOR.textMuted }}>Loading...</p></PageLayout>
   }
 
   return (
-    <PageLayout title={`Edit Counterparty 遯ｶ繝ｻ${lei}`}>
+    <PageLayout title={`Edit Counterparty - ${lei}`}>
       <div style={{ maxWidth: 560 }}>
         <div style={CARD}>
           {error && (
@@ -111,7 +111,7 @@ export function CounterpartyEditPage({ lei }: { lei: string }) {
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button onClick={handleSave} disabled={saving} style={BTN_PRIMARY}>
-              {saving ? 'Saving遯ｶ・ｦ' : 'Save'}
+              {saving ? 'Saving...' : 'Save'}
             </button>
             <button onClick={() => router.push('/counterparties')} style={BTN_SECONDARY}>
               Cancel
@@ -129,7 +129,7 @@ export function CounterpartyEditPage({ lei }: { lei: string }) {
         </div>
 
         {ssiLoading ? (
-          <p style={{ color: COLOR.textMuted }}>Loading SSIs遯ｶ・ｦ</p>
+          <p style={{ color: COLOR.textMuted }}>Loading SSIs...</p>
         ) : ssis.length === 0 ? (
           <p style={{ color: COLOR.textMuted, margin: 0 }}>No SSIs found for this counterparty.</p>
         ) : (

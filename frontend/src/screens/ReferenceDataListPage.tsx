@@ -21,7 +21,7 @@ export function ReferenceDataListPage() {
     <PageLayout title="Reference Data (Instruments)">
       <div style={CARD}>
         {loading ? (
-          <p style={{ color: COLOR.textMuted }}>Loading遯ｶ・ｦ</p>
+          <p style={{ color: COLOR.textMuted }}>Loading...</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
           <table style={TABLE}>

@@ -96,7 +96,7 @@ export function RuleListPage() {
 
   return (
     <PageLayout title="Check Rules">
-      {loading && <p style={{ color: COLOR.textMuted }}>Loading遯ｶ・ｦ</p>}
+      {loading && <p style={{ color: COLOR.textMuted }}>Loading...</p>}
       {error && (
         <div style={{
           padding: '0.75rem',

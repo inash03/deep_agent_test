@@ -222,7 +222,7 @@ export function TradeListPage() {
       {/* Table */}
       <div style={CARD}>
         {loading ? (
-          <p style={{ color: COLOR.textMuted, textAlign: 'center', padding: '2rem' }}>Loading遯ｶ・ｦ</p>
+          <p style={{ color: COLOR.textMuted, textAlign: 'center', padding: '2rem' }}>Loading...</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={TABLE}>
@@ -299,7 +299,7 @@ export function TradeListPage() {
                   <th style={STICKY_TRADE_ID_TH}>
                     <input
                       style={{ ...INPUT, width: '100%' }}
-                      placeholder="Filter遯ｶ・ｦ"
+                      placeholder="Filter..."
                       value={uiFilterTradeId}
                       onChange={e => setUiFilterTradeId(e.target.value)}
                       onClick={e => e.stopPropagation()}

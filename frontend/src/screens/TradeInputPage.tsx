@@ -207,7 +207,7 @@ export function TradeInputPage() {
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button onClick={handleCreate} disabled={saving} style={BTN_PRIMARY}>
-              {saving ? 'Creating遯ｶ・ｦ' : 'Create Trade'}
+              {saving ? 'Creating...' : 'Create Trade'}
             </button>
             <button onClick={() => router.push('/trades')} style={BTN_SECONDARY}>
               Cancel

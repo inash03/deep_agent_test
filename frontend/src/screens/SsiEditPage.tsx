@@ -52,11 +52,11 @@ export function SsiEditPage({ id }: { id: string }) {
   }
 
   if (!ssi && !error) {
-    return <PageLayout title="Edit SSI"><p style={{ color: COLOR.textMuted }}>Loading遯ｶ・ｦ</p></PageLayout>
+    return <PageLayout title="Edit SSI"><p style={{ color: COLOR.textMuted }}>Loading...</p></PageLayout>
   }
 
   return (
-    <PageLayout title={`Edit SSI 遯ｶ繝ｻ${ssi?.lei ?? ''} / ${ssi?.currency ?? ''}`}>
+    <PageLayout title={`Edit SSI - ${ssi?.lei ?? ''} / ${ssi?.currency ?? ''}`}>
       <div style={{ maxWidth: 560 }}>
         <div style={CARD}>
           {error && (
@@ -99,7 +99,7 @@ export function SsiEditPage({ id }: { id: string }) {
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button onClick={handleSave} disabled={saving} style={BTN_PRIMARY}>
-              {saving ? 'Saving遯ｶ・ｦ' : 'Save'}
+              {saving ? 'Saving...' : 'Save'}
             </button>
             <button onClick={() => router.push('/ssis')} style={BTN_SECONDARY}>
               Cancel

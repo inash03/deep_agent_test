@@ -80,7 +80,7 @@ export function SettingsPage() {
   return (
     <PageLayout title="Settings">
       {loading ? (
-        <p style={{ color: COLOR.textMuted }}>Loading遯ｶ・ｦ</p>
+        <p style={{ color: COLOR.textMuted }}>Loading...</p>
       ) : (
         <div style={{ ...CARD, maxWidth: 600 }}>
           {error && (
@@ -97,7 +97,7 @@ export function SettingsPage() {
                   <label style={LABEL}>{TRIGGER_LABELS[key]}</label>
                   <ToggleButton value={s.value} onChange={v => handleChange(key, v)} saving={saving === key} />
                   <p style={{ marginTop: '0.4rem', fontSize: '0.8rem', color: COLOR.textMuted }}>{TRIGGER_DESCS[key]}</p>
-                  {saving === key && <p style={{ marginTop: '0.3rem', fontSize: '0.8rem', color: COLOR.primary }}>Saving遯ｶ・ｦ</p>}
+                  {saving === key && <p style={{ marginTop: '0.3rem', fontSize: '0.8rem', color: COLOR.primary }}>Saving...</p>}
                 </div>
               )
             })}

@@ -42,7 +42,7 @@ export function SsiListPage() {
         <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', color: COLOR.textMuted, marginBottom: 2 }}>LEI</label>
-            <input style={INPUT} value={filterLei} onChange={e => setFilterLei(e.target.value)} placeholder="Search LEI遯ｶ・ｦ" />
+            <input style={INPUT} value={filterLei} onChange={e => setFilterLei(e.target.value)} placeholder="Search LEI..." />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', color: COLOR.textMuted, marginBottom: 2 }}>Type</label>
@@ -60,7 +60,7 @@ export function SsiListPage() {
 
       <div style={CARD}>
         {loading ? (
-          <p style={{ color: COLOR.textMuted }}>Loading遯ｶ・ｦ</p>
+          <p style={{ color: COLOR.textMuted }}>Loading...</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
           <table style={TABLE}>

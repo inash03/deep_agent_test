@@ -55,14 +55,14 @@ export function CostPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <PageLayout title="LLM Cost"><p style={{ color: COLOR.textMuted }}>Loading遯ｶ・ｦ</p></PageLayout>
+  if (loading) return <PageLayout title="LLM Cost"><p style={{ color: COLOR.textMuted }}>Loading...</p></PageLayout>
   if (error || !summary) return <PageLayout title="LLM Cost"><p style={{ color: COLOR.danger }}>{error || 'No data'}</p></PageLayout>
 
   const avgCost = summary.total_runs > 0 ? summary.total_cost_usd / summary.total_runs : 0
 
   return (
     <PageLayout title="LLM Cost">
-      {/* 隨渉隨渉 Summary cards 隨渉隨渉 */}
+      {/* Summary cards */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
         <StatCard label="Total Cost" value={fmt(summary.total_cost_usd)} />
         <StatCard label="Total Runs" value={String(summary.total_runs)} sub={`${summary.total_calls} LLM calls`} />
@@ -72,7 +72,7 @@ export function CostPage() {
       </div>
 
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-        {/* 隨渉隨渉 By agent 隨渉隨渉 */}
+        {/* By agent */}
         <div style={{ ...CARD, flex: '1 1 260px' }}>
           <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: COLOR.text }}>By Agent</h3>
           <table style={TABLE}>
@@ -100,7 +100,7 @@ export function CostPage() {
           </table>
         </div>
 
-        {/* 隨渉隨渉 By model 隨渉隨渉 */}
+        {/* By model */}
         <div style={{ ...CARD, flex: '1 1 260px' }}>
           <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: COLOR.text }}>By Model</h3>
           <table style={TABLE}>
@@ -126,7 +126,7 @@ export function CostPage() {
           </table>
         </div>
 
-        {/* 隨渉隨渉 Daily breakdown 隨渉隨渉 */}
+        {/* Daily breakdown */}
         <div style={{ ...CARD, flex: '2 1 340px' }}>
           <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: COLOR.text }}>Daily Cost (last 30 days)</h3>
           {summary.daily_costs.length === 0 ? (
@@ -156,7 +156,7 @@ export function CostPage() {
         </div>
       </div>
 
-      {/* 隨渉隨渉 Recent log entries 隨渉隨渉 */}
+      {/* Recent log entries */}
       <div style={CARD}>
         <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: COLOR.text }}>Recent LLM Calls (latest 100)</h3>
         {logs.length === 0 ? (
