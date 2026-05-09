@@ -1,132 +1,87 @@
 # Task List
 
-Task state = section position. No checkbox marks.
-Transitions: Backlog → In Progress (before coding) → Done (after commit).
-Max 1 task in In Progress at a time.
-Completed tasks are archived in `docs/tasks_done.md`.
+Task state is represented by section position. Do not use checkbox marks for
+state. Keep at most one task in `In Progress`.
 
----
+Completed tasks are archived in `docs/tasks_done.md`.
 
 ## In Progress
 
-
----
-
 ## Backlog
 
-#### Phase 40 — EventPending ステータス時の Triage ボタン非活性化
+### Phase 40 - Disable triage buttons while an event is pending
 
-**目的:** `EventPending` ステータスの取引に対して FO Triage・BO Triage をマニュアル実行できないよう、
-`Start FO Triage` / `Start BO Triage` ボタンを disabled にする。
+Goal: prevent manual FO/BO triage from starting while a trade is in
+`EventPending`.
 
-**修正内容:**
-- `frontend/src/pages/TradeDetailPage.tsx` の Triage 起動ボタンに
-  `workflow_status === 'EventPending'` のときは `disabled` 属性を付与
-- ボタン非活性時はツールチップ等で理由を表示（例: `"Cannot start triage while event is pending"`）
+Scope:
 
----
+- Update the trade detail screen to disable `Start FO Triage` and
+  `Start BO Triage` when `workflow_status === "EventPending"`.
+- Show a concise tooltip or disabled-state reason such as
+  `Cannot start triage while an event is pending`.
 
-#### Phase 42 — BO Triage 500 エラー調査
+### Phase 42 - Investigate occasional BO triage 500 errors
 
-**目的:** `POST /api/v1/trades/{trade_id}/bo-triage` が稀に 500 Internal Server Error を返すケースを調査・修正する。
+Goal: identify and fix cases where `POST /api/v1/trades/{trade_id}/bo-triage`
+returns `500 Internal Server Error`.
 
-**既知情報:**
-- 再現手順は未確立（ユーザーが再現方法を確立次第共有予定）
-- 発生確認取引: TRD-009
-- 発生タイミング: "Start BO Triage" ボタン押下時
+Known context:
 
-**調査観点:**
-- バックエンドログで例外スタックトレースを確認
-- `bo_triage.py` の use_case.start() 内での未ハンドル例外の有無
-- DB 接続・MemorySaver 状態の整合性
-- レートリミット（5/minute）への抵触有無
+- One candidate reproduction trade is `TRD-009`.
+- The error appears when pressing `Start BO Triage`.
 
----
+Investigation points:
 
-#### Phase 36 — FO/BO エージェントのツール一覧確認画面
+- Backend logs and stack traces.
+- `bo_triage.py` use case startup path.
+- DB connection and LangGraph checkpoint state.
+- LLM/API rate limit handling.
 
-**目的:** FO エージェントと BO エージェントがそれぞれ利用できるツールを一覧で確認できる画面を作成する。
+### Phase 36 - Agent tool overview page
 
-**Frontend:**
-- `frontend/src/pages/AgentToolsPage.tsx` 新規作成
-  - FO エージェント用ツール一覧テーブル（ツール名・説明・HITL 対象か否か）
-  - BO エージェント用ツール一覧テーブル（同上）
-  - NavBar に "Agent Tools" リンク追加
+Goal: provide an operator-facing page that lists tools available to FO and BO
+agents.
 
-**Backend:**
-- `GET /api/v1/agent-tools` エンドポイント追加
-  - FO/BO エージェントが保持するツール定義（name, description, is_hitl）を返却
+Frontend:
 
----
+- Add an Agent Tools page.
+- Display FO and BO tool tables with name, description, and HITL flag.
+- Add navigation to the page.
 
-#### Phase 28 — 取引入力画面：Counterparty 検索モーダル
+Backend:
 
-**目的:** 取引入力フォームの Counterparty 選択をプルダウンからモーダル検索に変更する。
-現状はプルダウンに全件ロードしているため、件数が増えると使いにくい。
+- Add `GET /api/v1/agent-tools`.
+- Return tool metadata for FO/BO agents.
 
-**Frontend:**
-- `frontend/src/pages/TradeInputPage.tsx` 更新
-  - Counterparty フィールドを `<select>` から「選択済み表示 + 変更ボタン」に変更
-  - ボタン押下でモーダルを開く
-  - モーダル内: 名前前方一致・LEI 部分一致などで検索 → 結果一覧から1件選択
-  - 選択後モーダルを閉じ、フォームに LEI + 名前を反映
-- API: `GET /api/v1/counterparties?name=<prefix>&lei=<partial>` を活用（既存エンドポイント）
+### Phase 28 - Counterparty search modal for trade creation
 
----
+Goal: replace the trade input counterparty dropdown with a searchable modal.
 
-#### Phase 12 — MCP Server Externalization（低優先度）
+Frontend:
 
-- `tools.py` の tool 実装を MCP サーバとして外部化
-- LangGraph agent を MCP クライアントとして接続するよう変更
-- MCPサーバのDockerコンテナ化
-- MCPサーバの認証・認可設計
+- Show selected counterparty as LEI + name.
+- Open a modal for counterparty search.
+- Support name prefix and partial LEI search.
+- Select one result and write it back to the form.
 
----
+Backend:
 
-#### Phase 13 — deepagents版（Future）
+- Reuse or extend `GET /api/v1/counterparties` filtering.
 
-> LangGraph版完成後に実装。同じユースケースを deepagents で実装し、
-> コード量・HITL API・ツール管理の違いを比較する。
+### Future - Externalize more tools through MCP
 
-- Add `deepagents>=0.5.0a4` and `langchain>=1.2.15` to `pyproject.toml`
-- Implement `build_deep_graph()` (`src/infrastructure/agent_deep.py`)
-- Implement `TriageDeepSTPFailureUseCase` (`src/infrastructure/triage_use_case_deep.py`)
-- Implement `POST /api/v1/triage/deep` + resume endpoint (`src/presentation/router_deep.py`)
-- Add `docs/comparison.md` — LangGraph vs deepagents comparison
+Goal: evaluate which additional LangGraph tools should become MCP-backed
+external services.
 
----
+Considerations:
 
-#### Phase 21 — GCP read-only IAM ロールと MCP 連携（低優先度・保留）
+- Tool ownership and security.
+- Local fallback behavior.
+- Cloud Run deployment shape.
+- Observability and retry behavior.
 
-> **保留理由**: Web版 Claude Code は Anthropic の VM 上で動作するため、GCP サービスアカウントキーを
-> そこに置くことはセキュリティ上好ましくない。
-> デスクトップ版 Claude Code を使う環境が整ったタイミングで再検討する。
+### Future - Evaluate deepagents
 
-- GCP サービスアカウント `claude-reader` 作成済み
-  - 付与ロール: `roles/compute.viewer`, `roles/logging.viewer`, `roles/monitoring.viewer`, `roles/run.viewer`
-- 残り作業: `~/.claude/settings.json` に `GOOGLE_APPLICATION_CREDENTIALS` を設定（デスクトップ版環境で実施）
-
----
-
-#### Phase 23 — フロントエンドを Firebase Hosting に移行（低優先度）
-
-> Phase 20（Cloud Run 移行）と Phase 22（CI/CD）完了後に検討。
-
-- Firebase プロジェクトを作成（GCP プロジェクトと連携可能）
-- `firebase.json` と `.firebaserc` を追加
-- SPA ルーティング対応: `firebase.json` に `"rewrites": [{"source": "**", "destination": "/index.html"}]` を設定
-- CI/CD への組み込み: GitHub Actions に `firebase-action/deploy` ステップを追加
-
----
-
-#### Ops — GCP 静的外部 IP の予約（人間作業）
-
-> VM を再起動するたびに外部 IP が変わる問題の恒久対策。
-
-```bash
-gcloud compute addresses create stp-agent-ip --region=us-central1
-gcloud compute instances add-access-config free-dev-vm \
-  --access-config-name="External NAT" --address=<IP> --zone=us-central1-a
-```
-
-完了後は `.env` の `VITE_API_URL` と `CORS_ORIGINS` を新しい固定 IP に更新する。
+Goal: compare the current LangGraph implementation with a deepagents-based
+implementation after the current workflow stabilizes.
