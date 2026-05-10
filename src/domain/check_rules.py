@@ -22,6 +22,17 @@ if TYPE_CHECKING:
 _IBAN_RE = re.compile(r"^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$")
 
 
+def _iban_mod97_valid(iban: str) -> bool:
+    rearranged = iban[4:] + iban[:4]
+    digits = ""
+    for char in rearranged:
+        if char.isdigit():
+            digits += char
+        else:
+            digits += str(ord(char) - ord("A") + 10)
+    return int(digits) % 97 == 1
+
+
 # ---------------------------------------------------------------------------
 # Rule type definitions
 # ---------------------------------------------------------------------------
@@ -216,7 +227,9 @@ def _iban_format_valid(
     except ValueError as exc:
         return False, f"IBAN {ssi.iban!r} failed checksum/structure validation: {exc}"
     except ImportError:
-        return True, f"IBAN {ssi.iban!r} has valid format (schwifty unavailable, checksum not verified)"
+        if not _iban_mod97_valid(ssi.iban):
+            return False, f"IBAN {ssi.iban!r} failed checksum validation"
+        return True, f"IBAN {ssi.iban!r} is valid (local mod-97 checksum verified)"
 
 
 def _risk_limit_check(
