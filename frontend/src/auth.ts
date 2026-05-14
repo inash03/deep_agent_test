@@ -30,14 +30,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
-        if (username !== expectedUser || !password) {
-          console.warn('Credentials sign-in rejected: username mismatch or empty password.')
-          return null
-        }
-
-        const ok = await bcrypt.compare(password, passwordHash)
-        if (!ok) {
-          console.warn('Credentials sign-in rejected: password hash comparison failed.')
+        // Always run bcrypt.compare to prevent timing-based username enumeration
+        const ok = await bcrypt.compare(password || '', passwordHash)
+        if (username !== expectedUser || !password || !ok) {
+          console.warn('Credentials sign-in rejected.')
           return null
         }
 
