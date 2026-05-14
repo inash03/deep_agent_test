@@ -118,3 +118,70 @@ def test_trade_event_rejects_unknown_event_type_before_db_access() -> None:
 
     assert exc.value.status_code == 422
     assert "event_type must be AMEND or CANCEL" in str(exc.value.detail)
+
+
+# ---------------------------------------------------------------------------
+# Positive / happy-path schema tests
+# ---------------------------------------------------------------------------
+
+
+def test_trade_create_request_accepts_valid_input() -> None:
+    """FR-01 happy path: a well-formed trade request is accepted without error."""
+    body = TradeCreateRequest(
+        trade_date=date(2026, 5, 1),
+        value_date=date(2026, 5, 5),
+        counterparty_lei="254900CUSTBANK000001",
+        instrument_id="EURUSD",
+        currency="USD",
+        amount=Decimal("1000000"),
+        fx_rate=Decimal("1.10000000"),
+    )
+    assert body.amount == Decimal("1000000")
+    assert body.currency == "USD"
+    assert body.instrument_id == "EURUSD"
+
+
+def test_cancel_event_request_does_not_require_amended_fields() -> None:
+    """FR-08: CANCEL events carry no field amendments."""
+    body = TradeEventCreateRequest(
+        event_type="CANCEL",
+        reason="Trade cancelled by counterparty",
+        requested_by="fo_user_01",
+    )
+    assert body.event_type == "CANCEL"
+    assert body.amended_fields is None
+
+
+def test_amend_event_request_with_amended_fields_is_valid() -> None:
+    """FR-08: AMEND events with amended_fields pass schema validation."""
+    body = TradeEventCreateRequest(
+        event_type="AMEND",
+        reason="Correct value date",
+        requested_by="fo_user_01",
+        amended_fields={"value_date": "2026-05-10", "fx_rate": "1.09250000"},
+    )
+    assert body.amended_fields == {"value_date": "2026-05-10", "fx_rate": "1.09250000"}
+
+
+def test_trade_out_amount_and_fx_rate_are_strings() -> None:
+    """Amount and fx_rate serialize as strings to preserve decimal precision."""
+    from src.presentation.schemas import TradeOut
+
+    out = TradeOut(
+        trade_id="TRD-001",
+        version=1,
+        workflow_status="Initial",
+        is_current=True,
+        counterparty_lei="254900CUSTBANK000001",
+        instrument_id="EURUSD",
+        currency="USD",
+        amount="1000000.00000000",
+        fx_rate="1.10000000",
+        trade_type="Spot",
+        value_date=date(2026, 5, 5),
+        trade_date=date(2026, 5, 1),
+        input_date=date(2026, 5, 1),
+        settlement_currency="USD",
+    )
+    assert isinstance(out.amount, str)
+    assert isinstance(out.fx_rate, str)
