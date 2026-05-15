@@ -9,6 +9,22 @@ Completed tasks are archived in `docs/tasks_done.md`.
 
 ## Backlog
 
+### Security - Upgrade Next.js to fix middleware bypass vulnerability
+
+Goal: resolve GHSA-26hh-7cqf-hhc6 (high severity), which allows crafted
+segment-prefetch requests to bypass Next.js middleware including the
+login rate-limiter added in this branch.
+
+Scope:
+
+- Run `npm audit fix` (or manually bump `next` to the patched version)
+  inside `frontend/`.
+- Verify the rate-limiting middleware still compiles and behaves correctly
+  after the upgrade.
+- Run `npm run lint` and `npm run build` to confirm no regressions.
+
+Reference: https://github.com/advisories/GHSA-26hh-7cqf-hhc6
+
 ### Phase 40 - Disable triage buttons while an event is pending
 
 Goal: prevent manual FO/BO triage from starting while a trade is in
