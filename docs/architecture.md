@@ -89,6 +89,9 @@ The frontend uses Next.js App Router.
 | Login | `frontend/src/app/login/page.tsx` | Auth.js credentials sign-in |
 | Auth route | `frontend/src/app/api/auth/[...nextauth]/route.ts` | Auth.js HTTP handlers |
 | BFF route | `frontend/src/app/api/backend/[...path]/route.ts` | Authenticated FastAPI proxy |
+| Middleware | `frontend/src/middleware.ts` | IP-based rate limiting on login endpoint |
+| Auth config | `frontend/src/auth.ts` | Auth.js provider, bcrypt verify, account lockout |
+| Account lockout | `frontend/src/account-lockout.ts` | Per-username failure counter backed by Upstash Redis |
 | Screens | `frontend/src/screens/` | Migrated client UI screens |
 | API client | `frontend/src/api/` | Browser calls to `/api/backend/*` |
 
@@ -114,19 +117,41 @@ Routes:
 
 ## Authentication and BFF
 
-Auth.js uses a Credentials provider with one administrator account during the
-initial migration phase.
+Auth.js uses a Credentials provider with one administrator account.
+The login flow passes through two independent security layers before the
+session is issued.
+
+```
+Browser POST /api/auth/callback/credentials
+    │
+    ▼
+[middleware.ts] ── IP rate limit (5 req / 10 min / IP, Upstash Redis)
+    │ 429 → reject immediately
+    ▼
+[auth.ts authorize()]
+    ├─ Account lockout check (5 failures → 15 min lock, Upstash Redis)
+    │      locked → return null
+    ├─ bcrypt.compare() — always runs to prevent timing-based enumeration
+    │      mismatch → recordFailure() → return null
+    └─ match → recordSuccess() (reset counter) → issue JWT session
+```
 
 | Variable | Used by | Purpose |
 | --- | --- | --- |
 | `AUTH_SECRET` | Auth.js | Signs/encrypts and verifies session/JWT data |
 | `APP_USERNAME` | Auth.js credentials provider | Expected login username |
 | `APP_PASSWORD_HASH` | Auth.js credentials provider | bcrypt hash of the expected password |
+| `UPSTASH_REDIS_REST_URL` | middleware, account-lockout | Upstash Redis endpoint for rate limiting and lockout |
+| `UPSTASH_REDIS_REST_TOKEN` | middleware, account-lockout | Upstash Redis auth token |
 | `BACKEND_API_URL` | Next.js BFF | FastAPI base URL |
 | `BACKEND_API_KEY` | Next.js BFF | Value forwarded as `X-API-Key` |
 
 `AUTH_SECRET` is not sent to FastAPI. It protects Auth.js session material on
 the Next.js side only.
+
+Both the rate limiter and the lockout module fail open: if the Upstash
+environment variables are absent the application behaves as if no limit is
+configured. This keeps local development and CI environments unaffected.
 
 ## Backend Architecture
 
@@ -249,6 +274,8 @@ Alembic owns schema migrations under `alembic/versions`.
 - `AUTH_SECRET`
 - `APP_USERNAME`
 - `APP_PASSWORD_HASH`
+- `UPSTASH_REDIS_REST_URL` — required for IP rate limiting and account lockout
+- `UPSTASH_REDIS_REST_TOKEN` — required for IP rate limiting and account lockout
 - `NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA` is provided by Vercel and may be shown in
   the UI as a short commit identifier.
 
