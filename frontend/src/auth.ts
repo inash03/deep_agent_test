@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
+import { getLockoutStatus, recordFailure, recordSuccess } from './account-lockout'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
@@ -30,17 +31,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
-        if (username !== expectedUser || !password) {
-          console.warn('Credentials sign-in rejected: username mismatch or empty password.')
+        // Check account lockout before verifying credentials
+        const lockout = await getLockoutStatus(username)
+        if (lockout.locked) {
+          const minutes = Math.ceil(lockout.remainingSeconds / 60)
+          console.warn(`Credentials sign-in rejected: account locked for ${minutes} more minute(s).`)
           return null
         }
 
-        const ok = await bcrypt.compare(password, passwordHash)
-        if (!ok) {
-          console.warn('Credentials sign-in rejected: password hash comparison failed.')
+        // Always run bcrypt.compare to prevent timing-based username enumeration
+        const ok = await bcrypt.compare(password || '', passwordHash)
+        if (username !== expectedUser || !password || !ok) {
+          await recordFailure(username)
+          console.warn('Credentials sign-in rejected.')
           return null
         }
 
+        await recordSuccess(username)
         return {
           id: expectedUser,
           name: expectedUser,

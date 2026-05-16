@@ -43,6 +43,8 @@ approval, and a Next.js business UI.
 | FR-16 | Deploy backend and MCP services through GitHub Actions to Cloud Run | Implemented |
 | FR-17 | Provide English UI text except for the optional Japanese Home view | Implemented |
 | FR-18 | Display frontend version and short commit SHA | Implemented |
+| FR-19 | Rate-limit login endpoint to 5 requests per 10 minutes per source IP | Implemented |
+| FR-20 | Lock account for 15 minutes after 5 consecutive failed login attempts | Implemented |
 
 ## Non-Functional Requirements
 
@@ -52,6 +54,9 @@ approval, and a Next.js business UI.
 | Security | Auth.js must protect business pages and BFF API routes. |
 | Security | FastAPI protected endpoints must validate `X-API-Key` when configured. |
 | Security | Secrets must live in environment variables, Vercel secrets, GitHub secrets, or Cloud Run secrets. |
+| Security | The login endpoint must be protected by IP-based rate limiting to mitigate distributed brute-force attacks. |
+| Security | Accounts must be locked for a fixed period after repeated authentication failures to mitigate per-account brute-force and dictionary attacks. |
+| Security | Password verification must run unconditionally on every login attempt to prevent timing-based username enumeration. |
 | Auditability | Triage decisions, HITL approvals, and tool calls should be persisted where relevant. |
 | Maintainability | Backend code should keep presentation, domain, and infrastructure concerns separated. |
 | Maintainability | Frontend routes should follow Next.js App Router conventions. |
@@ -68,6 +73,42 @@ approval, and a Next.js business UI.
 - `APP_PASSWORD_HASH` must be a bcrypt hash, not a plaintext password.
 - `AUTH_SECRET` is required in production and is used by Auth.js for session/JWT
   protection.
+
+### Brute-Force and Dictionary Attack Defences
+
+Two independent layers protect the login endpoint against automated attacks:
+
+**Layer 1 — IP-based rate limiting (Next.js middleware)**
+
+- Applies to `POST /api/auth/callback/credentials`.
+- Allows at most 5 requests per 10-minute sliding window per source IP.
+- Implemented with `@upstash/ratelimit` and Upstash Redis.
+- Returns HTTP 429 with a `Retry-After` header when the limit is exceeded.
+- Falls back to allow-all if `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`
+  are not set (safe for local development).
+
+This layer limits the throughput of attacks from a single IP but can be
+partially circumvented by distributing requests across many source addresses.
+
+**Layer 2 — Account lockout (Auth.js `authorize` callback)**
+
+- Tracks consecutive failures per username in Upstash Redis under the key
+  `auth:lockout:{username}`.
+- Locks the account for **15 minutes** after **5 consecutive failures**,
+  regardless of source IP.
+- Counter is reset to zero on a successful login.
+- Falls back to allow-all if Redis is not configured.
+
+Because the lockout key is keyed to the username rather than the IP, it
+remains effective against distributed attacks that rotate source addresses.
+A legitimate user who is locked out can wait 15 minutes or delete the Redis
+key manually (`DEL auth:lockout:{username}`) via the Upstash console.
+
+**Layer 3 — Timing-attack mitigation**
+
+- `bcrypt.compare` is called on every login attempt, even when the submitted
+  username does not match the expected value. This prevents an attacker from
+  inferring valid usernames by measuring response latency.
 
 ## API Requirements
 
