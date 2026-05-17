@@ -85,6 +85,88 @@ Backend:
 
 - Reuse or extend `GET /api/v1/counterparties` filtering.
 
+### Learning - LLM evaluation pipeline (PromptFoo / Ragas)
+
+Goal: introduce quantitative evaluation of agent judgment quality and RAG
+retrieval accuracy.
+
+Scope:
+
+- Define a golden dataset of FO/BO triage cases with expected outcomes.
+- Integrate PromptFoo to regression-test prompt changes and tool selection
+  in CI.
+- Integrate Ragas to measure RAG pipeline quality: context recall, answer
+  relevancy, faithfulness.
+- Document evaluation metrics and thresholds in `docs/testing.md`.
+
+References:
+- https://promptfoo.dev
+- https://docs.ragas.io
+
+### Learning - LangGraph checkpointing and streaming
+
+Goal: deepen LangGraph usage by adding persistent checkpoints and real-time
+streaming to the frontend.
+
+Scope:
+
+- Replace the current in-memory state with `AsyncPostgresSaver` (Neon) so
+  interrupted triage runs can be resumed.
+- Expose `astream_events` from FO/BO triage endpoints and pipe the event
+  stream to the frontend via Server-Sent Events.
+- Show live agent step progress on the trade detail screen.
+
+### Learning - Hybrid RAG (vector + full-text) with reranking
+
+Goal: improve retrieval quality beyond pure vector search.
+
+Scope:
+
+- Add a PostgreSQL `tsvector` full-text search index to `rag_chunks`.
+- Implement a hybrid retriever that combines pgvector cosine similarity and
+  `ts_rank` scores (RRF or weighted sum).
+- Evaluate adding a cross-encoder reranker (e.g. `cross-encoder/ms-marco`
+  or Cohere Rerank) as a second-stage filter.
+- Compare retrieval quality before and after using the Ragas evaluation
+  pipeline.
+
+### Learning - Observability with OpenTelemetry and Langfuse (self-hosted)
+
+Goal: add LLM-aware distributed tracing without sending sensitive trade data
+to a third-party SaaS.
+
+Background:
+LangSmith is a hosted service that receives full LLM trace payloads. For a
+financial application, exporting trade and counterparty data to an external
+vendor is a compliance concern. Langfuse is open-source and can be deployed
+to Cloud Run inside the same GCP project, keeping all trace data within the
+existing trust boundary. OpenTelemetry is the vendor-neutral wire protocol,
+so the instrumentation code is not tied to Langfuse and can be swapped later.
+
+Scope:
+
+- Deploy Langfuse (Docker image) as a Cloud Run service backed by the
+  existing Neon PostgreSQL instance.
+- Instrument the FastAPI backend and LangGraph nodes with the OpenTelemetry
+  SDK and the Langfuse exporter.
+- Capture: node name, token counts, latency, tool calls, and triage outcome
+  per run.
+- Verify that no data leaves the GCP project boundary.
+
+### Learning - Multi-agent patterns (Supervisor / Orchestrator)
+
+Goal: extend the current two-agent (FO/BO) design toward a multi-agent
+architecture, and compare with deepagents.
+
+Scope:
+
+- Implement a lightweight Supervisor agent that delegates to FO and BO
+  subgraphs as LangGraph subgraphs.
+- Add a third agent role (e.g. audit or compliance checker) to exercise
+  cross-agent handoff.
+- Compare the LangGraph implementation with a deepagents-based equivalent
+  (see "Evaluate deepagents" below) on the same workflow.
+
 ### Future - Externalize more tools through MCP
 
 Goal: evaluate which additional LangGraph tools should become MCP-backed
