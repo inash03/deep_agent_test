@@ -14,6 +14,27 @@ decide on Spectral / schemathesis.
 
 ## Recent Log
 
+### 2026-06-13 - First full Phase 2 lap: max settlement tenor FO rule (#52)
+
+Branch: `claude/enterprise-ai-dev-process-w53dsl` (PR #51, Issue #52)
+
+Drove one real feature through the full DDD -> BDD -> SDD -> TDD pipeline using
+the phase skills, one commit per phase:
+
+- **DDD** (`0045178`): added "Settlement Tenor" / "Maximum Settlement Tenor" to
+  `docs/domain/glossary.md`; no model/context-map structure change.
+- **BDD** (`1ac84d1`): `features/fo_max_tenor.feature` + step defs (red until TDD).
+- **SDD** (`e90cc8a`): `MAX_SETTLEMENT_TENOR_DAYS = 730`, warning severity,
+  upper-bound only; `docs/specs/fo-value-date.md` updated and
+  `features/specs/fo_max_tenor.spec.feature` added. OpenAPI snapshot regenerated
+  with no diff — confirming no API contract change (drift test still green).
+- **TDD** (`abcafcd`): unit test first (red, ImportError), then implemented
+  `_value_date_within_max_tenor` and registered it in `FO_RULES`.
+
+Verification: `uv run pytest` -> 194 passed, 9 deselected (was 184). New code is
+ruff-clean (the 2 remaining F541 findings are pre-existing stubs in the lint
+backlog). Backend-only change; frontend build not applicable.
+
 ### 2026-06-13 - GitHub integration + Phase 2 (SDD) foundation
 
 Branch: `claude/enterprise-ai-dev-process-w53dsl` (PR #51)

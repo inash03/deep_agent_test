@@ -29,8 +29,11 @@ Done so far:
 
 Remaining:
 
-- Apply the SDD artifact set to one real new feature end-to-end via `/sdd-spec`.
 - Decide whether to add Spectral lint and/or schemathesis (integration suite).
+
+Done — first full lap (Issue #52): the max-settlement-tenor FO rule was driven
+end-to-end through DDD -> BDD -> SDD -> TDD using the phase skills, one commit
+per phase. This validated the pipeline on a real feature.
 
 Reference: `docs/ai-driven-development.md` §4 (SDD), §9; ADR-0003.
 
