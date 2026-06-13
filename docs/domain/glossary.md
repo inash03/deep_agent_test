@@ -28,6 +28,8 @@ domain code (`src/domain/`) and `docs/architecture.md`.
 | **LEI** | Legal Entity Identifier — the counterparty identifier. |
 | **Reference Data** | Instrument metadata (description, asset class, active flag). |
 | **Value Date** | The settlement date of a trade; subject to business-day and validity rules. |
+| **Settlement Tenor** | The span between a trade's trade date and its value date. |
+| **Maximum Settlement Tenor** | The upper bound on settlement tenor that the FO check tolerates; a value date beyond it is flagged as a likely data-entry error (maps to the `INVALID_VALUE_DATE` root cause). |
 
 ## Trade workflow status
 
