@@ -19,15 +19,17 @@ highest-leverage phase for non-frontier models: thicker specs mean less rework.
 
 ## What to produce
 
-1. **API spec** — the endpoint contract (OpenAPI-style YAML or a Markdown table
-   of method, path, request schema, response schema, status codes, auth). The
-   spec is canonical; implementation follows it.
-2. **Data-model spec** — Markdown describing tables/columns/constraints, paired
-   with the intended Alembic migration outline.
+1. **API contract** — `docs/api/openapi.json`. After changing endpoints/schemas,
+   regenerate with `uv run python scripts/export_openapi.py`; the diff is the
+   reviewable contract. `tests/unit/test_openapi_contract.py` fails on drift.
+2. **Data-model spec** — `docs/specs/<name>.md`: tables/columns/constraints and
+   error mapping, paired with the intended Alembic migration outline. Follow the
+   pattern in `docs/specs/fo-value-date.md`.
 3. **`features/specs/<name>.spec.feature`** — the BDD feature taken down to an
    implementable granularity: edge cases, error cases, validation failures,
-   auth failures, and NFR/observability acceptance criteria. This is the direct
-   input to `/tdd-implement`.
+   auth failures, and NFR/observability acceptance criteria. Bind step
+   definitions in `tests/bdd/` (see `tests/bdd/test_fo_value_date_spec.py`).
+   This is the direct input to `/tdd-implement`.
 
 ## Method
 

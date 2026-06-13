@@ -50,9 +50,11 @@ full process, artifacts, ownership, and staged rollout are defined in
 - Phase skills under `.claude/skills/` drive each phase: `/ddd-update`,
   `/bdd-feature`, `/sdd-spec`, `/tdd-implement`.
 
-Rollout status (see `docs/ai-driven-development.md` §9): **Phase 1 in
-progress** — executable Gherkin, ADRs, domain docs, and phase skills are
-established. SDD contract tooling (Phase 2) is not yet active.
+Rollout status (see `docs/ai-driven-development.md` §9): **Phase 1 done,
+Phase 2 in progress**. SDD is active: the API contract is committed at
+`docs/api/openapi.json` and verified by `tests/unit/test_openapi_contract.py`
+(regenerate with `uv run python scripts/export_openapi.py`). Detailed scenarios
+live in `features/specs/*.spec.feature`; data-model specs in `docs/specs/`.
 
 ## Mandatory TDD Workflow
 

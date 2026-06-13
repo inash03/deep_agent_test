@@ -255,9 +255,13 @@ out in three phases. Status of each phase is tracked in `docs/progress.md`.
 
 | Phase | Adds | Status |
 | --- | --- | --- |
-| Phase 1 | Executable Gherkin (BDD), ADRs, domain docs (glossary/model/context map), the phase skills, and the move toward Issue-driven tasks | In progress |
-| Phase 2 | SDD: OpenAPI as the canonical contract, contract tests in CI, `spec.feature` | Planned |
-| Phase 3 | Per-phase subagents, AI code review wired into CI, model routing, managed settings | Planned |
+| Phase 1 | Executable Gherkin (BDD), ADRs, domain docs (glossary/model/context map), the phase skills, Issue/PR templates + CODEOWNERS, and a CI suite | Done |
+| Phase 2 | SDD: committed OpenAPI contract (`docs/api/openapi.json`) with a drift test, data-model specs in `docs/specs/`, and `features/specs/*.spec.feature` executed in CI | In progress |
+| Phase 3 | Per-phase subagents, AI code review wired into CI, model routing, managed settings; optional Spectral lint and schemathesis contract fuzzing | Planned |
+
+Phase 2 mechanics (see ADR-0003): the API contract is committed and verified by
+`tests/unit/test_openapi_contract.py`, which fails on any drift from the live
+FastAPI app. Regenerate it with `uv run python scripts/export_openapi.py`.
 
 The biggest risk is **document rot**. The governing rule is one line:
 **do not create a specification that CI does not execute or verify.** Execute

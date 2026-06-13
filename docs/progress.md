@@ -6,13 +6,45 @@
 
 **Last updated:** 2026-06-13
 
-**Current focus:** Establish the team-scale AI-driven development process
-(DDD/BDD/SDD/TDD) — Phase 1.
+**Current focus:** AI-driven development process — Phase 1 done, Phase 2 (SDD)
+in progress.
 
-**Next:** Phase 2 — adopt SDD: OpenAPI as the canonical contract, contract
-tests in CI, and `features/specs/*.spec.feature`.
+**Next:** Apply the full SDD artifact set to one real new feature end-to-end;
+decide on Spectral / schemathesis.
 
 ## Recent Log
+
+### 2026-06-13 - GitHub integration + Phase 2 (SDD) foundation
+
+Branch: `claude/enterprise-ai-dev-process-w53dsl` (PR #51)
+
+GitHub integration (completing Phase 1):
+
+- `.github/ISSUE_TEMPLATE/feature.yml` + `config.yml`: feature Issue form with
+  the artifact checklist (one Issue = one feature = one branch = one session).
+- `.github/pull_request_template.md`: requires links to feature/spec/ADR and a
+  verification block.
+- `.github/CODEOWNERS`: routes `docs/domain/`, `docs/adr/`, `docs/api/`,
+  `docs/specs/`, `features/`, and `.claude/` to the architect/PM owner.
+
+Phase 2 (SDD) foundation:
+
+- `scripts/export_openapi.py` + `docs/api/openapi.json`: canonical API contract
+  snapshot (27 paths under `/api/v1/*`).
+- `tests/unit/test_openapi_contract.py`: drift test (fails if the live app
+  diverges from the committed contract) + well-formedness check.
+- `docs/specs/fo-value-date.md`: first data-model/rule spec.
+- `features/specs/fo_value_date.spec.feature` + `tests/bdd/test_fo_value_date_spec.py`:
+  detailed boundary scenarios (6, passing).
+- ADR-0003: OpenAPI snapshot + drift-test decision.
+- Updated `docs/ai-driven-development.md` rollout table, `CLAUDE.md` status, the
+  `/sdd-spec` skill, and `docs/tasks.md` (Phase 2 → In Progress).
+- `.github/workflows/ci.yml`: fixed to use `uv sync --extra dev` (the
+  `uv pip install --system` form failed on the externally-managed runner).
+
+Verification: `uv run pytest` → 184 passed, 9 deselected.
+
+### 2026-06-13 - AI-driven development process (Phase 1)
 
 ### 2026-06-13 - AI-driven development process (Phase 1)
 
