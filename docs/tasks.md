@@ -49,8 +49,10 @@ Done so far:
 
 Next (Tier 1, core domain + HITL), one Issue/branch/PR each:
 
-- FR-06 BO triage + HITL resume: BDD + spec.feature + characterization test for
-  the approval/rejection resume path (currently untested).
+- [done] FR-06 BO triage + HITL resume: BDD (`bo_triage_hitl.feature`),
+  spec.feature, data-model spec (`docs/specs/bo-triage-hitl.md`), and
+  approve/reject characterization tests (`tests/bdd/test_bo_triage_hitl.py`,
+  5 scenarios). Closed the previously-untested resume path.
 - FR-05 FO triage use-case: characterization tests + BDD/spec.
 - FR-07 triage persistence: repository/DB-layer tests.
 - FR-08 events: BDD feature + data-model spec (unit tests already strong).

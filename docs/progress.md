@@ -14,6 +14,26 @@ decide on Spectral / schemathesis.
 
 ## Recent Log
 
+### 2026-06-13 - Retrofit lap: FR-06 BO triage HITL resume
+
+Branch: `claude/enterprise-ai-dev-process-w53dsl` (PR #51)
+
+First Tier-1 brownfield retrofit lap through DDD -> BDD -> SDD, closing the
+previously-untested BO triage resume (approve/reject) path.
+
+- DDD: added "Triage Resume" to `docs/domain/glossary.md`.
+- BDD: `features/bo_triage_hitl.feature` (approve / reject business scenarios).
+- SDD: `features/specs/bo_triage_hitl.spec.feature` (AG01 boundary, outline) and
+  data-model/contract spec `docs/specs/bo-triage-hitl.md`. OpenAPI unchanged.
+- Tests: `tests/bdd/test_bo_triage_hitl.py` — 5 characterization scenarios
+  driving the real `BoTriageUseCase` with all boundaries mocked (no DB/LLM/
+  network). Approve executes the reactivate tool once + `action_taken=true`;
+  reject skips the tool + `action_taken=false`.
+- Updated coverage matrix (FR-06 now BDD/spec/data-model ✅), tasks.
+
+No production code changed (characterization of existing behavior).
+Verification: `uv run pytest` -> 199 passed, 9 deselected (was 194).
+
 ### 2026-06-13 - Brownfield retrofit: coverage matrix + retrospective ADRs
 
 Branch: `claude/enterprise-ai-dev-process-w53dsl` (PR #51)

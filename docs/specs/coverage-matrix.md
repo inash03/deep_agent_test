@@ -42,7 +42,7 @@ Legend: ✅ exists · ⚠️ partial · ❌ missing.
 | FR-03 | FO rule checks | ✅ `test_fo_rules`, `test_check_rules`, `test_fo_max_tenor` | ✅ | ✅ | ✅ | ✅ |
 | FR-04 | BO rule checks | ✅ `test_bo_rules` (pure fns) | ❌ | ❌ | ❌ | ✅ |
 | FR-05 | FO triage + HITL | ⚠️ routing/tools only; use-case untested | ❌ | ❌ | ❌ | ✅ |
-| FR-06 | BO triage + HITL | ✅ `test_determine_triage_path`, integ `test_hybrid_routing`; resume untested | ❌ | ❌ | ❌ | ✅ |
+| FR-06 | BO triage + HITL | ✅ `test_determine_triage_path`, integ `test_hybrid_routing`, `test_bo_triage_hitl` (resume approve/reject) | ✅ | ✅ | ✅ | ✅ |
 | FR-07 | Persist triage runs/steps | ⚠️ `test_entities` (domain only); repo/DB untested | ❌ | ❌ | ❌ | ✅ |
 | FR-08 | Amend/cancel events + versions | ✅ `test_trade_event_lifecycle` (17) | ❌ | ❌ | ❌ | ✅ |
 | FR-09 | Triage history | ❌ E2E smoke only | ❌ | ❌ | ❌ | ✅ |
@@ -61,7 +61,8 @@ Legend: ✅ exists · ⚠️ partial · ❌ missing.
 ## Priority tiers for retrofit
 
 **Tier 1 — core domain + HITL (highest risk).** FR-06 BO triage + HITL resume
-(complex, resume path untested), FR-05 FO triage use-case (untested),
+(**done** — `bo_triage_hitl.feature`, spec, and approve/reject characterization
+tests), FR-05 FO triage use-case (untested),
 FR-07 triage persistence (DB layer untested), FR-08 events (well unit-tested,
 needs BDD + data-model spec).
 
