@@ -169,6 +169,14 @@ npm run build
 - Backend and MCP services deploy through GitHub Actions to Cloud Run.
 - Frontend deploys through Vercel Git Integration.
 
+## AI-Driven Development Process
+
+This repository is adopting a team-scale DDD/BDD/SDD/TDD process defined in
+`docs/ai-driven-development.md` (read it before feature work). Decisions are
+recorded as ADRs in `docs/adr/`; domain vocabulary in `docs/domain/`; executable
+Gherkin in `features/` with step definitions in `tests/bdd/` (run by CI). Rollout
+is at Phase 1 (see section 9). Claude Code phase skills live in `.claude/skills/`.
+
 ## Documentation Language
 
 - `README.md` is Japanese.

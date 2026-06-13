@@ -2,16 +2,44 @@
 
 ## Current Status
 
-**Branch:** `claude/enhance-auth-security-YtqHg`
+**Branch:** `claude/enterprise-ai-dev-process-w53dsl`
 
-**Last updated:** 2026-05-15
+**Last updated:** 2026-06-13
 
-**Current focus:** Auth security hardening — brute-force / dictionary attack
-protection and documentation update.
+**Current focus:** Establish the team-scale AI-driven development process
+(DDD/BDD/SDD/TDD) — Phase 1.
 
-**Next:** Merge branch, then continue with the backlog in `docs/tasks.md`.
+**Next:** Phase 2 — adopt SDD: OpenAPI as the canonical contract, contract
+tests in CI, and `features/specs/*.spec.feature`.
 
 ## Recent Log
+
+### 2026-06-13 - AI-driven development process (Phase 1)
+
+Branch: `claude/enterprise-ai-dev-process-w53dsl`
+
+Added the DDD/BDD/SDD/TDD process for a 5–10 person team using AI agents.
+
+- `docs/ai-driven-development.md` (new): full process — artifacts, ownership,
+  agent control files, non-frontier-model strategy, and the staged rollout.
+- `docs/adr/` (new): ADR log with `README.md`, `0000-template.md`,
+  `0001-record-architecture-decisions.md`, and
+  `0002-adopt-ddd-bdd-sdd-tdd-process.md`.
+- `docs/domain/` (new): `glossary.md`, `model.md`, `context-map.md`, seeded
+  from `src/domain/` and `docs/architecture.md`.
+- `features/` (new): executable Gherkin. `fo_value_date_validation.feature`
+  with step definitions in `tests/bdd/test_fo_value_date_validation.py`
+  bound to the real FO value-date rules (3 scenarios, passing).
+- `.claude/skills/` (new): phase skills `ddd-update`, `bdd-feature`,
+  `sdd-spec`, `tdd-implement`.
+- `.github/workflows/ci.yml` (new): runs ruff + the default pytest suite
+  (unit + BDD) on PRs and `main`.
+- `pyproject.toml`: added `pytest-bdd==8.1.0` to dev dependencies.
+- `CLAUDE.md`: added an index section pointing to the new process and the
+  Phase 1 rollout status.
+
+Verification: `uv run pytest` → 176 passed, 9 deselected;
+`ruff check tests/bdd/` → clean.
 
 ### 2026-05-15 - Auth security hardening
 

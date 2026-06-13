@@ -5,9 +5,55 @@ state. Keep at most one task in `In Progress`.
 
 Completed tasks are archived in `docs/tasks_done.md`.
 
+> **Process note:** As part of the AI-driven development process
+> (`docs/ai-driven-development.md`), the source of truth for tasks is moving to
+> GitHub Issues / Projects (one Issue = one feature = one branch = one agent
+> session). This file is being demoted to an in-branch working note. New
+> feature work should be tracked as Issues, not added here.
+
 ## In Progress
 
 ## Backlog
+
+### Process Phase 2 - Adopt SDD (specification-driven design)
+
+Goal: make OpenAPI the canonical API contract and verify it in CI.
+
+Scope:
+
+- Generate/curate the OpenAPI spec for `/api/v1/*` and lint it (e.g. Spectral).
+- Add contract tests (e.g. schemathesis) so an OpenAPI diff must be accompanied
+  by updated tests; wire them into `.github/workflows/ci.yml`.
+- Introduce `features/specs/*.spec.feature` authored via the `/sdd-spec` skill.
+
+Reference: `docs/ai-driven-development.md` §4 (SDD), §9.
+
+### Process Phase 3 - Subagents, AI review, model routing
+
+Goal: complete the rollout.
+
+Scope:
+
+- Add `.claude/agents/` subagents (reviewer, researcher).
+- Wire AI code review (`code-review`, `security-review`) into CI.
+- Document model routing per phase and ship managed (org-level) settings with
+  hard prohibitions.
+
+Reference: `docs/ai-driven-development.md` §6, §7, §9.
+
+### CI - Clear ruff backlog and make lint blocking
+
+Goal: `ruff check .` passes repo-wide so the CI lint step can become blocking.
+
+Scope:
+
+- Resolve the existing ruff findings (mostly `E501` line length, plus some
+  `F401`/`I001`) across `src/` and `tests/`.
+- Once clean, remove `continue-on-error` from the `Lint (ruff, advisory)` step
+  in `.github/workflows/ci.yml`.
+
+Reference: introduced with the Phase 1 CI workflow on
+`claude/enterprise-ai-dev-process-w53dsl`.
 
 ### Security - Upgrade Next.js to fix middleware bypass vulnerability
 

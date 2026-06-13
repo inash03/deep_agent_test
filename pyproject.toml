@@ -35,6 +35,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest==9.0.2",
+    "pytest-bdd==8.1.0",
     "ruff==0.15.9",
     "mypy==1.20.0",
 ]
@@ -48,6 +49,7 @@ gcp = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "pytest-bdd>=8.1.0",
 ]
 
 [tool.ruff]
