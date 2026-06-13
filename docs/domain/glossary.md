@@ -22,6 +22,7 @@ domain code (`src/domain/`) and `docs/architecture.md`.
 | **Rule Check** | A deterministic validation (FO or BO) that passes or fails without an LLM. Defined in `src/domain/check_rules.py`. |
 | **Root Cause** | The classified reason a trade failed (see Root Cause codes). |
 | **HITL** | Human-in-the-Loop — a write action that requires explicit human approval before it executes. |
+| **Triage Resume** | Continuing a `PENDING_APPROVAL` triage run after the operator's decision: approve executes the pending HITL action, reject skips it; either way the run proceeds to a final diagnosis. |
 | **Trade Event** | An `AMEND` or `CANCEL` event applied to a trade, creating a new trade version. |
 | **SSI** | Settlement Standing Instruction — settlement details (BIC, account, IBAN) for a counterparty/currency pair. |
 | **Counterparty** | The other party to a trade, identified by an LEI; may be active or inactive. |
