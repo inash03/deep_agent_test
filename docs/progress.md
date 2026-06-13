@@ -14,6 +14,27 @@ decide on Spectral / schemathesis.
 
 ## Recent Log
 
+### 2026-06-13 - Phase 3 foundation: subagents, AI review, model routing
+
+Branch: `claude/enterprise-ai-dev-process-w53dsl` (PR #51)
+
+- `.claude/agents/spec-reviewer.md` (new): independent, read-only reviewer that
+  checks a change against its SDD artifacts and conventions (model: opus).
+- `.claude/agents/researcher.md` (new): read-only codebase researcher for
+  context isolation (model: sonnet).
+- `.github/workflows/claude-review.yml` (new): automatic AI PR review using
+  `anthropics/claude-code-action@v1`, gated on the `ANTHROPIC_API_KEY` secret via
+  an env-mapped step check so CI stays green when the secret is absent. Note: the
+  secret cannot be referenced in a job/step `if:`, hence the step-based gate.
+- `.claude/settings.json` (new): shared convenience permission allowlist only
+  (test/lint/read-only git + the OpenAPI export script; denies force-push). No
+  behavior-changing hooks.
+- ADR-0004 (new): model routing per phase + managed-settings policy.
+- Updated `docs/ai-driven-development.md` (§6, §9), `CLAUDE.md`, ADR index.
+
+Verification: workflow + agent frontmatter + settings.json all parse cleanly;
+`uv run pytest` unaffected (194 passed).
+
 ### 2026-06-13 - First full Phase 2 lap: max settlement tenor FO rule (#52)
 
 Branch: `claude/enterprise-ai-dev-process-w53dsl` (PR #51, Issue #52)

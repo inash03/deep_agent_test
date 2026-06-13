@@ -194,8 +194,18 @@ trail, and cannot be the source of truth for parallel agent sessions.
     bdd-feature/         # /bdd-feature    story -> .feature
     sdd-spec/            # /sdd-spec       feature -> OpenAPI + data model + spec.feature
     tdd-implement/       # /tdd-implement  spec -> red-green-refactor
-  agents/                # subagent definitions (reviewer, researcher)
+  agents/                # subagent definitions (spec-reviewer, researcher)
 ```
+
+Subagents (`.claude/agents/`) are separate agent instances with their own
+context window, role prompt, and tool allowlist — distinct from the phase skills
+(same agent, swapped instructions, run sequentially). The phases stay sequential
+skills; subagents are cross-cutting helpers: `spec-reviewer` gives an independent
+review pass against the SDD artifacts, and `researcher` absorbs broad read-only
+searches so the main session's context stays clean. Switching agent or skill does
+not by itself insert a human gate — agent boundaries and human approval gates are
+independent; place human gates at phase boundaries by risk (DDD/SDD: gate;
+routine TDD: CI + AI review may suffice).
 
 - **Phases are encoded as skills.** This is the most maintainable form of
   "a different agent per phase". Each skill states its input artifact, its
@@ -257,7 +267,13 @@ out in three phases. Status of each phase is tracked in `docs/progress.md`.
 | --- | --- | --- |
 | Phase 1 | Executable Gherkin (BDD), ADRs, domain docs (glossary/model/context map), the phase skills, Issue/PR templates + CODEOWNERS, and a CI suite | Done |
 | Phase 2 | SDD: committed OpenAPI contract (`docs/api/openapi.json`) with a drift test, data-model specs in `docs/specs/`, and `features/specs/*.spec.feature` executed in CI | In progress |
-| Phase 3 | Per-phase subagents, AI code review wired into CI, model routing, managed settings; optional Spectral lint and schemathesis contract fuzzing | Planned |
+| Phase 3 | Per-phase subagents, AI code review wired into CI, model routing, managed settings; optional Spectral lint and schemathesis contract fuzzing | In progress |
+
+Phase 3 mechanics: project subagents live in `.claude/agents/` (`spec-reviewer`,
+`researcher`); automatic AI review runs in `.github/workflows/claude-review.yml`
+(gated on the `ANTHROPIC_API_KEY` secret so CI stays green without it); model
+routing and managed-settings policy are recorded in ADR-0004; the shared
+convenience permission allowlist is `.claude/settings.json`.
 
 Phase 2 mechanics (see ADR-0003): the API contract is committed and verified by
 `tests/unit/test_openapi_contract.py`, which fails on any drift from the live

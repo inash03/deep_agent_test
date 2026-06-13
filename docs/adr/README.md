@@ -31,3 +31,4 @@ superseding ADR rather than reverting silently.
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
 | [0002](0002-adopt-ddd-bdd-sdd-tdd-process.md) | Adopt the DDD/BDD/SDD/TDD AI-driven process | Accepted |
 | [0003](0003-openapi-contract-snapshot-and-drift-test.md) | OpenAPI contract snapshot with drift test | Accepted |
+| [0004](0004-model-routing-and-managed-settings.md) | Model routing per phase and managed settings | Accepted |
