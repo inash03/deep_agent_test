@@ -106,6 +106,25 @@ def _value_date_settlement_cycle(trade: "TradeModel") -> tuple[bool, str]:
     return True, f"Value date {trade.value_date} meets T+2 settlement cycle"
 
 
+# Sanity bound on settlement tenor (trade date -> value date). A value date
+# beyond this is almost always a data-entry error; flagged as a warning rather
+# than hard-blocked so genuine long-dated forwards still pass review.
+MAX_SETTLEMENT_TENOR_DAYS = 730
+
+
+def _value_date_within_max_tenor(trade: "TradeModel") -> tuple[bool, str]:
+    max_vd = trade.trade_date + timedelta(days=MAX_SETTLEMENT_TENOR_DAYS)
+    if trade.value_date > max_vd:
+        return False, (
+            f"Value date {trade.value_date} exceeds the maximum settlement tenor "
+            f"of {MAX_SETTLEMENT_TENOR_DAYS} days ({max_vd})"
+        )
+    return True, (
+        f"Value date {trade.value_date} is within the maximum settlement tenor "
+        f"of {MAX_SETTLEMENT_TENOR_DAYS} days"
+    )
+
+
 def _amount_positive(trade: "TradeModel") -> tuple[bool, str]:
     if trade.amount <= Decimal("0"):
         return False, f"Amount {trade.amount} must be greater than zero"
@@ -145,6 +164,7 @@ FO_RULES: list[FoRule] = [
     FoRule("value_date_after_trade_date", "error", _value_date_after_trade_date),
     FoRule("value_date_not_past", "error", _value_date_not_past),
     FoRule("value_date_settlement_cycle", "warning", _value_date_settlement_cycle),
+    FoRule("value_date_within_max_tenor", "warning", _value_date_within_max_tenor),
     FoRule("amount_positive", "error", _amount_positive),
     FoRule("settlement_currency_consistency", "error", _settlement_currency_consistency),
     FoRule("counterparty_exists", "error", _counterparty_exists_fo),
