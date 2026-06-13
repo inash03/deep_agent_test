@@ -30,15 +30,21 @@ The rules read these fields of a trade (subset of `TradeDetail` in
 | `value_date_after_trade_date` | error | Value date must be strictly after the trade date. | `value_date <= trade_date` |
 | `value_date_not_past` | error | Value date must not be before today. | `value_date < today` |
 | `value_date_settlement_cycle` | warning | Value date should meet the T+2 FX settlement cycle. | `value_date < trade_date + 2 days` |
+| `value_date_within_max_tenor` | warning | Value date must not exceed the maximum settlement tenor. | `value_date > trade_date + MAX_SETTLEMENT_TENOR_DAYS` |
 
 Notes:
 
-- `value_date_settlement_cycle` is **warning** severity: it flags but does not by
-  itself block, whereas `value_date_after_trade_date` and `value_date_not_past`
-  are **error** severity.
+- `value_date_settlement_cycle` and `value_date_within_max_tenor` are **warning**
+  severity: they flag but do not by themselves block, whereas
+  `value_date_after_trade_date` and `value_date_not_past` are **error** severity.
 - T+2 uses calendar days in the current implementation, not business days. A
   business-day calendar is a separate concern (see `_trade_date_not_weekend` and
   the calendar service).
+- **`MAX_SETTLEMENT_TENOR_DAYS = 730`** (about two years), defined in
+  `src/domain/check_rules.py`. `value_date_within_max_tenor` checks only the
+  **upper** bound; the lower bound (after trade date, T+2) is owned by the other
+  rules. It is a sanity bound for likely data-entry errors, not a hard limit on
+  legitimate long-dated forwards — hence warning severity.
 
 ## Boundary specification
 
@@ -52,6 +58,13 @@ The executable boundaries are in `features/specs/fo_value_date.spec.feature`:
 | settlement-cycle | value date 2026-06-02 (T+1) | fail |
 | settlement-cycle | value date 2026-06-03 (T+2) | pass |
 | settlement-cycle | value date 2026-06-10 (>T+2) | pass |
+| max-tenor | value date = trade date + 0 days | pass |
+| max-tenor | value date = trade date + 730 days (the maximum) | pass |
+| max-tenor | value date = trade date + 731 days | fail |
+| max-tenor | value date = trade date + 4000 days | fail |
+
+Detailed max-tenor boundaries are executed in
+`features/specs/fo_max_tenor.spec.feature`.
 
 ## Change protocol
 
