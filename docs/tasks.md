@@ -37,6 +37,28 @@ Reference: `docs/ai-driven-development.md` §6, §7, §9; ADR-0004.
 
 ## Backlog
 
+### Retrofit - Apply DDD/BDD/SDD/TDD artifacts to existing features
+
+Goal: close the artifact gaps on already-built features without document rot.
+Map and strategy: `docs/specs/coverage-matrix.md`.
+
+Done so far:
+
+- Coverage matrix (FR-01..FR-20) with priority tiers and retrofit strategy.
+- Retrospective ADRs 0005 (BFF proxy), 0006 (HITL checkpointer), 0007 (BO hybrid).
+
+Next (Tier 1, core domain + HITL), one Issue/branch/PR each:
+
+- FR-06 BO triage + HITL resume: BDD + spec.feature + characterization test for
+  the approval/rejection resume path (currently untested).
+- FR-05 FO triage use-case: characterization tests + BDD/spec.
+- FR-07 triage persistence: repository/DB-layer tests.
+- FR-08 events: BDD feature + data-model spec (unit tests already strong).
+
+Then Tier 2 (security: FR-19/20/12), Tier 3 (CRUD: FR-02/04), Tier 4 (rest).
+Remaining retrospective ADRs: MCP fallback, single-admin Auth.js + Upstash,
+optional RAG no-op.
+
 ### Process Phase 2 - Adopt SDD (specification-driven design) — done
 
 Completed: committed OpenAPI contract (`docs/api/openapi.json`) with the drift

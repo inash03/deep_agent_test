@@ -14,6 +14,30 @@ decide on Spectral / schemathesis.
 
 ## Recent Log
 
+### 2026-06-13 - Brownfield retrofit: coverage matrix + retrospective ADRs
+
+Branch: `claude/enterprise-ai-dev-process-w53dsl` (PR #51)
+
+Started retrofitting the AI-driven artifacts onto existing features.
+
+- `docs/specs/coverage-matrix.md` (new): maps FR-01..FR-20 to existing tests /
+  BDD / spec.feature / data-model specs, with the retrofit strategy
+  (characterization over greenfield TDD; prioritize core+HITL; no full sweep)
+  and a priority tiering. Built from a `researcher` subagent survey.
+- Retrospective ADRs (decisions already embodied in code, verified against
+  source before writing):
+  - ADR-0005 BFF catch-all proxy (`route.ts`).
+  - ADR-0006 HITL via `interrupt_before` + persistent PostgresSaver checkpointer
+    with MemorySaver fallback (`db/checkpointer.py`). Corrected the survey's
+    "in-memory only" claim after reading the code.
+  - ADR-0007 BO hybrid deterministic + ReAct, FO pure ReAct (`bo_agent.py`,
+    `fo_agent.py`).
+- Updated the ADR index.
+
+No code changed; `uv run pytest` still 194 passed. Next: a Tier-1 behavioral
+retrofit lap (BO/FO triage + HITL) using the phase skills in
+"document-existing-behavior" mode.
+
 ### 2026-06-13 - Phase 3 foundation: subagents, AI review, model routing
 
 Branch: `claude/enterprise-ai-dev-process-w53dsl` (PR #51)

@@ -32,3 +32,6 @@ superseding ADR rather than reverting silently.
 | [0002](0002-adopt-ddd-bdd-sdd-tdd-process.md) | Adopt the DDD/BDD/SDD/TDD AI-driven process | Accepted |
 | [0003](0003-openapi-contract-snapshot-and-drift-test.md) | OpenAPI contract snapshot with drift test | Accepted |
 | [0004](0004-model-routing-and-managed-settings.md) | Model routing per phase and managed settings | Accepted |
+| [0005](0005-bff-catch-all-proxy.md) | BFF catch-all proxy for browser-to-backend calls | Accepted (retrospective) |
+| [0006](0006-hitl-checkpointer.md) | HITL via LangGraph interrupt_before with a persistent checkpointer | Accepted (retrospective) |
+| [0007](0007-bo-hybrid-deterministic-react.md) | BO hybrid deterministic + ReAct architecture | Accepted (retrospective) |
