@@ -14,6 +14,25 @@ decide on Spectral / schemathesis.
 
 ## Recent Log
 
+### 2026-06-14 - Reorganize agent guides as maps, not manuals
+
+Branch: `claude/lucid-einstein-mwupcd`
+
+Applied the "map, not a manual" principle to the agent instruction files. Slimmed
+`CLAUDE.md` from 272 to ~90 lines (a documentation map + golden rules), and
+aligned the sibling mirrors `.codex.md` and `.openai/config.md` to the same lean
+form. Externalized the detailed rules that had no home into new `docs/`:
+
+- `docs/development.md` (process, task tracking, checklist, git, commands).
+- `docs/frontend.md` (App Router rules, UI language, versioning).
+- `docs/backend.md` (layering, API compatibility).
+- `docs/security.md` (secrets, key roles, boundaries).
+- `docs/README.md` (top-level documentation index).
+
+Sections that already had a source of truth (architecture, TDD/harness,
+AI-driven process) are now references instead of duplicates, removing the stale
+"Phase 1" rollout status the mirrors had drifted into.
+
 ### 2026-06-13 - Retrofit lap: FR-06 BO triage HITL resume
 
 Branch: `claude/enterprise-ai-dev-process-w53dsl` (PR #51)
