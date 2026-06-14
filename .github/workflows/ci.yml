@@ -34,7 +34,7 @@ jobs:
 
       # Repo-wide `ruff check .` currently reports a backlog of pre-existing
       # lint errors (mostly E501). Lint runs as advisory until that backlog is
-      # cleared (tracked in docs/tasks.md), then it should become blocking.
+      # cleared (tracked as a GitHub Issue), then it should become blocking.
       - name: Lint (ruff, advisory)
         continue-on-error: true
         run: uv run ruff check .

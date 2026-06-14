@@ -10,7 +10,8 @@ the same authority as this file.
 ## Session Start
 
 1. Check `git status --short --branch`.
-2. Read the current task in `docs/tasks.md` and status in `docs/progress.md`.
+2. Find the task in its GitHub Issue (the source of truth). `docs/tasks.md` is
+   an ephemeral per-session scratchpad, not shared task state.
 3. Open the documents relevant to the task from the map below.
 4. Inspect only the files needed for the task.
 

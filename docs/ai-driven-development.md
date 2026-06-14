@@ -163,8 +163,10 @@ trail, and cannot be the source of truth for parallel agent sessions.
   - [ ] Tests green / CI green
   ```
 
-- `docs/tasks.md` is **demoted** to an in-branch working note / agent plan
-  scratchpad. It is no longer the shared, multi-person state.
+- `docs/tasks.md` is **demoted** to an in-branch agent scratchpad (working
+  memory for the current session). It is no longer the shared, multi-person
+  state. The hand-maintained `docs/progress.md` and `docs/tasks_done.md` logs are
+  retired in favor of the Issue/PR timeline and git history (ADR-0008).
 - **PR template** requires links to the corresponding feature file, spec, and
   ADR. **CODEOWNERS** makes `docs/domain/` and `docs/adr/` require architect
   approval.
@@ -261,7 +263,7 @@ intelligence with specification detail and machine verification**.
 ## 9. Staged rollout
 
 Adopting everything at once guarantees the process becomes a formality. We roll
-out in three phases. Status of each phase is tracked in `docs/progress.md`.
+out in three phases. Status of each phase is tracked in GitHub Issues / Projects.
 
 | Phase | Adds | Status |
 | --- | --- | --- |

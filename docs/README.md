@@ -31,6 +31,10 @@ task instead of loading everything.
 
 ## Status and planning
 
-- `tasks.md` — active and backlog tasks. `tasks_done.md` — completed tasks.
-- `progress.md` — chronological progress log.
+- Task state lives in **GitHub Issues / Projects** (the source of truth);
+  see ADR-0002 and ADR-0008.
+- `tasks.md` — ephemeral per-session agent scratchpad (working memory), not
+  shared task state.
+- `issue-drafts.md` — temporary staging for backlog being migrated to Issues;
+  delete once the Issues are filed.
 </content>

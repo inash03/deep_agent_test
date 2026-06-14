@@ -22,23 +22,21 @@ live in `docs/testing.md`; the AI-driven phase pipeline lives in
 
 ## Task Tracking
 
-Task state is represented by section position in `docs/tasks.md`.
+The source of truth for tasks is **GitHub Issues / Projects** — one Issue = one
+feature (or scenario group) = one branch = one agent session (ADR-0002,
+ADR-0008). Track state, ownership, priority, and history there, not in Markdown.
 
-| Section | Meaning |
-| --- | --- |
-| `## In Progress` | Currently active task |
-| `## Backlog` | Planned but not started |
-
-Completed tasks are summarized in `docs/tasks_done.md`. Keep at most one task in
-`In Progress`.
+`docs/tasks.md` is an **ephemeral per-session scratchpad** (working memory for
+the current branch): the plan, intermediate findings, and the next step. It is
+safe to overwrite or clear, and is not shared, cross-session state.
 
 ## End-of-Step Checklist
 
 1. Run relevant checks until they pass 100%.
 2. Update docs if behavior, architecture, env vars, or deployment changed.
-3. Update `docs/progress.md` with a concise entry.
-4. Move completed task notes to `docs/tasks_done.md` when appropriate.
-5. Summarize changes and verification for the user, including exact commands
+3. Update the GitHub Issue/PR (status, checklist, links) — that is the audit
+   trail, not a Markdown log.
+4. Summarize changes and verification for the user, including exact commands
    run and whether each passed.
 
 ## Git Conventions

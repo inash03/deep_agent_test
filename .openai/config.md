@@ -8,7 +8,8 @@ guidance is readable by any agent. Read the document you need for the task.
 ## Session Start
 
 1. Check `git status --short --branch`.
-2. Read the current task in `docs/tasks.md` and status in `docs/progress.md`.
+2. Find the task in its GitHub Issue (the source of truth). `docs/tasks.md` is
+   an ephemeral per-session scratchpad, not shared task state.
 3. Open the relevant documents from the map below; inspect only the files the
    task needs.
 
