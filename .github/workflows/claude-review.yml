@@ -1,0 +1,76 @@
+name: Claude PR review
+
+# Automatic AI code review for the AI-driven development process
+# (docs/ai-driven-development.md, Phase 3). It reviews each PR against the
+# project's SDD artifacts and conventions, then posts inline comments.
+#
+# Gating: the review only runs when the ANTHROPIC_API_KEY secret is configured.
+# The secret cannot be referenced in a job/step `if:` condition, so we map it to
+# an env var and check it in a step; when it is absent the job succeeds (green)
+# and simply skips the review, so CI is never blocked (e.g. on forks).
+#
+# Requires repository secret ANTHROPIC_API_KEY and, recommended, the Claude
+# GitHub App (https://github.com/apps/claude). Docs:
+# https://code.claude.com/docs/en/github-actions
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for API key
+        id: check
+        env:
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "ANTHROPIC_API_KEY not set; skipping Claude review (CI stays green)."
+          fi
+
+      - name: Checkout
+        if: steps.check.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude review
+        if: steps.check.outputs.enabled == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Strong model for review judgement (model routing, see ADR-0004).
+          claude_args: --model claude-opus-4-8
+          prompt: |
+            You are reviewing this pull request for a project that follows the
+            AI-driven DDD/BDD/SDD/TDD process in docs/ai-driven-development.md.
+            Focus the review on conformance to the approved specification, not
+            just generic code quality:
+
+            1. Spec conformance — does the implementation match the boundaries
+               in the relevant features/specs/*.spec.feature and docs/specs/*.md?
+               Flag behavior in code that is absent from the spec, and spec
+               scenarios with no covering test.
+            2. Executable Gherkin — every new/changed .feature and .spec.feature
+               has binding step definitions in tests/bdd/ (none orphaned).
+            3. Contract — if endpoints/schemas changed, docs/api/openapi.json was
+               regenerated (scripts/export_openapi.py) and the drift test passes.
+            4. Ubiquitous language — names match docs/domain/glossary.md.
+            5. Layering & harness — domain stays framework-light; no real
+               LLM/DB/network in the default test suite (docs/testing.md).
+            6. ADRs — the change does not silently reverse an accepted ADR in
+               docs/adr/.
+
+            Post concise inline comments grouped as Blocking / Should-fix / Nits,
+            each citing file:line. End with a verdict: APPROVE,
+            APPROVE WITH NITS, or REQUEST CHANGES.

@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'main'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dev dependencies
+        # uv sync creates a .venv and installs the project + dev extras (pytest,
+        # pytest-bdd, ruff, mypy). No --system flag needed; avoids the
+        # "externally managed" error on Ubuntu runners.
+        run: uv sync --extra dev
+
+      - name: Run default test suite (unit + BDD)
+        # Executes tests/bdd/*.feature step definitions alongside unit tests.
+        # Excludes integration tests, which require real services.
+        run: uv run pytest
+
+      # Repo-wide `ruff check .` currently reports a backlog of pre-existing
+      # lint errors (mostly E501). Lint runs as advisory until that backlog is
+      # cleared (tracked in docs/tasks.md), then it should become blocking.
+      - name: Lint (ruff, advisory)
+        continue-on-error: true
+        run: uv run ruff check .

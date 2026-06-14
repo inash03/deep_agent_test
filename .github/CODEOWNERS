@@ -1,0 +1,23 @@
+# Code ownership for review routing (GitHub requests these owners automatically).
+#
+# Replace the individual owner below with team handles (e.g. @inash03/architects,
+# @inash03/pm) once GitHub Teams are configured. Until then, the repository owner
+# is the concrete owner so the rules actually enforce.
+
+# Architecture decisions and domain model: architect approval required.
+/docs/adr/        @inash03
+/docs/domain/     @inash03
+/docs/architecture.md  @inash03
+
+# The development process itself and agent control files.
+/docs/ai-driven-development.md  @inash03
+/.claude/         @inash03
+/CLAUDE.md        @inash03
+/AGENTS.md        @inash03
+
+# SDD contract artifacts: architect + implementing engineer.
+/docs/api/        @inash03
+/docs/specs/      @inash03
+
+# BDD feature files: PM is the reviewer of business scenarios.
+/features/        @inash03

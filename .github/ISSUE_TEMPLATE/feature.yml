@@ -1,0 +1,58 @@
+name: Feature (DDD/BDD/SDD/TDD)
+description: A unit of feature work that flows through the AI-driven development pipeline.
+title: "[Feature] "
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One Issue = one feature (or scenario group) = one branch = one agent session.
+        See `docs/ai-driven-development.md` for the full process.
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User story
+      description: Who wants what, and why.
+      placeholder: |
+        As an operations analyst,
+        I want trades with an invalid value date to fail the FO check,
+        so that settlement problems are caught before processing.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: The observable outcomes that define "done", in business language.
+      placeholder: |
+        - A value date on the trade date is rejected.
+        - A value date earlier than T+2 fails the settlement-cycle rule.
+    validations:
+      required: true
+  - type: textarea
+    id: artifact-checklist
+    attributes:
+      label: Artifact checklist
+      description: The pipeline artifacts this feature must produce. Each is gated by its owner.
+      value: |
+        - [ ] **DDD** — glossary/model diff in `docs/domain/` (or state "no change"). Owner: architect.
+        - [ ] **BDD** — `features/*.feature` + step definitions in `tests/bdd/`. Owner: PM.
+        - [ ] **SDD** — OpenAPI contract diff (`docs/api/openapi.json`), data-model spec (`docs/specs/*.md`), and `features/specs/*.spec.feature`. Owner: architect + engineer.
+        - [ ] **TDD** — failing test first, then implementation; full suite green. Owner: engineers + CI.
+    validations:
+      required: true
+  - type: input
+    id: phase
+    attributes:
+      label: Current phase
+      description: Which pipeline phase is this Issue in right now?
+      placeholder: DDD | BDD | SDD | TDD
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / out of scope
+      description: Constraints, dependencies, related ADRs, or anything explicitly out of scope.
+    validations:
+      required: false
