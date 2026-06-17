@@ -80,6 +80,10 @@ uv run pytest tests/integration -m integration -v
 ruff check .
 mypy src
 
+# Architecture fitness functions (see docs/governance/automated-gates.md)
+uv run lint-imports            # import-linter contracts
+uv run pytest -m architecture  # pytest-archon rules (excluded from default suite)
+
 # Local backend server
 alembic upgrade head
 uvicorn src.main:app --reload

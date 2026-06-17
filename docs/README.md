@@ -12,6 +12,8 @@ task instead of loading everything.
   and known test gaps.
 - `ai-driven-development.md` — the DDD/BDD/SDD/TDD phase pipeline, artifacts,
   ownership, and staged rollout.
+- `governance/automated-gates.md` — converting human review gates into enforced
+  fitness functions (HITL → HOTL); architecture checks roadmap.
 
 ## Architecture and conventions
 

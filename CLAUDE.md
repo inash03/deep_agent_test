@@ -24,6 +24,7 @@ the same authority as this file.
 | How we work, commands, git, checklist | `docs/development.md` |
 | Testing: TDD loop, harness, coverage | `docs/testing.md` |
 | AI-driven phase pipeline (DDD/BDD/SDD/TDD) | `docs/ai-driven-development.md` |
+| Automated gates / architecture fitness functions | `docs/governance/automated-gates.md` |
 | System architecture | `docs/architecture.md` |
 | Frontend rules, UI language, versioning | `docs/frontend.md` |
 | Backend layering and API compatibility | `docs/backend.md` |

@@ -38,6 +38,8 @@ dev = [
     "pytest-bdd==8.1.0",
     "ruff==0.15.9",
     "mypy==1.20.0",
+    "import-linter==2.11",
+    "pytest-archon==0.0.7",
 ]
 gcp = [
     # GCP Secret Manager クライアント
@@ -66,5 +68,8 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-m 'not integration'"
-markers = ["integration: requires real LLM (ANTHROPIC_API_KEY must be set)"]
+addopts = "-m 'not integration and not architecture'"
+markers = [
+    "integration: requires real LLM (ANTHROPIC_API_KEY must be set)",
+    "architecture: ArchUnit-style architecture fitness functions (advisory; run with -m architecture)",
+]
