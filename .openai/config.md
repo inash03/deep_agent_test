@@ -1,153 +1,54 @@
 # OpenAI/Codex Configuration Notes
 
-This file gives OpenAI/Codex and other AI coding agents the same operational
-rules as `CLAUDE.md`. Use common Markdown only so the guidance is readable by
-any agent.
+This file gives OpenAI/Codex and other AI coding agents the same guidance as
+`CLAUDE.md`: it is a **map, not a manual**. The system of record lives under
+`docs/` (`docs/README.md` is the full index). Use common Markdown only so the
+guidance is readable by any agent. Read the document you need for the task.
 
 ## Session Start
 
 1. Check `git status --short --branch`.
-2. Read the current task in `docs/tasks.md`.
-3. Read the current status in `docs/progress.md`.
-4. Inspect only the files needed for the task.
+2. Find the task in its GitHub Issue (the source of truth). `docs/tasks.md` is
+   an ephemeral per-session scratchpad, not shared task state.
+3. Open the relevant documents from the map below; inspect only the files the
+   task needs.
 
-## Current Architecture
+## Documentation Map
 
-- Frontend: Next.js App Router, React, TypeScript, Auth.js.
-- BFF: Next.js Route Handler at `/api/backend/[...path]`.
-- Backend: Python 3.12, FastAPI, LangGraph, SQLAlchemy, Alembic.
-- Database: Neon PostgreSQL.
-- External data: MCP external-data server on Cloud Run.
-- Hosting: Vercel for frontend, Cloud Run for backend and MCP services.
-- CI/CD: Vercel Git Integration for frontend, GitHub Actions for Cloud Run.
+| Topic | Source of truth |
+| --- | --- |
+| How we work, commands, git, checklist | `docs/development.md` |
+| Testing: TDD loop, harness, coverage matrix, gaps | `docs/testing.md` |
+| AI-driven phase pipeline (DDD/BDD/SDD/TDD) | `docs/ai-driven-development.md` |
+| System architecture | `docs/architecture.md` |
+| Frontend rules, UI language, versioning | `docs/frontend.md` |
+| Backend layering and API compatibility | `docs/backend.md` |
+| Secrets, keys, trust boundaries | `docs/security.md` |
+| Requirements | `docs/requirements.md` |
+| API contract, specs, domain, ADRs | `docs/api/`, `docs/specs/`, `docs/domain/`, `docs/adr/` |
 
-The old static frontend deployment path is retired.
+## Golden Rules
 
-## Mandatory TDD Workflow
+- Keep changes scoped to the task; do not refactor unrelated code or remove user
+  changes; prefer existing patterns over new abstractions.
+- Use test-driven development for every behavior change: write the smallest
+  failing test first, then the smallest production change (`docs/testing.md`).
+- Isolate external dependencies (Neon, Anthropic, OpenAI, ECB, MCP) in the
+  default suite; real-service tests are opt-in integration tests
+  (`docs/testing.md`).
+- Browser API calls go through the BFF at `/api/backend/*`; never expose backend
+  secrets via `NEXT_PUBLIC_*`; never commit `.env` or real secrets
+  (`docs/security.md`).
+- Preserve API backward compatibility; keep HITL write actions explicit
+  (`docs/backend.md`).
+- Update docs when architecture, env vars, endpoints, or deployment change.
+- Do not report a task complete until relevant checks pass 100%, or a blocker is
+  documented with the exact failing command and reason. Final responses must
+  list the exact verification commands run and whether each passed.
 
-See `docs/testing.md` for the full test strategy, harness rules, requirement
-coverage matrix, and known test gaps.
+## Quick Commands
 
-Agents must use test-driven development for every behavior change. Write or
-update the smallest meaningful test before implementing production code.
-
-Run the red-green-refactor loop autonomously:
-
-1. Identify the behavior surface and the closest existing test file.
-2. Write a failing test first:
-   - Backend domain logic: add or update `tests/unit/test_*.py`.
-   - Backend API behavior: add or update a focused pytest using FastAPI/httpx
-     test clients or repository/service harnesses.
-   - Frontend type or UI behavior: add a focused TypeScript/React test when a
-     local test harness exists; otherwise add or update Playwright coverage in
-     `frontend/tests/e2e/*.spec.ts` for user-visible flows.
-   - Documentation-only changes may skip new tests, but still run the relevant
-     verification commands listed below.
-3. Run the focused test and confirm it fails for the expected reason.
-4. Implement the smallest production change that can make the test pass.
-5. Run the focused test again until it passes.
-6. Run the full relevant suite before final reporting.
-7. Refactor only after tests are green, and rerun the affected tests after each
-   refactor.
-
-Never replace this loop with manual inspection when an automated harness can be
-written or extended.
-
-## Harness Engineering Strategy
-
-External dependencies must be isolated by default so tests are deterministic,
-fast, and safe to run without manual environment setup.
-
-- Database:
-  - Prefer repository or service-level tests with in-memory fakes, transaction
-    rollbacks, or explicit test fixtures instead of touching Neon PostgreSQL.
-  - Tests that require a real database must be clearly marked as integration
-    and must not run in the default `pytest` suite.
-- LLM providers:
-  - Never call Anthropic or OpenAI from unit tests.
-  - Stub model clients, LangGraph nodes, cost trackers, and embeddings at the
-    boundary where they enter infrastructure code.
-  - Assert prompts, routing decisions, tool choices, state transitions, and
-    persisted outputs rather than provider responses.
-- External APIs and MCP:
-  - Use local fakes or monkeypatched clients for ECB/external-data/MCP calls.
-  - Keep the fallback behavior testable without network access.
-- HTTP/BFF:
-  - Browser code must call `/api/backend/*`; tests should assert this contract
-    instead of calling Cloud Run directly.
-  - FastAPI protected endpoints should be tested with explicit `X-API-Key`
-    harness values when authentication behavior is part of the change.
-- Time, randomness, and environment:
-  - Freeze or inject clocks for date-sensitive rules.
-  - Use deterministic IDs and seed data in tests.
-  - Patch environment variables in the test harness rather than relying on a
-    developer's shell.
-- E2E:
-  - Keep Playwright smoke tests focused on critical operator flows.
-  - Use local dev servers and test credentials; do not depend on production
-    Vercel, Cloud Run, Neon, or real LLM credentials.
-
-## Completion Rule
-
-Do not report a task as complete until the relevant automated checks pass 100%,
-or until a blocker is clearly documented with the exact failing command and
-failure reason.
-
-Final responses must include the exact verification commands run and whether
-each passed.
-
-## Test and Verification Commands
-
-Backend:
-
-```bash
-# Install/update backend dev dependencies when needed
-uv pip install -e ".[dev]"
-
-# Default backend test suite; excludes tests marked integration
-pytest
-
-# Equivalent uv invocation
-uv run pytest
-
-# Focused TDD loop examples
-uv run pytest tests/unit/test_check_rules.py -v
-uv run pytest tests/unit/test_gather_context_routing.py -v
-
-# Integration tests that may require real services or credentials
-uv run pytest tests/integration -m integration -v
-
-# Static checks
-ruff check .
-mypy src
-
-# Local backend server
-alembic upgrade head
-uvicorn src.main:app --reload
-```
-
-Frontend:
-
-```bash
-cd frontend
-
-# Install frontend dependencies when needed
-npm install
-
-# TypeScript check; this repository uses it as the lint command
-npm run lint
-
-# Production build
-npm run build
-
-# Local dev server
-npm run dev
-
-# Playwright E2E tests; requires a running frontend unless configured otherwise
-npm run test:e2e
-```
-
-Recommended completion gate:
+Full command list is in `docs/development.md`. Completion gate:
 
 ```bash
 pytest
@@ -155,31 +56,10 @@ cd frontend
 npm run lint
 npm run build
 ```
-
-## Development Rules
-
-- Keep changes scoped to the requested task.
-- Prefer existing patterns over new abstractions.
-- Do not refactor unrelated code.
-- Do not remove user changes.
-- Update documentation when architecture, environment variables, endpoints, or
-  deployment behavior changes.
-- Browser API calls must go through the Next.js BFF at `/api/backend/*`.
-- Do not expose backend secrets through `NEXT_PUBLIC_*`.
-- Backend and MCP services deploy through GitHub Actions to Cloud Run.
-- Frontend deploys through Vercel Git Integration.
-
-## AI-Driven Development Process
-
-This repository is adopting a team-scale DDD/BDD/SDD/TDD process defined in
-`docs/ai-driven-development.md` (read it before feature work). Decisions are
-recorded as ADRs in `docs/adr/`; domain vocabulary in `docs/domain/`; executable
-Gherkin in `features/` with step definitions in `tests/bdd/` (run by CI). Rollout
-is at Phase 1 (see section 9). Claude Code phase skills live in `.claude/skills/`.
 
 ## Documentation Language
 
 - `README.md` is Japanese.
-- Files under `docs/` are English.
-- Agent instruction files such as `CLAUDE.md`, `.codex.md`, and
-  `.openai/config.md` are English.
+- Files under `docs/`, and the agent instruction files `CLAUDE.md`, `.codex.md`,
+  and `.openai/config.md`, are English.
+</content>

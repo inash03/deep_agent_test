@@ -44,6 +44,13 @@ _FO_RULES: list[RuleOut] = [
         is_stub=False,
     ),
     RuleOut(
+        rule_name="value_date_not_weekend",
+        severity="error",
+        check_type="FO",
+        description="Ensures the value date falls on a weekday (Monday–Friday). Settlement cannot occur on a weekend.",
+        is_stub=False,
+    ),
+    RuleOut(
         rule_name="value_date_not_past",
         severity="error",
         check_type="FO",
@@ -61,7 +68,14 @@ _FO_RULES: list[RuleOut] = [
         rule_name="value_date_business_calendar",
         severity="error",
         check_type="FO",
-        description="Uses the MCP calendar server to verify that the FX value date is open in both currencies' representative holiday calendars.",
+        description="Planned (not yet implemented in the rule engine): will use the MCP calendar server to verify the FX value date is open in both currencies' representative holiday calendars.",
+        is_stub=True,
+    ),
+    RuleOut(
+        rule_name="value_date_within_max_tenor",
+        severity="warning",
+        check_type="FO",
+        description="Ensures the value date does not exceed the maximum settlement tenor (about two years). A value date beyond it likely indicates a data-entry error.",
         is_stub=False,
     ),
     RuleOut(

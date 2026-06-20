@@ -34,7 +34,19 @@ jobs:
 
       # Repo-wide `ruff check .` currently reports a backlog of pre-existing
       # lint errors (mostly E501). Lint runs as advisory until that backlog is
-      # cleared (tracked in docs/tasks.md), then it should become blocking.
+      # cleared (tracked as a GitHub Issue), then it should become blocking.
       - name: Lint (ruff, advisory)
         continue-on-error: true
         run: uv run ruff check .
+
+      # Architecture fitness functions (Clean Architecture dependency rules).
+      # Both currently pass; kept advisory only to match the staged rollout in
+      # docs/governance/automated-gates.md / ADR-0009. Flip continue-on-error to
+      # false to make them blocking — recommended, since they are already green.
+      - name: Architecture contracts (import-linter, advisory)
+        continue-on-error: true
+        run: uv run lint-imports
+
+      - name: Architecture fitness functions (pytest-archon, advisory)
+        continue-on-error: true
+        run: uv run pytest -m architecture

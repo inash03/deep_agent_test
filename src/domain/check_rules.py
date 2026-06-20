@@ -80,6 +80,14 @@ def _trade_date_not_weekend(trade: "TradeModel") -> tuple[bool, str]:
     return True, f"Trade date {trade.trade_date} is a business day"
 
 
+def _value_date_not_weekend(trade: "TradeModel") -> tuple[bool, str]:
+    wd = trade.value_date.weekday()
+    if wd >= 5:
+        day_name = "Saturday" if wd == 5 else "Sunday"
+        return False, f"Value date {trade.value_date} falls on a {day_name}"
+    return True, f"Value date {trade.value_date} is a business day"
+
+
 def _value_date_after_trade_date(trade: "TradeModel") -> tuple[bool, str]:
     if trade.value_date <= trade.trade_date:
         return False, (
@@ -162,6 +170,7 @@ FO_RULES: list[FoRule] = [
     FoRule("trade_date_not_future", "error", _trade_date_not_future),
     FoRule("trade_date_not_weekend", "error", _trade_date_not_weekend),
     FoRule("value_date_after_trade_date", "error", _value_date_after_trade_date),
+    FoRule("value_date_not_weekend", "error", _value_date_not_weekend),
     FoRule("value_date_not_past", "error", _value_date_not_past),
     FoRule("value_date_settlement_cycle", "warning", _value_date_settlement_cycle),
     FoRule("value_date_within_max_tenor", "warning", _value_date_within_max_tenor),

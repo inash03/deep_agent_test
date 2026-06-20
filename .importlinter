@@ -1,0 +1,51 @@
+# Architecture fitness functions (import-linter).
+#
+# These contracts enforce Clean Architecture dependency rules as machine checks.
+# Run locally with `uv run lint-imports`. Rationale and rollout: see
+# docs/governance/automated-gates.md and ADR-0009.
+#
+# Status: ADVISORY in CI until the recorded debt below is paid down, then it
+# becomes blocking (same staged rollout as ruff).
+
+[importlinter]
+root_package = src
+include_external_packages = True
+
+# The domain layer must stay free of frameworks and I/O concerns. This is the
+# innermost Clean Architecture ring: pure business rules + entities only.
+[importlinter:contract:domain-purity]
+name = Domain must not depend on frameworks or I/O
+type = forbidden
+source_modules =
+    src.domain
+forbidden_modules =
+    fastapi
+    sqlalchemy
+    langgraph
+    langchain_anthropic
+    langchain_openai
+    httpx
+    slowapi
+    uvicorn
+    psycopg
+    psycopg2
+# Accepted debt: the only purity leak is the type-only edge below (domain
+# references infrastructure DB models under `if TYPE_CHECKING`, which transitively
+# pulls sqlalchemy). Same edge as the layers contract; remove once inverted.
+ignore_imports =
+    src.domain.check_rules -> src.infrastructure.db.models
+
+# Dependency direction: presentation -> infrastructure -> domain.
+# A lower layer must never import a higher one.
+[importlinter:contract:layers]
+name = Layered architecture (presentation -> infrastructure -> domain)
+type = layers
+layers =
+    src.presentation
+    src.infrastructure
+    src.domain
+# Accepted debt (type-only leak): domain.check_rules references infrastructure
+# DB models under `if TYPE_CHECKING`. Tracked for dependency inversion (move the
+# referenced types into the domain). Remove this ignore once inverted.
+ignore_imports =
+    src.domain.check_rules -> src.infrastructure.db.models
