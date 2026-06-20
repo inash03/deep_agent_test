@@ -38,8 +38,23 @@ the first fitness function in this repo).
 | TDD: structure | reviewer eyeballs design | dependency direction, layer purity, no cycles, complexity | **import-linter + pytest-archon** (this increment), radon/xenon | **advisory** |
 | TDD: test quality | trust "green" | mutation testing kills tautological tests; property-based for negative space | mutmut/cosmic-ray, Hypothesis | planned |
 | TDD: security | ad hoc | dependency audit, SAST, secret scan | pip-audit, npm audit (#57), bandit, gitleaks | planned |
-| Cross-cutting | human review | independent AI reviewer (different model) | `spec-reviewer`, claude-review (#54) | partial |
+| TDD: consistency | reviewer checks parallel registries by eye | dashboard registry must mirror the engine rules | `tests/unit/test_rules_dashboard_sync.py` | **done** |
+| Cross-cutting | human review | independent AI reviewer (different model) | `spec-reviewer` (live), `claude-review.yml` (wired; needs `ANTHROPIC_API_KEY`) | wired — see `review-gates.md` |
 | Cross-cutting | memory links rule↔check↔test | requirement↔spec↔test linkage check | machine-readable coverage matrix | planned |
+
+Human and AI **review** gates (CODEOWNERS, branch protection, independent AI
+review) are covered in `docs/governance/review-gates.md`.
+
+### Worked example: a finding promoted to a check
+
+An independent `spec-reviewer` pass found a defect every mechanical check missed:
+a new engine rule (`value_date_not_weekend`) was registered in
+`src.domain.check_rules.FO_RULES` but not in the hand-written `_FO_RULES`
+dashboard registry behind `GET /api/v1/rules` (FR-10) — invisible to operators,
+and uncatchable by the OpenAPI drift test (the gap is response *data*, not
+schema). Fix: sync the registry **and** add `tests/unit/test_rules_dashboard_sync.py`
+so the class of defect is now a machine check, not a review item. This is the
+core HOTL loop: review discovers, the check enforces.
 
 ## Architecture fitness functions (this increment)
 

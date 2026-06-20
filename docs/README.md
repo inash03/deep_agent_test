@@ -14,6 +14,9 @@ task instead of loading everything.
   ownership, and staged rollout.
 - `governance/automated-gates.md` — converting human review gates into enforced
   fitness functions (HITL → HOTL); architecture checks roadmap.
+- `governance/review-gates.md` — making the DDD/BDD/SDD/TDD phase hand-offs
+  enforceable: CODEOWNERS + branch protection (HITL) and independent AI review
+  (toward HOTL).
 
 ## Architecture and conventions
 
