@@ -68,8 +68,8 @@ _FO_RULES: list[RuleOut] = [
         rule_name="value_date_business_calendar",
         severity="error",
         check_type="FO",
-        description="Uses the MCP calendar server to verify that the FX value date is open in both currencies' representative holiday calendars.",
-        is_stub=False,
+        description="Planned (not yet implemented in the rule engine): will use the MCP calendar server to verify the FX value date is open in both currencies' representative holiday calendars.",
+        is_stub=True,
     ),
     RuleOut(
         rule_name="value_date_within_max_tenor",
