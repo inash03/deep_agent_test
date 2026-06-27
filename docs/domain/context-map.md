@@ -25,6 +25,7 @@ flowchart TB
     end
 
     TM -->|"trade detail (Customer/Supplier)"| Triage
+    RefData -->|"counterparty search\n(trade creation)"| TradeMgmt
     RefData -->|"SSI, counterparty,\ninstrument lookups"| Triage
     Triage -->|"HITL write proposals\n(register SSI, reactivate CP)"| RefData
     Triage -->|"status transitions,\napply events"| TradeMgmt
@@ -37,6 +38,7 @@ flowchart TB
 | Upstream → Downstream | Pattern | Notes |
 | --- | --- | --- |
 | Trade Management → Triage | Customer/Supplier | Triage consumes trade detail and writes back status transitions. |
+| Reference & Settlement → Trade Management | Customer/Supplier | Trade creation reads counterparties via Counterparty Search to bind an LEI to a new trade. |
 | Reference & Settlement → Triage | Customer/Supplier | Triage reads SSI/counterparty/instrument; proposes HITL writes back. |
 | Market Data → Triage | Anti-Corruption Layer | The MCP external-data server isolates ECB/market-data shapes from the domain; fallback must stay testable without network. |
 | Platform → all | Shared Kernel (infra) | Auth, BFF, cost tracking, and settings are cross-cutting. |
