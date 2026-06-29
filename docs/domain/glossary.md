@@ -27,6 +27,8 @@ domain code (`src/domain/`) and `docs/architecture.md`.
 | **SSI** | Settlement Standing Instruction — settlement details (BIC, account, IBAN) for a counterparty/currency pair. |
 | **Counterparty** | The other party to a trade, identified by an LEI; may be active or inactive. |
 | **LEI** | Legal Entity Identifier — the counterparty identifier. |
+| **Counterparty Search** | Finding a counterparty during trade creation by **partial-name** or **partial-LEI** (substring, case-insensitive) match — reusing the existing `GET /api/v1/counterparties` filtering. The result set is the candidate counterparties an operator chooses from; selecting one binds its LEI (and name, for display) to the trade. |
+| **Counterparty Selection** | The act of choosing one counterparty from a Counterparty Search result and writing it back to the trade form, displayed as `LEI + name`. |
 | **Reference Data** | Instrument metadata (description, asset class, active flag). |
 | **Value Date** | The settlement date of a trade; subject to business-day and validity rules. |
 | **Settlement Tenor** | The span between a trade's trade date and its value date. |
