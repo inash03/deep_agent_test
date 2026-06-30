@@ -38,7 +38,7 @@ Legend: ✅ exists · ⚠️ partial · ❌ missing.
 | FR | Feature | Tests | BDD | spec.feature | Data-model spec | Domain terms |
 | --- | --- | --- | --- | --- | --- | --- |
 | FR-01 | Create/list trades | ⚠️ `test_api_contracts`, E2E smoke | ❌ | ❌ | ❌ | ✅ |
-| FR-02 | Counterparty/SSI/refdata/STP exceptions | ⚠️ `test_tools` (tools only) | ❌ | ❌ | ❌ | ✅ |
+| FR-02 | Counterparty/SSI/refdata/STP exceptions | ⚠️ `test_tools`; counterparty search ✅ (`test_counterparty_search`, `test_counterparty_search_spec`) | ⚠️ search only | ⚠️ search only | ⚠️ search only | ✅ |
 | FR-03 | FO rule checks | ✅ `test_fo_rules`, `test_check_rules`, `test_fo_max_tenor` | ✅ | ✅ | ✅ | ✅ |
 | FR-04 | BO rule checks | ✅ `test_bo_rules` (pure fns) | ❌ | ❌ | ❌ | ✅ |
 | FR-05 | FO triage + HITL | ⚠️ routing/tools only; use-case untested | ❌ | ❌ | ❌ | ✅ |
@@ -70,7 +70,10 @@ needs BDD + data-model spec).
 lockout, FR-12 auth login. These are defenses with no automated coverage at all.
 
 **Tier 3 — CRUD / reference data.** FR-02 counterparty/SSI/STP-exception
-endpoints, FR-04 BO rules (add BDD + data-model spec to match FR-03).
+endpoints (counterparty **search** retrofitted — `counterparty_search.feature`,
+`counterparty-search.md` spec, and substring/case-insensitive spec tests;
+SSI/refdata/STP-exception still open), FR-04 BO rules (add BDD + data-model spec
+to match FR-03).
 
 **Tier 4 — dashboards, BFF, UI copy (lower risk).** FR-09, FR-10, FR-11,
 FR-13/14, FR-17/18. FR-15/16 are documentation-only.
