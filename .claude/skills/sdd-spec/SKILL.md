@@ -11,7 +11,9 @@ highest-leverage phase for non-frontier models: thicker specs mean less rework.
 
 ## Inputs to read first
 
-- The approved `features/<name>.feature`.
+- The parent feature Issue and, if filed via `/feature-issue`, this feature's
+  SDD sub-issue, plus the **approved `features/<name>.feature`** (the BDD
+  hand-off).
 - `docs/domain/glossary.md` and `docs/domain/model.md`.
 - `docs/architecture.md` (API contract `/api/v1/*`, layering, DB tables).
 - Relevant existing routers/schemas in `src/presentation/` and Alembic

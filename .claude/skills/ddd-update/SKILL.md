@@ -13,7 +13,10 @@ language and domain model consistent, as a small diff — not a rewrite.
 - `docs/domain/glossary.md`
 - `docs/domain/model.md`
 - `docs/domain/context-map.md`
-- The Issue / user story describing the feature.
+- The parent feature Issue (user story, acceptance criteria) and, if filed via
+  `/feature-issue`, this feature's DDD sub-issue (states this phase's inputs,
+  artifact, and acceptance). If the feature is tracked as a single Issue with
+  no sub-issues, that Issue serves as both.
 - Relevant enums in `src/domain/entities.py` (these are canonical).
 
 ## What to produce
