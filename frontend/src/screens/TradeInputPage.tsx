@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { listCounterparties } from '../api/counterparties'
 import { listReferenceData } from '../api/referenceData'
 import { createTrade } from '../api/trades'
+import { CounterpartySearchModal } from '../components/CounterpartySearchModal'
 import { PageLayout } from '../components/PageLayout'
 import { BTN_PRIMARY, BTN_SECONDARY, CARD, COLOR, INPUT, LABEL } from '../styles/theme'
 import type { Counterparty } from '../types/counterparty'
@@ -41,20 +41,21 @@ export function TradeInputPage() {
 
   const [tradeDate, setTradeDate] = useState('')
   const [valueDate, setValueDate] = useState('')
-  const [counterpartyLei, setCounterpartyLei] = useState('')
+  const [counterparty, setCounterparty] = useState<Counterparty | null>(null)
+  const [counterpartyModalOpen, setCounterpartyModalOpen] = useState(false)
   const [instrumentId, setInstrumentId] = useState('')
   const [currency, setCurrency] = useState('')
   const [amount, setAmount] = useState('')
   const [fxRate, setFxRate] = useState('')
 
-  const [counterparties, setCounterparties] = useState<Counterparty[]>([])
   const [instruments, setInstruments] = useState<ReferenceData[]>([])
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const counterpartyLei = counterparty?.lei ?? ''
+
   useEffect(() => {
-    listCounterparties({ limit: 100 }).then(r => setCounterparties(r.items.filter(c => c.is_active))).catch(() => {})
     listReferenceData().then(r => setInstruments(r.items.filter(i => i.is_active))).catch(() => {})
   }, [])
 
@@ -133,16 +134,22 @@ export function TradeInputPage() {
 
           <div style={{ marginBottom: '1rem' }}>
             <label style={LABEL}>Counterparty</label>
-            <select
-              style={{ ...INPUT }}
-              value={counterpartyLei}
-              onChange={e => setCounterpartyLei(e.target.value)}
-            >
-              <option value="">Select</option>
-              {counterparties.map(cp => (
-                <option key={cp.lei} value={cp.lei}>{cp.name} ({cp.lei})</option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              {counterparty ? (
+                <span
+                  data-testid="selected-counterparty"
+                  style={{ flex: 1, fontSize: '0.875rem', color: COLOR.text }}
+                >
+                  <strong>{counterparty.name}</strong>{' '}
+                  <span style={{ fontFamily: 'monospace', color: COLOR.textMuted }}>{counterparty.lei}</span>
+                </span>
+              ) : (
+                <span style={{ flex: 1, fontSize: '0.875rem', color: COLOR.textLight }}>No counterparty selected</span>
+              )}
+              <button type="button" onClick={() => setCounterpartyModalOpen(true)} style={BTN_SECONDARY}>
+                Search counterparty
+              </button>
+            </div>
           </div>
 
           <div style={{ marginBottom: '1rem' }}>
@@ -215,6 +222,15 @@ export function TradeInputPage() {
           </div>
         </div>
       </div>
+
+      <CounterpartySearchModal
+        open={counterpartyModalOpen}
+        onSelect={cp => {
+          setCounterparty(cp)
+          setCounterpartyModalOpen(false)
+        }}
+        onClose={() => setCounterpartyModalOpen(false)}
+      />
     </PageLayout>
   )
 }
