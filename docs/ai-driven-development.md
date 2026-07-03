@@ -165,12 +165,27 @@ trail, and cannot be the source of truth for parallel agent sessions.
 
 ### Filing a feature: parent Issue + phase sub-issues
 
-- The `/feature-issue` skill turns a user story into **one parent Issue**
-  (`.github/ISSUE_TEMPLATE/feature.yml`) plus **four sub-issues**, one per
-  phase (`.github/ISSUE_TEMPLATE/phase-subissue.yml`), linked to the parent
-  via GitHub's sub-issue relationship. Each sub-issue states that phase's
-  inputs (parent Issue + prior phase's approved artifact), the artifact to
-  produce, the owner, and its acceptance.
+Filing is a **hybrid** of an agent and an automation, split by where each is
+strong:
+
+- **Parent Issue — agent (`/feature-issue`).** The skill turns a user story
+  into **one parent Issue** (`.github/ISSUE_TEMPLATE/feature.yml`): user story,
+  acceptance criteria, artifact checklist (the roll-up summary), current phase.
+  This is the part that needs feature-specific reasoning — translating the
+  story into English and writing good acceptance criteria — so an agent authors
+  it, draft-then-approve (it shows the draft and files only after the operator
+  approves, since this is outward-facing).
+- **Four phase sub-issues — automation (`create-phase-subissues` workflow).**
+  When the parent is opened with the `feature` label, a GitHub Action files
+  **four sub-issues**, one per phase (`.github/ISSUE_TEMPLATE/phase-subissue.yml`
+  is the shape), and links each to the parent via GitHub's sub-issue
+  relationship. Each states that phase's inputs (parent Issue + prior phase's
+  approved artifact), the artifact to produce, the owner, and its acceptance.
+  This content is fixed boilerplate that does not vary by feature, so it is
+  produced **deterministically**: no tokens, always exactly four, no drift from
+  the phase skills, and it fires on issue creation without anyone running a
+  skill. The Action is idempotent (skips if sub-issues already exist) and only
+  the parent carries the `feature` label, so sub-issues never re-trigger it.
 - `feature.yml` (the parent) and `phase-subissue.yml` (the four children) are
   complementary, not competing: `feature.yml` stays the roll-up — whole-story,
   acceptance criteria, and the artifact checklist as a summary — while each
@@ -178,11 +193,10 @@ trail, and cannot be the source of truth for parallel agent sessions.
 - **All four sub-issues are always filed**, even when a phase is expected to
   be a no-op (e.g. DDD with no new domain concept). The sub-issue is closed
   with that verdict instead of being skipped, so the parent's artifact
-  checklist and the sub-issue set never drift apart.
-- Filing is **draft-then-approve**: the skill shows the parent + sub-issue
-  drafts to the operator and only calls the GitHub write tools after explicit
-  approval, since this creates outward-facing content.
-- Each phase skill's "Inputs to read first" now names both the parent Issue
+  checklist and the sub-issue set never drift apart. This is exactly what makes
+  the sub-issues good **phase-completion tracking**: the open/closed state of
+  the four children is the source of truth for how far a feature has advanced.
+- Each phase skill's "Inputs to read first" names both the parent Issue
   (whole-feature context) and that phase's own sub-issue. A feature still
   filed as a single Issue (no sub-issues) is unaffected — that Issue serves as
   both inputs.
@@ -215,7 +229,7 @@ trail, and cannot be the source of truth for parallel agent sessions.
 .claude/
   settings.json          # shared permission allowlist + hooks (committed)
   skills/                # phase skills (slash commands)
-    feature-issue/       # /feature-issue  story -> parent Issue + 4 sub-issues
+    feature-issue/       # /feature-issue  story -> parent Issue (Action files 4 sub-issues)
     ddd-update/          # /ddd-update     glossary + model diff
     bdd-feature/         # /bdd-feature    story -> .feature
     sdd-spec/            # /sdd-spec       feature -> OpenAPI + data model + spec.feature
@@ -295,11 +309,13 @@ out in three phases. Status of each phase is tracked in GitHub Issues / Projects
 | Phase 2 | SDD: committed OpenAPI contract (`docs/api/openapi.json`) with a drift test, data-model specs in `docs/specs/`, and `features/specs/*.spec.feature` executed in CI | In progress |
 | Phase 3 | Per-phase subagents, AI code review wired into CI, model routing, managed settings; optional Spectral lint and schemathesis contract fuzzing | In progress |
 
-Phase 1 addendum: issue filing is now assisted by the `/feature-issue` skill,
-which files the parent Issue (`feature.yml`) plus four linked DDD/BDD/SDD/TDD
-sub-issues (`phase-subissue.yml`) — see §5, "Filing a feature". Not every
-feature needs it; a single Issue with no sub-issues remains valid input to
-the phase skills.
+Phase 1 addendum: issue filing is now a hybrid — the `/feature-issue` skill
+authors the parent Issue (`feature.yml`), and the `create-phase-subissues`
+workflow (`.github/workflows/`) then files the four linked DDD/BDD/SDD/TDD
+sub-issues (`phase-subissue.yml`) automatically on parent creation. The
+open/closed state of the four sub-issues is the phase-completion tracker. See
+§5, "Filing a feature". Not every feature needs it; a single Issue with no
+sub-issues remains valid input to the phase skills.
 
 Phase 3 mechanics: project subagents live in `.claude/agents/` (`spec-reviewer`,
 `researcher`); automatic AI review runs in `.github/workflows/claude-review.yml`
@@ -320,7 +336,7 @@ CODEOWNERS. Adding unverified documents is worse than skipping the phase.
 
 | You are asked to… | Skill | Read first | Produce | Never do |
 | --- | --- | --- | --- | --- |
-| File a feature | `/feature-issue` | user story, `feature.yml`, `phase-subissue.yml` | parent Issue + 4 linked sub-issues | file without operator approval |
+| File a feature | `/feature-issue` | user story, `feature.yml` | parent Issue (the Action then files 4 linked sub-issues) | file the sub-issues by hand, or file without operator approval |
 | Capture domain concepts | `/ddd-update` | glossary, model, context map, parent Issue + DDD sub-issue | diff PR to `docs/domain/*` | write code or tests |
 | Write usage scenarios | `/bdd-feature` | glossary, parent Issue + BDD sub-issue, approved DDD artifact | `features/*.feature` | invent API or data shapes |
 | Specify the contract | `/sdd-spec` | feature file, glossary, parent Issue + SDD sub-issue | OpenAPI diff, data-model spec, `features/specs/*.spec.feature` | write implementation code |

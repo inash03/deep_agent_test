@@ -49,20 +49,44 @@ parent, and feed parent+child into each phase. Branch `claude/issue-69-ddd-73xxy
 - No conflict/synonym found (no glossary term overlaps with "parent issue" /
   "sub-issue" / "phase skill").
 
+## Design revision — hybrid filing (user decision)
+
+User chose a **hybrid** split instead of the agent filing all 5 issues:
+- Parent feature Issue: authored by the `/feature-issue` agent skill
+  (feature-specific reasoning: story translation + acceptance criteria).
+- Four DDD/BDD/SDD/TDD sub-issues: created **mechanically by a GitHub Action**
+  (`create-phase-subissues`) on parent creation — boilerplate, deterministic,
+  zero tokens, and the open/closed state is the phase-completion tracker.
+
+Rationale: the sub-issue content is fixed boilerplate that duplicates the
+phase skills, so an agent adds no quality there; determinism/reliability wins.
+
+## Implementation (hybrid)
+
+- NEW `.github/workflows/create-phase-subissues.yml` — Action (github-script)
+  fires on issue opened/labeled with `feature`, idempotent, creates + links 4
+  sub-issues via the sub-issues REST API (`sub_issue_id` = child `id`), posts
+  a summary comment. Sub-issues labelled `phase-subissue` (no recursion).
+- REWROTE `.claude/skills/feature-issue/SKILL.md` — parent Issue only; Action
+  owns sub-issues; keeps draft-then-approve + English rule.
+- `.github/ISSUE_TEMPLATE/feature.yml` + `phase-subissue.yml` — notes updated
+  to reference the Action; phase-subissue form is now a manual fallback.
+- 4 phase skills — input wording decoupled from `/feature-issue`
+  ("if the feature has phase sub-issues") + single-Issue fallback retained.
+- `docs/ai-driven-development.md` — §5 rewritten as hybrid, §6/§9/§10 updated.
+
+## Verification
+
+- YAML valid (workflow + 2 templates).
+- github-script JS passes `node --check` (wrapped as an async fn, as the
+  action does).
+- `uv run pytest` unaffected (no Python touched); pre-existing unrelated
+  `pytest-archon` collection gap in `tests/unit/test_architecture.py` remains
+  (optional extra, not installed by plain `uv sync`).
+
 ## Next step
 
-Implementation complete:
-- `.claude/skills/feature-issue/SKILL.md` (new skill).
-- `.github/ISSUE_TEMPLATE/phase-subissue.yml` (new sub-issue template).
-- `.github/ISSUE_TEMPLATE/feature.yml` (parent-issue note + English rule).
-- `.claude/skills/{ddd-update,bdd-feature,sdd-spec,tdd-implement}/SKILL.md`
-  ("Inputs to read first" now names parent Issue + own-phase sub-issue).
-- `docs/ai-driven-development.md` (§5 filing flow, §6 skills list, §9
-  addendum, §10 quick-reference table).
-
-`uv run pytest` (excluding a pre-existing, unrelated collection error in
-`tests/unit/test_architecture.py` — `pytest-archon` is an optional extra not
-installed by plain `uv sync`, predates this change): 231 passed, 9 deselected.
-
-Ready to commit and push to `claude/issue-69-ddd-73xxyi`.
+Commit + push to `claude/issue-69-ddd-73xxyi`. The Action can only be
+exercised end-to-end once merged (needs to run on GitHub); locally validated
+by static checks.
 </content>

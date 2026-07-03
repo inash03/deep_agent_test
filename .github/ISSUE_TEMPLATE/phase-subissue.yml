@@ -1,5 +1,5 @@
 name: Phase sub-issue (DDD/BDD/SDD/TDD)
-description: A single pipeline-phase task, linked as a sub-issue of a parent Feature issue. Normally filed by the /feature-issue skill, not by hand.
+description: A single pipeline-phase task, linked as a sub-issue of a parent Feature issue. Normally created automatically by the create-phase-subissues workflow when a parent feature issue is opened; this form is a manual fallback.
 title: "[Phase] "
 labels: ["phase-subissue"]
 body:
@@ -8,8 +8,10 @@ body:
       value: |
         One pipeline phase (DDD/BDD/SDD/TDD) of a feature, linked as a
         sub-issue of the parent Feature issue. See
-        `docs/ai-driven-development.md` for the full process and the
-        `/feature-issue` skill that normally files this issue.
+        `docs/ai-driven-development.md` for the full process. These sub-issues
+        are normally created automatically by the `create-phase-subissues`
+        workflow when a parent feature issue is opened; use this form only to
+        add a phase sub-issue by hand.
 
         All issues are authored in English, regardless of the language used
         to request them.

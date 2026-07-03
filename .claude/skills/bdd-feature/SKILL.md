@@ -11,8 +11,8 @@ user-facing scenarios that a PM can read and that CI can execute.
 ## Inputs to read first
 
 - `docs/domain/glossary.md` (use this vocabulary exactly).
-- The parent feature Issue (who wants what, and why) and, if filed via
-  `/feature-issue`, this feature's BDD sub-issue, plus the **approved DDD
+- The parent feature Issue (who wants what, and why) and, if the feature has
+  phase sub-issues, this feature's BDD sub-issue, plus the **approved DDD
   artifact** (glossary/model diff, or its "no change" verdict) as the
   hand-off from the previous phase. If the feature is tracked as a single
   Issue with no sub-issues, that Issue serves as both.
