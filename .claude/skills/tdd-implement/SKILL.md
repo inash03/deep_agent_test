@@ -12,7 +12,8 @@ working, tested code using the project's existing red-green-refactor loop.
 
 - The parent feature Issue and, if filed via `/feature-issue`, this feature's
   TDD sub-issue, plus the **approved `features/specs/<name>.spec.feature`**
-  and the API/data-model spec (the SDD hand-off).
+  and the API/data-model spec (the SDD hand-off). If the feature is tracked as
+  a single Issue with no sub-issues, that Issue serves as both.
 - `docs/testing.md` (test pyramid, harness rules, completion criteria).
 - `CLAUDE.md` (layering, backend/frontend rules, git conventions).
 - The closest existing test file to the behavior surface.

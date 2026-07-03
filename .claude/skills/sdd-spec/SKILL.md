@@ -13,7 +13,8 @@ highest-leverage phase for non-frontier models: thicker specs mean less rework.
 
 - The parent feature Issue and, if filed via `/feature-issue`, this feature's
   SDD sub-issue, plus the **approved `features/<name>.feature`** (the BDD
-  hand-off).
+  hand-off). If the feature is tracked as a single Issue with no sub-issues,
+  that Issue serves as both.
 - `docs/domain/glossary.md` and `docs/domain/model.md`.
 - `docs/architecture.md` (API contract `/api/v1/*`, layering, DB tables).
 - Relevant existing routers/schemas in `src/presentation/` and Alembic

@@ -14,7 +14,8 @@ user-facing scenarios that a PM can read and that CI can execute.
 - The parent feature Issue (who wants what, and why) and, if filed via
   `/feature-issue`, this feature's BDD sub-issue, plus the **approved DDD
   artifact** (glossary/model diff, or its "no change" verdict) as the
-  hand-off from the previous phase.
+  hand-off from the previous phase. If the feature is tracked as a single
+  Issue with no sub-issues, that Issue serves as both.
 - `features/README.md` and an existing `.feature` + its `tests/bdd/` step file
   as the pattern to follow.
 
