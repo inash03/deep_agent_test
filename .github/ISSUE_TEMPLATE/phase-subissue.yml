@@ -1,0 +1,72 @@
+name: Phase sub-issue (DDD/BDD/SDD/TDD)
+description: A single pipeline-phase task, linked as a sub-issue of a parent Feature issue. Normally created automatically by the create-phase-subissues workflow when a parent feature issue is opened; this form is a manual fallback.
+title: "[Phase] "
+labels: ["phase-subissue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One pipeline phase (DDD/BDD/SDD/TDD) of a feature, linked as a
+        sub-issue of the parent Feature issue. See
+        `docs/ai-driven-development.md` for the full process. These sub-issues
+        are normally created automatically by the `create-phase-subissues`
+        workflow when a parent feature issue is opened; use this form only to
+        add a phase sub-issue by hand.
+
+        All issues are authored in English, regardless of the language used
+        to request them.
+  - type: input
+    id: parent-issue
+    attributes:
+      label: Parent Issue
+      description: Link to the parent Feature issue (e.g. #123).
+      placeholder: "#123"
+    validations:
+      required: true
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase
+      options:
+        - DDD
+        - BDD
+        - SDD
+        - TDD
+    validations:
+      required: true
+  - type: textarea
+    id: inputs
+    attributes:
+      label: Inputs to read
+      description: The parent Issue, plus the prior phase's approved artifact (if any).
+      placeholder: |
+        - Parent Issue #123 (whole-feature context: user story, acceptance criteria)
+        - Approved DDD glossary diff (PR #124)
+    validations:
+      required: true
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Artifact to produce
+      description: What this phase must output, and where it lives.
+      placeholder: |
+        features/counterparty_search.feature + tests/bdd/test_counterparty_search.py
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Owner
+      description: Who approves this phase's artifact.
+      placeholder: architect | PM | architect + engineer | engineers + CI
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      description: How this sub-issue is closed.
+      placeholder: |
+        Diff PR to docs/domain/ approved by architect, or state "no change".
+    validations:
+      required: true

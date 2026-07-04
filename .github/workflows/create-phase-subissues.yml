@@ -1,0 +1,152 @@
+name: Create phase sub-issues
+
+# Hybrid issue-filing flow (docs/ai-driven-development.md §5): the /feature-issue
+# skill (an agent) authors the *parent* feature issue — the part that needs
+# feature-specific reasoning (translating the user story, writing acceptance
+# criteria). This workflow then mechanically files the four DDD/BDD/SDD/TDD
+# sub-issues and links them to the parent, because their content is boilerplate
+# and is better produced deterministically (no tokens, always four, no drift).
+#
+# Fires when a parent feature issue is opened, or when the `feature` label is
+# added later (e.g. a draft that is promoted). Sub-issues are labelled
+# `phase-subissue` (not `feature`), so they never re-trigger this workflow;
+# GITHUB_TOKEN-raised events do not start new workflow runs either.
+#
+# Idempotent: if the parent already has sub-issues, it does nothing.
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  # Serialise runs for the same issue so a rapid opened+labeled pair cannot
+  # race and double-create.
+  group: phase-subissues-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  create-subissues:
+    runs-on: ubuntu-latest
+    # Only for issues that carry the `feature` label. For `labeled` events,
+    # also require that the label just added was `feature`, so unrelated
+    # labelling does not trigger creation.
+    if: >-
+      contains(github.event.issue.labels.*.name, 'feature') &&
+      (github.event.action == 'opened' ||
+       (github.event.action == 'labeled' && github.event.label.name == 'feature'))
+    steps:
+      - name: File the four phase sub-issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const parent = context.payload.issue;
+            const { owner, repo } = context.repo;
+            const parentNumber = parent.number;
+
+            // Idempotency: skip if this parent already has sub-issues.
+            const existing = await github.request(
+              'GET /repos/{owner}/{repo}/issues/{issue_number}/sub_issues',
+              { owner, repo, issue_number: parentNumber, per_page: 1 }
+            );
+            if (Array.isArray(existing.data) && existing.data.length > 0) {
+              core.info(`#${parentNumber} already has sub-issues; nothing to do.`);
+              return;
+            }
+
+            // Derive the feature name from the parent title (strip the
+            // "[Feature] " prefix the template adds).
+            const featureName =
+              parent.title.replace(/^\s*\[Feature\]\s*/i, '').trim() ||
+              parent.title.trim();
+
+            const phases = [
+              {
+                key: 'DDD',
+                owner: 'architect',
+                inputs: `Parent issue #${parentNumber} (whole-feature context: user story, acceptance criteria).`,
+                artifact: 'Glossary / domain-model / context-map diff in `docs/domain/` (or state "no change").',
+                acceptance: 'Diff PR to `docs/domain/` approved by the architect, or a "no change" verdict recorded on this sub-issue.',
+              },
+              {
+                key: 'BDD',
+                owner: 'PM',
+                inputs: `Parent issue #${parentNumber} + the approved DDD artifact (glossary/model diff, or its "no change" verdict).`,
+                artifact: '`features/<name>.feature` + step definitions in `tests/bdd/`.',
+                acceptance: 'Feature executes in CI with no undefined/pending steps; PM-approved.',
+              },
+              {
+                key: 'SDD',
+                owner: 'architect + engineer',
+                inputs: `Parent issue #${parentNumber} + the approved BDD feature (\`features/<name>.feature\`).`,
+                artifact: 'OpenAPI diff (`docs/api/openapi.json`), data-model spec (`docs/specs/*.md`), and `features/specs/<name>.spec.feature`.',
+                acceptance: 'OpenAPI drift test green; spec approved by architect + engineer.',
+              },
+              {
+                key: 'TDD',
+                owner: 'engineers + CI',
+                inputs: `Parent issue #${parentNumber} + the approved SDD spec (\`features/specs/<name>.spec.feature\` + API/data-model spec).`,
+                artifact: 'Failing test first, then the implementation that makes it pass.',
+                acceptance: 'Full suite green (unit + BDD + contract); CI green.',
+              },
+            ];
+
+            const created = [];
+            for (const p of phases) {
+              const body = [
+                `**Parent:** #${parentNumber}`,
+                `**Phase:** ${p.key}`,
+                `**Owner:** ${p.owner}`,
+                '',
+                '### Inputs to read',
+                p.inputs,
+                '',
+                '### Artifact to produce',
+                p.artifact,
+                '',
+                '### Acceptance',
+                p.acceptance,
+                '',
+                '---',
+                '_Auto-created by the `create-phase-subissues` workflow. All issues are authored in English._',
+              ].join('\n');
+
+              const issue = await github.rest.issues.create({
+                owner,
+                repo,
+                title: `[${p.key}] ${featureName}`,
+                body,
+                labels: ['phase-subissue'],
+              });
+
+              // Link as a sub-issue of the parent. The sub-issues API takes the
+              // child's numeric `id` (not its issue number).
+              await github.request(
+                'POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues',
+                {
+                  owner,
+                  repo,
+                  issue_number: parentNumber,
+                  sub_issue_id: issue.data.id,
+                }
+              );
+
+              created.push(`- ${p.key}: #${issue.data.number}`);
+              core.info(`Created and linked [${p.key}] as #${issue.data.number}`);
+            }
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: parentNumber,
+              body: [
+                'Filed four phase sub-issues (DDD/BDD/SDD/TDD):',
+                '',
+                ...created,
+                '',
+                'Each phase agent reads this parent issue plus its own sub-issue. See `docs/ai-driven-development.md` §5.',
+              ].join('\n'),
+            });

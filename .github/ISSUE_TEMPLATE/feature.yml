@@ -8,6 +8,14 @@ body:
       value: |
         One Issue = one feature (or scenario group) = one branch = one agent session.
         See `docs/ai-driven-development.md` for the full process.
+
+        This is the **parent** Issue for the feature. When it is opened with
+        the `feature` label, the `create-phase-subissues` workflow files four
+        linked sub-issues (DDD/BDD/SDD/TDD, see `phase-subissue.yml`) that
+        track each phase; the artifact checklist below stays the roll-up
+        summary. The parent is normally authored by the `/feature-issue`
+        skill. All issues are authored in English, regardless of the language
+        used to request them.
   - type: textarea
     id: user-story
     attributes:
