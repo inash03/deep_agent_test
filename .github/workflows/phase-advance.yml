@@ -8,6 +8,17 @@ name: Advance the phase pipeline
 # signals that the next phase is ready, so nobody has to notice the transition
 # by hand.
 #
+# Two distinct outputs, by role:
+#   - The next phase's sub-issue gets a **comment** — the actionable ping to
+#     where the work is picked up: which skill to run (`/bdd-feature`,
+#     `/sdd-spec`, `/tdd-implement`) and its inputs. Comments notify that
+#     issue's subscribers.
+#   - The parent gets a single **`phase:<next>` label** — a queryable
+#     current-phase status *field*, not a timeline comment. It behaves like a
+#     single-select ("only one phase label at a time"), so "which phase is
+#     feature #N in?" is a label search rather than reading the timeline. When
+#     TDD closes the parent is labelled `phase:done`.
+#
 # Same design philosophy as `create-phase-subissues.yml`: the signal is
 # boilerplate produced mechanically — no tokens, no drift, idempotent. All
 # conventions (title prefix `[DDD]`/`[BDD]`/`[SDD]`/`[TDD]`, the
@@ -17,11 +28,13 @@ name: Advance the phase pipeline
 # Increment 1: deterministic signalling only. The human still *starts* each
 # phase; this increment only removes the "nobody noticed the hand-off" failure
 # mode. It does NOT enforce phase order (a human may close sub-issues out of
-# order; the workflow just signals the next one).
+# order; the workflow just signals the next one — the parent label may move
+# backwards on an out-of-order close, which is acceptable).
 #
-# Explicit next increment (out of scope here): automatically dispatching an
-# agent session for the next phase (e.g. the Claude GitHub Action) instead of
-# only commenting that it is ready.
+# Explicit next increment (out of scope here, tracked as its own issue):
+# auto-dispatching an agent session for the next phase (mechanical trigger →
+# `ANTHROPIC_API_KEY`-gated inline Claude step → draft PR, human gate kept)
+# instead of only signalling that it is ready.
 
 on:
   issues:
@@ -41,7 +54,7 @@ jobs:
   advance-phase:
     runs-on: ubuntu-latest
     # Guard: only act on closed sub-issues that carry the `phase-subissue`
-    # label. A non-phase issue closing must not trigger any comment.
+    # label. A non-phase issue closing must not trigger any comment or label.
     if: contains(github.event.issue.labels.*.name, 'phase-subissue')
     steps:
       - name: Signal the next phase
@@ -107,19 +120,38 @@ jobs:
               core.info(`Commented on #${issueNumber} (marker "${marker}").`);
             }
 
-            // 4. TDD is the last phase: signal completion on the parent.
-            if (phase === 'TDD') {
-              await commentOnce(
-                parentNumber,
-                '<!-- phase-advance:parent:TDD-complete -->',
-                [
-                  `All four phase sub-issues (DDD/BDD/SDD/TDD) are closed — the last one was #${closed.number} (TDD).`,
-                  '',
-                  'This feature can be closed once its acceptance criteria in the artifact checklist are checked off.',
-                  '',
-                  '_Auto-posted by the `phase-advance` workflow. See `docs/ai-driven-development.md` §5._',
-                ]
+            // Sets the parent's single current-phase status label, removing any
+            // other `phase:*` label so it behaves like a single-select field.
+            // Labels are inherently idempotent, so no marker is needed here.
+            async function setParentPhase(issueNumber, label) {
+              const { data: parent } = await github.rest.issues.get({
+                owner, repo, issue_number: issueNumber,
+              });
+              const current = (parent.labels || []).map(
+                (l) => (typeof l === 'string' ? l : l.name)
               );
+              for (const name of current) {
+                if (name && name.startsWith('phase:') && name !== label) {
+                  await github.rest.issues.removeLabel({
+                    owner, repo, issue_number: issueNumber, name,
+                  });
+                }
+              }
+              if (current.includes(label)) {
+                core.info(`Parent #${issueNumber} already has ${label}; unchanged.`);
+                return;
+              }
+              // addLabels auto-creates the label in the repo if it is missing.
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number: issueNumber, labels: [label],
+              });
+              core.info(`Set ${label} on parent #${issueNumber}.`);
+            }
+
+            // 4. TDD is the last phase: mark the parent done.
+            if (phase === 'TDD') {
+              await setParentPhase(parentNumber, 'phase:done');
+              core.info(`TDD (#${closed.number}) closed → parent #${parentNumber} marked phase:done.`);
               return;
             }
 
@@ -146,8 +178,8 @@ jobs:
               return;
             }
 
-            // Post on the next sub-issue: it is ready, which skill to run, and
-            // its inputs.
+            // Post the actionable ping on the next sub-issue: it is ready, which
+            // skill to run, and its inputs.
             await commentOnce(
               next.number,
               `<!-- phase-advance:${phase}->${nextPhase} -->`,
@@ -160,9 +192,5 @@ jobs:
               ]
             );
 
-            // Post a status line on the parent.
-            await commentOnce(
-              parentNumber,
-              `<!-- phase-advance:parent:${phase}->${nextPhase} -->`,
-              [`${phase} closed → ${nextPhase} ready: #${next.number} (\`${meta.skill}\`).`]
-            );
+            // Move the parent's current-phase status field forward.
+            await setParentPhase(parentNumber, `phase:${nextPhase}`);

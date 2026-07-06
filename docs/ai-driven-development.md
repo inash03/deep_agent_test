@@ -200,14 +200,21 @@ strong:
   workflow).** When a `phase-subissue` closes, a GitHub Action reads its phase
   (the `[DDD]`/`[BDD]`/`[SDD]`/`[TDD]` title prefix) and parent (the
   `**Parent:** #N` body line — the same conventions `create-phase-subissues`
-  writes), finds the next phase's sub-issue among the parent's children, and
-  posts one comment on it (it is ready to start, which skill to run, its
-  inputs) plus one status line on the parent. Closing TDD instead signals on
-  the parent that all four phases are done. Each comment carries a marker
+  writes) and finds the next phase's sub-issue among the parent's children. It
+  then produces two outputs, split by role: a **comment on the next
+  sub-issue** — the actionable ping (which skill to run, its inputs), which
+  notifies that issue's subscribers — and a single **`phase:<next>` label on
+  the parent** — a queryable current-phase status *field* (single-select: only
+  one `phase:*` label at a time), not a timeline comment. Closing TDD instead
+  labels the parent `phase:done`. The sub-issue comment carries a marker
   (e.g. `<!-- phase-advance:DDD->BDD -->`) so a close → reopen → close never
-  double-posts. This is deterministic signalling only: the human still *starts*
-  each phase, and phase order is not enforced. Auto-dispatching an agent
-  session for the next phase is the explicit next increment.
+  double-posts; the parent label is inherently idempotent. This is
+  deterministic signalling only: the human still *starts* each phase, and
+  phase order is not enforced (an out-of-order close may move the parent label
+  backwards, which is acceptable). Auto-dispatching an agent session for the
+  next phase — mechanical trigger → `ANTHROPIC_API_KEY`-gated inline Claude
+  step → draft PR, with the human approval gate kept — is the explicit next
+  increment.
 - Each phase skill's "Inputs to read first" names both the parent Issue
   (whole-feature context) and that phase's own sub-issue. A feature still
   filed as a single Issue (no sub-issues) is unaffected — that Issue serves as
