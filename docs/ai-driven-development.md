@@ -196,6 +196,18 @@ strong:
   checklist and the sub-issue set never drift apart. This is exactly what makes
   the sub-issues good **phase-completion tracking**: the open/closed state of
   the four children is the source of truth for how far a feature has advanced.
+- **Closing a phase signals the next one — automation (`phase-advance`
+  workflow).** When a `phase-subissue` closes, a GitHub Action reads its phase
+  (the `[DDD]`/`[BDD]`/`[SDD]`/`[TDD]` title prefix) and parent (the
+  `**Parent:** #N` body line — the same conventions `create-phase-subissues`
+  writes), finds the next phase's sub-issue among the parent's children, and
+  posts one comment on it (it is ready to start, which skill to run, its
+  inputs) plus one status line on the parent. Closing TDD instead signals on
+  the parent that all four phases are done. Each comment carries a marker
+  (e.g. `<!-- phase-advance:DDD->BDD -->`) so a close → reopen → close never
+  double-posts. This is deterministic signalling only: the human still *starts*
+  each phase, and phase order is not enforced. Auto-dispatching an agent
+  session for the next phase is the explicit next increment.
 - Each phase skill's "Inputs to read first" names both the parent Issue
   (whole-feature context) and that phase's own sub-issue. A feature still
   filed as a single Issue (no sub-issues) is unaffected — that Issue serves as

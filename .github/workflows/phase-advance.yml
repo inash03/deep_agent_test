@@ -1,0 +1,168 @@
+name: Advance the phase pipeline
+
+# Outer-loop signalling for the DDD→BDD→SDD→TDD pipeline (docs/ai-driven-
+# development.md §5, §9). The pipeline's state machine is externalized in
+# Issues: `create-phase-subissues.yml` files four `phase-subissue`-labelled
+# children per feature, and their open/closed state is the phase-completion
+# tracker. This workflow drives the hand-off: when a phase sub-issue closes, it
+# signals that the next phase is ready, so nobody has to notice the transition
+# by hand.
+#
+# Same design philosophy as `create-phase-subissues.yml`: the signal is
+# boilerplate produced mechanically — no tokens, no drift, idempotent. All
+# conventions (title prefix `[DDD]`/`[BDD]`/`[SDD]`/`[TDD]`, the
+# `**Parent:** #N` body line, the sub-issues API) are the ones that workflow
+# writes; this one only reads them. Do not introduce a second convention.
+#
+# Increment 1: deterministic signalling only. The human still *starts* each
+# phase; this increment only removes the "nobody noticed the hand-off" failure
+# mode. It does NOT enforce phase order (a human may close sub-issues out of
+# order; the workflow just signals the next one).
+#
+# Explicit next increment (out of scope here): automatically dispatching an
+# agent session for the next phase (e.g. the Claude GitHub Action) instead of
+# only commenting that it is ready.
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  # Serialise runs for the same issue, mirroring create-phase-subissues.yml, so
+  # a rapid close → reopen → close cannot race the idempotency check.
+  group: phase-advance-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  advance-phase:
+    runs-on: ubuntu-latest
+    # Guard: only act on closed sub-issues that carry the `phase-subissue`
+    # label. A non-phase issue closing must not trigger any comment.
+    if: contains(github.event.issue.labels.*.name, 'phase-subissue')
+    steps:
+      - name: Signal the next phase
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const closed = context.payload.issue;
+            const { owner, repo } = context.repo;
+
+            // Phase order and the skill/inputs each downstream phase reads.
+            // Kept consistent with create-phase-subissues.yml (the `inputs`
+            // wording mirrors the sub-issue bodies that workflow files).
+            const ORDER = ['DDD', 'BDD', 'SDD', 'TDD'];
+            const NEXT = {
+              BDD: {
+                skill: '/bdd-feature',
+                inputs: 'the parent issue + the approved DDD artifact (glossary/model diff, or its "no change" verdict).',
+              },
+              SDD: {
+                skill: '/sdd-spec',
+                inputs: 'the parent issue + the approved BDD feature (`features/<name>.feature`).',
+              },
+              TDD: {
+                skill: '/tdd-implement',
+                inputs: 'the parent issue + the approved SDD spec (`features/specs/<name>.spec.feature` + API/data-model spec).',
+              },
+            };
+
+            // 1. Parse the phase key from the closed issue's title. Same prefix
+            //    convention create-phase-subissues.yml writes: `[DDD] <name>`.
+            const phaseMatch = closed.title.match(/^\s*\[(DDD|BDD|SDD|TDD)\]/i);
+            if (!phaseMatch) {
+              core.info(`#${closed.number} has the phase-subissue label but no [PHASE] title prefix; nothing to do.`);
+              return;
+            }
+            const phase = phaseMatch[1].toUpperCase();
+
+            // Parse the parent number from the `**Parent:** #N` body line.
+            const parentMatch = (closed.body || '').match(/\*\*Parent:\*\*\s*#(\d+)/i);
+            if (!parentMatch) {
+              core.info(`#${closed.number} has no "**Parent:** #N" line; cannot locate the parent. Nothing to do.`);
+              return;
+            }
+            const parentNumber = Number(parentMatch[1]);
+
+            // Posts a comment only if `marker` is not already present on the
+            // target issue (idempotent across close → reopen → close).
+            async function commentOnce(issueNumber, marker, lines) {
+              const comments = await github.paginate(
+                github.rest.issues.listComments,
+                { owner, repo, issue_number: issueNumber, per_page: 100 }
+              );
+              if (comments.some((c) => (c.body || '').includes(marker))) {
+                core.info(`Marker "${marker}" already on #${issueNumber}; skipping.`);
+                return;
+              }
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: [marker, ...lines].join('\n'),
+              });
+              core.info(`Commented on #${issueNumber} (marker "${marker}").`);
+            }
+
+            // 4. TDD is the last phase: signal completion on the parent.
+            if (phase === 'TDD') {
+              await commentOnce(
+                parentNumber,
+                '<!-- phase-advance:parent:TDD-complete -->',
+                [
+                  `All four phase sub-issues (DDD/BDD/SDD/TDD) are closed — the last one was #${closed.number} (TDD).`,
+                  '',
+                  'This feature can be closed once its acceptance criteria in the artifact checklist are checked off.',
+                  '',
+                  '_Auto-posted by the `phase-advance` workflow. See `docs/ai-driven-development.md` §5._',
+                ]
+              );
+              return;
+            }
+
+            // 2–3. Locate the next phase's sub-issue among the parent's
+            //       children and signal it if it is still open.
+            const nextPhase = ORDER[ORDER.indexOf(phase) + 1];
+            const meta = NEXT[nextPhase];
+
+            const subIssues = await github.paginate(
+              'GET /repos/{owner}/{repo}/issues/{issue_number}/sub_issues',
+              { owner, repo, issue_number: parentNumber, per_page: 100 }
+            );
+
+            const next = subIssues.find((s) =>
+              new RegExp(`^\\s*\\[${nextPhase}\\]`, 'i').test(s.title || '')
+            );
+
+            if (!next) {
+              core.info(`Parent #${parentNumber} has no [${nextPhase}] sub-issue; nothing to signal.`);
+              return;
+            }
+            if (next.state !== 'open') {
+              core.info(`Next sub-issue #${next.number} ([${nextPhase}]) is not open (state: ${next.state}); nothing to signal.`);
+              return;
+            }
+
+            // Post on the next sub-issue: it is ready, which skill to run, and
+            // its inputs.
+            await commentOnce(
+              next.number,
+              `<!-- phase-advance:${phase}->${nextPhase} -->`,
+              [
+                `**${phase} closed (#${closed.number}) → this ${nextPhase} phase is ready to start.**`,
+                '',
+                `Run \`${meta.skill}\`, reading ${meta.inputs}`,
+                '',
+                '_Auto-posted by the `phase-advance` workflow. See `docs/ai-driven-development.md` §5._',
+              ]
+            );
+
+            // Post a status line on the parent.
+            await commentOnce(
+              parentNumber,
+              `<!-- phase-advance:parent:${phase}->${nextPhase} -->`,
+              [`${phase} closed → ${nextPhase} ready: #${next.number} (\`${meta.skill}\`).`]
+            );
