@@ -1,48 +1,45 @@
 name: Advance the phase pipeline
 
-# Outer-loop signalling for the DDD→BDD→SDD→TDD pipeline (docs/ai-driven-
+# Outer-loop automation for the DDD→BDD→SDD→TDD pipeline (docs/ai-driven-
 # development.md §5, §9). The pipeline's state machine is externalized in
 # Issues: `create-phase-subissues.yml` files four `phase-subissue`-labelled
 # children per feature, and their open/closed state is the phase-completion
-# tracker. This workflow drives the hand-off: when a phase sub-issue closes, it
-# signals that the next phase is ready, so nobody has to notice the transition
-# by hand.
+# tracker. This workflow drives the hand-off when a phase sub-issue closes.
 #
-# Two distinct outputs, by role:
-#   - The next phase's sub-issue gets a **comment** — the actionable ping to
-#     where the work is picked up: which skill to run (`/bdd-feature`,
-#     `/sdd-spec`, `/tdd-implement`) and its inputs. Comments notify that
-#     issue's subscribers.
-#   - The parent gets a single **`phase:<next>` label** — a queryable
-#     current-phase status *field*, not a timeline comment. It behaves like a
-#     single-select ("only one phase label at a time"), so "which phase is
-#     feature #N in?" is a label search rather than reading the timeline. When
-#     TDD closes the parent is labelled `phase:done`.
+# Two layers, by role:
 #
-# Same design philosophy as `create-phase-subissues.yml`: the signal is
-# boilerplate produced mechanically — no tokens, no drift, idempotent. All
-# conventions (title prefix `[DDD]`/`[BDD]`/`[SDD]`/`[TDD]`, the
-# `**Parent:** #N` body line, the sub-issues API) are the ones that workflow
-# writes; this one only reads them. Do not introduce a second convention.
+#   1. SIGNAL (job `advance-phase`, deterministic, no AI) — mirrors the
+#      philosophy of `create-phase-subissues.yml`: no tokens, no drift,
+#      idempotent. It reads the closed sub-issue's phase (`[DDD]`/`[BDD]`/
+#      `[SDD]`/`[TDD]` title prefix) and parent (`**Parent:** #N` body line —
+#      the same conventions that workflow writes; do not invent new ones),
+#      finds the next phase's sub-issue, and produces two outputs:
+#        - a **comment on the next sub-issue** (the actionable ping: which skill
+#          to run and its inputs), and
+#        - a single **`phase:<next>` label on the parent** (a queryable
+#          single-select current-phase status field; TDD close ⇒ `phase:done`).
+#      The comment carries a marker so close → reopen → close never double-posts.
 #
-# Increment 1: deterministic signalling only. The human still *starts* each
-# phase; this increment only removes the "nobody noticed the hand-off" failure
-# mode. It does NOT enforce phase order (a human may close sub-issues out of
-# order; the workflow just signals the next one — the parent label may move
-# backwards on an out-of-order close, which is acceptable).
+#   2. DISPATCH (job `dispatch-next-phase`, increment 2, AI) — starts an agent
+#      session for the next phase so the hand-off advances without a human in
+#      the hot path, WHILE KEEPING the per-phase human approval gate. It is
+#      `ANTHROPIC_API_KEY`-gated (same pattern as `claude-review.yml`): absent
+#      secret ⇒ the job is a clean no-op and only the increment-1 signal
+#      remains. The dispatched agent is told to open a DRAFT PR and to NOT close
+#      the sub-issue or merge — a human still reviews and approves. Dispatch is
+#      tied to the SAME marker as the signal comment, so it fires exactly once
+#      per hand-off (a re-close after reopen re-signals nothing and re-dispatches
+#      nothing). Recommended: install the Claude GitHub App so the draft PR it
+#      opens triggers CI (a PR opened via GITHUB_TOKEN alone does not).
 #
-# Explicit next increment (out of scope here, tracked as its own issue):
-# auto-dispatching an agent session for the next phase (mechanical trigger →
-# `ANTHROPIC_API_KEY`-gated inline Claude step → draft PR, human gate kept)
-# instead of only signalling that it is ready.
+# Phase order is NOT enforced (a human may close sub-issues out of order; the
+# parent label may then move backwards, which is acceptable). The human gate at
+# every phase boundary is preserved — this workflow never auto-approves,
+# auto-merges, or auto-closes.
 
 on:
   issues:
     types: [closed]
-
-permissions:
-  contents: read
-  issues: write
 
 concurrency:
   # Serialise runs for the same issue, mirroring create-phase-subissues.yml, so
@@ -53,16 +50,32 @@ concurrency:
 jobs:
   advance-phase:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     # Guard: only act on closed sub-issues that carry the `phase-subissue`
-    # label. A non-phase issue closing must not trigger any comment or label.
+    # label. A non-phase issue closing must not signal or dispatch anything.
     if: contains(github.event.issue.labels.*.name, 'phase-subissue')
+    outputs:
+      # `dispatch` is 'true' only when the signal comment was newly posted (a
+      # fresh hand-off), so the AI dispatch below is idempotent via the same
+      # marker. The rest describe what to dispatch.
+      dispatch: ${{ steps.signal.outputs.dispatch }}
+      parent: ${{ steps.signal.outputs.parent }}
+      next_issue: ${{ steps.signal.outputs.next_issue }}
+      next_phase: ${{ steps.signal.outputs.next_phase }}
+      skill: ${{ steps.signal.outputs.skill }}
     steps:
       - name: Signal the next phase
+        id: signal
         uses: actions/github-script@v7
         with:
           script: |
             const closed = context.payload.issue;
             const { owner, repo } = context.repo;
+
+            // Default: nothing to dispatch unless we newly signal a next phase.
+            core.setOutput('dispatch', 'false');
 
             // Phase order and the skill/inputs each downstream phase reads.
             // Kept consistent with create-phase-subissues.yml (the `inputs`
@@ -101,7 +114,8 @@ jobs:
             const parentNumber = Number(parentMatch[1]);
 
             // Posts a comment only if `marker` is not already present on the
-            // target issue (idempotent across close → reopen → close).
+            // target issue (idempotent across close → reopen → close). Returns
+            // true iff it actually posted (used to gate the AI dispatch).
             async function commentOnce(issueNumber, marker, lines) {
               const comments = await github.paginate(
                 github.rest.issues.listComments,
@@ -109,7 +123,7 @@ jobs:
               );
               if (comments.some((c) => (c.body || '').includes(marker))) {
                 core.info(`Marker "${marker}" already on #${issueNumber}; skipping.`);
-                return;
+                return false;
               }
               await github.rest.issues.createComment({
                 owner,
@@ -118,6 +132,7 @@ jobs:
                 body: [marker, ...lines].join('\n'),
               });
               core.info(`Commented on #${issueNumber} (marker "${marker}").`);
+              return true;
             }
 
             // Sets the parent's single current-phase status label, removing any
@@ -148,7 +163,8 @@ jobs:
               core.info(`Set ${label} on parent #${issueNumber}.`);
             }
 
-            // 4. TDD is the last phase: mark the parent done.
+            // 4. TDD is the last phase: mark the parent done. No next phase to
+            //    dispatch.
             if (phase === 'TDD') {
               await setParentPhase(parentNumber, 'phase:done');
               core.info(`TDD (#${closed.number}) closed → parent #${parentNumber} marked phase:done.`);
@@ -180,7 +196,7 @@ jobs:
 
             // Post the actionable ping on the next sub-issue: it is ready, which
             // skill to run, and its inputs.
-            await commentOnce(
+            const posted = await commentOnce(
               next.number,
               `<!-- phase-advance:${phase}->${nextPhase} -->`,
               [
@@ -194,3 +210,80 @@ jobs:
 
             // Move the parent's current-phase status field forward.
             await setParentPhase(parentNumber, `phase:${nextPhase}`);
+
+            // Only dispatch the AI executor when this is a fresh hand-off (the
+            // comment was newly posted), so dispatch fires exactly once per
+            // hand-off — tied to the same marker as the signal comment.
+            if (posted) {
+              core.setOutput('dispatch', 'true');
+              core.setOutput('parent', String(parentNumber));
+              core.setOutput('next_issue', String(next.number));
+              core.setOutput('next_phase', nextPhase);
+              core.setOutput('skill', meta.skill);
+            }
+
+  dispatch-next-phase:
+    # Increment 2: start the next phase's agent session. Gated on the signal
+    # job having produced a fresh hand-off AND on the ANTHROPIC_API_KEY secret
+    # (checked in a step, since secrets cannot be used in a job `if:`). When the
+    # secret is absent this job is a clean no-op and only the increment-1 signal
+    # remains, so the pipeline still works (and forks/CI stay green).
+    needs: advance-phase
+    if: needs.advance-phase.outputs.dispatch == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Check for API key
+        id: check
+        env:
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "ANTHROPIC_API_KEY not set; skipping auto-dispatch (signal-only, increment 1)."
+          fi
+
+      - name: Checkout
+        if: steps.check.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Dispatch the next-phase agent
+        if: steps.check.outputs.enabled == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Model routing (ADR-0004): strong model for the design-heavy phases.
+          claude_args: --model claude-opus-4-8
+          # Pointer seed only — the skill reads the artifacts itself from the
+          # repo at HEAD + the named issues (artifact-first; see §1/§5).
+          prompt: |
+            The DDD→BDD→SDD→TDD pipeline (docs/ai-driven-development.md) has
+            advanced: the previous phase was approved and closed. Start the next
+            phase now.
+
+            Run ${{ needs.advance-phase.outputs.skill }} for the feature tracked
+            in issue #${{ needs.advance-phase.outputs.parent }}. Your phase
+            sub-issue is #${{ needs.advance-phase.outputs.next_issue }}
+            (${{ needs.advance-phase.outputs.next_phase }}).
+
+            Inputs to read (follow the skill's own "Inputs to read first"
+            exactly): the parent issue #${{ needs.advance-phase.outputs.parent }}
+            (user story + acceptance criteria); your sub-issue
+            #${{ needs.advance-phase.outputs.next_issue }} (this phase's inputs,
+            artifact, and acceptance); and the previous phase's approved artifact
+            from the repository at HEAD (the relevant glossary / feature / spec
+            files), or — if the previous phase closed with a "no change" verdict —
+            the closing comment on that phase's sub-issue.
+
+            Produce this phase's artifact and open a DRAFT pull request for it.
+            Do NOT close the sub-issue and do NOT merge: a human reviews and
+            approves the draft PR — the per-phase approval gate must stay. Keep
+            the change scoped to this phase only.
