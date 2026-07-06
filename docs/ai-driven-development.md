@@ -208,13 +208,26 @@ strong:
   one `phase:*` label at a time), not a timeline comment. Closing TDD instead
   labels the parent `phase:done`. The sub-issue comment carries a marker
   (e.g. `<!-- phase-advance:DDD->BDD -->`) so a close → reopen → close never
-  double-posts; the parent label is inherently idempotent. This is
-  deterministic signalling only: the human still *starts* each phase, and
-  phase order is not enforced (an out-of-order close may move the parent label
-  backwards, which is acceptable). Auto-dispatching an agent session for the
-  next phase — mechanical trigger → `ANTHROPIC_API_KEY`-gated inline Claude
-  step → draft PR, with the human approval gate kept — is the explicit next
-  increment.
+  double-posts; the parent label is inherently idempotent. Phase order is not
+  enforced (an out-of-order close may move the parent label backwards, which is
+  acceptable).
+- **Auto-dispatching the next phase — automation, gated (`phase-advance`,
+  increment 2).** The same workflow has a second job that, on a fresh hand-off,
+  starts an agent session for the next phase so the loop advances without a
+  human noticing the signal. It is a mechanical trigger → `ANTHROPIC_API_KEY`-
+  gated inline `claude-code-action` step (same gating pattern as
+  `claude-review.yml`; absent secret ⇒ clean no-op and only the signal above
+  remains). The dispatched agent gets a **pointer seed** (parent issue #, next
+  sub-issue #, which skill) and reads the approved artifacts itself from the
+  repo at HEAD (artifacts are the interface — §1); it produces the phase
+  artifact and opens a **draft PR**. It does **not** close the sub-issue or
+  merge — the per-phase human approval gate stays, so the loop never
+  self-advances past one phase. Dispatch is tied to the same marker as the
+  signal comment, so it fires exactly once per hand-off. Installing the Claude
+  GitHub App is recommended so the draft PR triggers CI. The result is a
+  **semi-automated loop**: a human closes an approved phase → the workflow
+  signals and dispatches → the agent drafts a PR → a human approves and closes,
+  advancing to the next phase.
 - Each phase skill's "Inputs to read first" names both the parent Issue
   (whole-feature context) and that phase's own sub-issue. A feature still
   filed as a single Issue (no sub-issues) is unaffected — that Issue serves as
@@ -335,6 +348,14 @@ sub-issues (`phase-subissue.yml`) automatically on parent creation. The
 open/closed state of the four sub-issues is the phase-completion tracker. See
 §5, "Filing a feature". Not every feature needs it; a single Issue with no
 sub-issues remains valid input to the phase skills.
+
+Outer-loop addendum: closing a phase sub-issue now drives the hand-off via the
+`phase-advance` workflow (`.github/workflows/`). Increment 1 signals the next
+phase (a comment on the next sub-issue + a `phase:<next>` status label on the
+parent); increment 2 additionally dispatches the next phase's agent session
+through an `ANTHROPIC_API_KEY`-gated `claude-code-action` step that opens a
+draft PR (no auto-close, no auto-merge — the human approval gate stays). Absent
+the secret, only the increment-1 signal runs. See §5, "Filing a feature".
 
 Phase 3 mechanics: project subagents live in `.claude/agents/` (`spec-reviewer`,
 `researcher`); automatic AI review runs in `.github/workflows/claude-review.yml`
