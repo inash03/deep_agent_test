@@ -50,6 +50,21 @@ jobs:
           docker push $IMAGE:${{ github.sha }}
           docker push $IMAGE:latest
 
+      # Keep Artifact Registry within the free tier (0.5 GB) by pruning old
+      # image versions. The policy is repository-level, so applying it once on
+      # the shared `stp-agent` repo covers both the mcp-external-data and
+      # backend packages. Keeps the 3 most recent versions per package and
+      # deletes anything older than 30 days (keep rules win over delete rules,
+      # so the current :latest image is never removed).
+      - name: Apply Artifact Registry cleanup policy
+        run: |
+          gcloud artifacts repositories set-cleanup-policies stp-agent \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --location=$REGION \
+            --policy=.github/artifact-registry-cleanup-policy.json \
+            --no-dry-run \
+            --quiet
+
       - name: Deploy to Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
