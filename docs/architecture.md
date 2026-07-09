@@ -76,6 +76,12 @@ flowchart LR
 - Merges to `main` create a Vercel Production Deployment.
 - GitHub Actions deploy only backend-related services to Cloud Run.
 - The old static frontend deployment path is retired.
+- The backend deploy workflow applies an Artifact Registry cleanup policy
+  (`.github/artifact-registry-cleanup-policy.json`) to the shared `stp-agent`
+  repository to stay within the free storage tier: it keeps the 3 most recent
+  versions per package and deletes versions older than 30 days. Applying it
+  requires the deploy service account to have the Artifact Registry Repository
+  Administrator role (`roles/artifactregistry.repoAdmin`).
 
 ## Frontend Architecture
 
