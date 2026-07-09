@@ -56,7 +56,15 @@ jobs:
       # backend packages. Keeps the 3 most recent versions per package and
       # deletes anything older than 30 days (keep rules win over delete rules,
       # so the current :latest image is never removed).
+      #
+      # This is a best-effort optimization and must never block the deploy:
+      # applying the policy needs the Artifact Registry Repository Administrator
+      # role (roles/artifactregistry.repoAdmin) on the deploy service account.
+      # If that role is missing (or the call fails transiently), continue so the
+      # Cloud Run deploy still runs. The policy is idempotent, so it self-heals
+      # on the next deploy once the permission is granted.
       - name: Apply Artifact Registry cleanup policy
+        continue-on-error: true
         run: |
           gcloud artifacts repositories set-cleanup-policies stp-agent \
             --project=${{ secrets.GCP_PROJECT_ID }} \

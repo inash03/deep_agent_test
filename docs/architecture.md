@@ -80,8 +80,11 @@ flowchart LR
   (`.github/artifact-registry-cleanup-policy.json`) to the shared `stp-agent`
   repository to stay within the free storage tier: it keeps the 3 most recent
   versions per package and deletes versions older than 30 days. Applying it
-  requires the deploy service account to have the Artifact Registry Repository
-  Administrator role (`roles/artifactregistry.repoAdmin`).
+  requires the deploy service account (`github-actions@…`) to have the Artifact
+  Registry Repository Administrator role (`roles/artifactregistry.repoAdmin`).
+  The step is best-effort (`continue-on-error: true`) so a missing permission or
+  transient failure never blocks the Cloud Run deploy; the policy is idempotent
+  and self-heals on the next deploy once the role is granted.
 
 ## Frontend Architecture
 
