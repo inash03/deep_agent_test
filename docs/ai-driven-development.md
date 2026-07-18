@@ -9,6 +9,12 @@ It is written for both humans and agents. Humans use it to understand the
 process and the review gates. Agents use it to know which artifact to read,
 which artifact to produce, and what they must not do in each phase.
 
+> **Triggering and cost:** who starts each phase (you or the pipeline) and which
+> Claude runs it (flat-rate interactive vs per-token API) — and the paid
+> automation that is **off by default** — are summarized in
+> [§5, "Operating modes and billing"](#operating-modes-and-billing-convenience-vs-cost).
+> Read it before enabling any automation.
+
 ## 1. Why artifacts, not conversations
 
 The core idea is that **every phase produces an artifact that is the interface
