@@ -245,6 +245,59 @@ strong:
   ADR. **CODEOWNERS** makes `docs/domain/` and `docs/adr/` require architect
   approval.
 
+### Operating modes and billing (convenience vs cost)
+
+Two things vary independently across the pipeline: **who triggers a phase**
+(convenience) and **which Claude executes it** (cost). They trade off — the more
+the pipeline does for you, the more the work moves from a flat-rate interactive
+session onto per-token API billing. Read this before enabling any paid
+automation.
+
+There are three execution layers:
+
+| Layer | What runs | Billing |
+| --- | --- | --- |
+| Deterministic automation | GitHub Actions with no Claude (`create-phase-subissues`, `phase-advance` signal) | Free — no tokens |
+| Interactive execution | You run a phase skill in a Claude Code session | Flat-rate subscription — no per-token charge |
+| CI automation | `claude-code-action` (`phase-advance` dispatch, `claude-review`) | Per-token **API**, billed to the workspace key |
+
+A phase's artifact is produced by a Claude agent either way; the levers are *who
+starts it* and *which billing it lands on*. That gives three operating modes (the
+same for DDD/BDD/SDD/TDD):
+
+| Mode | Phase trigger (convenience) | Executor (billing) | `claude-review` | Setting | Convenience / cost |
+| --- | --- | --- | --- | --- | --- |
+| **Manual** | You notice and run the skill | Claude Code (subscription) | off | `CLAUDE_API_AUTOMATION` unset | low / free |
+| **Signal-assisted** (default) | The pipeline comments "next phase ready + which skill" on the sub-issue; you run it | Claude Code (subscription) | off | `CLAUDE_API_AUTOMATION` unset | medium / free |
+| **Auto-dispatch** | The pipeline starts the agent on sub-issue close | CI `claude-code-action` (API, cheaper model) | per PR (API, stronger model) | `CLAUDE_API_AUTOMATION=true` + `ANTHROPIC_API_KEY` | high / metered |
+
+- **Signal-assisted is the everyday sweet spot** and is the default: the free
+  deterministic layer still files sub-issues and signals the next phase, and you
+  execute on the flat-rate subscription — you simply never have to *notice* the
+  hand-off. Nothing is billed per token.
+- **Auto-dispatch trades money for hands-off advancement**: each hand-off spends
+  API tokens (dispatch) and each resulting PR spends more (review). Turn the
+  variable on for a session, then unset it. The **per-phase human approval gate
+  (review the draft PR) stays in every mode** — no mode auto-merges or
+  auto-closes.
+
+Which component fires when, and what it costs:
+
+| Component | Fires on | Runs | Always on? | Condition / setting |
+| --- | --- | --- | --- | --- |
+| `create-phase-subissues` | parent `feature` issue opened | GitHub Action (no Claude) | yes — free | parent carries `feature` |
+| `phase-advance` — signal | phase sub-issue closed | GitHub Action (no Claude) | yes — free | closed issue carries `phase-subissue` |
+| `phase-advance` — dispatch | phase sub-issue closed | `claude-code-action` (API) | **off by default** | `CLAUDE_API_AUTOMATION=true` + `ANTHROPIC_API_KEY` |
+| `claude-review` | PR opened / updated | `claude-code-action` (API) | **off by default** | same variable + secret |
+| Phase skills (`/ddd-update`, …) | you run them | Claude Code (subscription) | on demand | human action |
+
+Rule of thumb: keep `CLAUDE_API_AUTOMATION` **unset for everyday work**
+(signal-assisted — free and still convenient); flip it on only to let a feature
+advance itself hands-off (auto-dispatch), then unset it. Per-phase mixing is
+fine — run the design-heavy DDD/SDD interactively (strong model on the
+subscription) and let only the routine BDD/TDD drafting auto-dispatch on the
+cheaper model.
+
 ## 6. Agent control files
 
 ### Hierarchical CLAUDE.md / AGENTS.md
