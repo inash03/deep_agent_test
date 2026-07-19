@@ -9,6 +9,12 @@ It is written for both humans and agents. Humans use it to understand the
 process and the review gates. Agents use it to know which artifact to read,
 which artifact to produce, and what they must not do in each phase.
 
+> **Triggering and cost:** who starts each phase (you or the pipeline) and which
+> Claude runs it (flat-rate interactive vs per-token API) — and the paid
+> automation that is **off by default** — are summarized in
+> [§5, "Operating modes and billing"](#operating-modes-and-billing-convenience-vs-cost).
+> Read it before enabling any automation.
+
 ## 1. Why artifacts, not conversations
 
 The core idea is that **every phase produces an artifact that is the interface
@@ -214,20 +220,25 @@ strong:
 - **Auto-dispatching the next phase — automation, gated (`phase-advance`,
   increment 2).** The same workflow has a second job that, on a fresh hand-off,
   starts an agent session for the next phase so the loop advances without a
-  human noticing the signal. It is a mechanical trigger → `ANTHROPIC_API_KEY`-
-  gated inline `claude-code-action` step (same gating pattern as
-  `claude-review.yml`; absent secret ⇒ clean no-op and only the signal above
-  remains). The dispatched agent gets a **pointer seed** (parent issue #, next
-  sub-issue #, which skill) and reads the approved artifacts itself from the
-  repo at HEAD (artifacts are the interface — §1); it produces the phase
-  artifact and opens a **draft PR**. It does **not** close the sub-issue or
-  merge — the per-phase human approval gate stays, so the loop never
-  self-advances past one phase. Dispatch is tied to the same marker as the
-  signal comment, so it fires exactly once per hand-off. Installing the Claude
-  GitHub App is recommended so the draft PR triggers CI. The result is a
+  human noticing the signal. Because it is billed per token, it is **OFF by
+  default** and triple-gated: a fresh hand-off, the repository variable
+  `CLAUDE_API_AUTOMATION == 'true'` (unset ⇒ off — flip it on only for sessions
+  you want auto-advanced, then off again), and the `ANTHROPIC_API_KEY` secret
+  (same secret-check pattern as `claude-review.yml`, which is gated on the same
+  variable). Absent any gate ⇒ clean no-op and only the signal above remains
+  (no API spend). The dispatched agent gets a **pointer seed** (parent issue #,
+  next sub-issue #, which skill) and reads the approved artifacts itself from
+  the repo at HEAD (artifacts are the interface — §1); it commits the phase
+  artifact to a new branch and the action posts a **PR-creation link** on the
+  sub-issue for a human to open and review the draft PR. It does **not** close
+  the sub-issue or merge — the per-phase human approval gate stays, so the loop
+  never self-advances past one phase. Dispatch is tied to the same marker as the
+  signal comment, so it fires exactly once per hand-off. A cheaper model is used
+  for routine drafting (model routing, ADR-0004); installing the Claude GitHub
+  App is recommended so the resulting PR triggers CI. The result is a
   **semi-automated loop**: a human closes an approved phase → the workflow
-  signals and dispatches → the agent drafts a PR → a human approves and closes,
-  advancing to the next phase.
+  signals and (when enabled) dispatches → the agent commits a draft branch/PR →
+  a human reviews, approves, and closes, advancing to the next phase.
 - Each phase skill's "Inputs to read first" names both the parent Issue
   (whole-feature context) and that phase's own sub-issue. A feature still
   filed as a single Issue (no sub-issues) is unaffected — that Issue serves as
@@ -239,6 +250,59 @@ strong:
 - **PR template** requires links to the corresponding feature file, spec, and
   ADR. **CODEOWNERS** makes `docs/domain/` and `docs/adr/` require architect
   approval.
+
+### Operating modes and billing (convenience vs cost)
+
+Two things vary independently across the pipeline: **who triggers a phase**
+(convenience) and **which Claude executes it** (cost). They trade off — the more
+the pipeline does for you, the more the work moves from a flat-rate interactive
+session onto per-token API billing. Read this before enabling any paid
+automation.
+
+There are three execution layers:
+
+| Layer | What runs | Billing |
+| --- | --- | --- |
+| Deterministic automation | GitHub Actions with no Claude (`create-phase-subissues`, `phase-advance` signal) | Free — no tokens |
+| Interactive execution | You run a phase skill in a Claude Code session | Flat-rate subscription — no per-token charge |
+| CI automation | `claude-code-action` (`phase-advance` dispatch, `claude-review`) | Per-token **API**, billed to the workspace key |
+
+A phase's artifact is produced by a Claude agent either way; the levers are *who
+starts it* and *which billing it lands on*. That gives three operating modes (the
+same for DDD/BDD/SDD/TDD):
+
+| Mode | Phase trigger (convenience) | Executor (billing) | `claude-review` | Setting | Convenience / cost |
+| --- | --- | --- | --- | --- | --- |
+| **Manual** | You notice and run the skill | Claude Code (subscription) | off | `CLAUDE_API_AUTOMATION` unset | low / free |
+| **Signal-assisted** (default) | The pipeline comments "next phase ready + which skill" on the sub-issue; you run it | Claude Code (subscription) | off | `CLAUDE_API_AUTOMATION` unset | medium / free |
+| **Auto-dispatch** | The pipeline starts the agent on sub-issue close | CI `claude-code-action` (API, cheaper model) | per PR (API, stronger model) | `CLAUDE_API_AUTOMATION=true` + `ANTHROPIC_API_KEY` | high / metered |
+
+- **Signal-assisted is the everyday sweet spot** and is the default: the free
+  deterministic layer still files sub-issues and signals the next phase, and you
+  execute on the flat-rate subscription — you simply never have to *notice* the
+  hand-off. Nothing is billed per token.
+- **Auto-dispatch trades money for hands-off advancement**: each hand-off spends
+  API tokens (dispatch) and each resulting PR spends more (review). Turn the
+  variable on for a session, then unset it. The **per-phase human approval gate
+  (review the draft PR) stays in every mode** — no mode auto-merges or
+  auto-closes.
+
+Which component fires when, and what it costs:
+
+| Component | Fires on | Runs | Always on? | Condition / setting |
+| --- | --- | --- | --- | --- |
+| `create-phase-subissues` | parent `feature` issue opened | GitHub Action (no Claude) | yes — free | parent carries `feature` |
+| `phase-advance` — signal | phase sub-issue closed | GitHub Action (no Claude) | yes — free | closed issue carries `phase-subissue` |
+| `phase-advance` — dispatch | phase sub-issue closed | `claude-code-action` (API) | **off by default** | `CLAUDE_API_AUTOMATION=true` + `ANTHROPIC_API_KEY` |
+| `claude-review` | PR opened / updated | `claude-code-action` (API) | **off by default** | same variable + secret |
+| Phase skills (`/ddd-update`, …) | you run them | Claude Code (subscription) | on demand | human action |
+
+Rule of thumb: keep `CLAUDE_API_AUTOMATION` **unset for everyday work**
+(signal-assisted — free and still convenient); flip it on only to let a feature
+advance itself hands-off (auto-dispatch), then unset it. Per-phase mixing is
+fine — run the design-heavy DDD/SDD interactively (strong model on the
+subscription) and let only the routine BDD/TDD drafting auto-dispatch on the
+cheaper model.
 
 ## 6. Agent control files
 
@@ -352,10 +416,15 @@ sub-issues remains valid input to the phase skills.
 Outer-loop addendum: closing a phase sub-issue now drives the hand-off via the
 `phase-advance` workflow (`.github/workflows/`). Increment 1 signals the next
 phase (a comment on the next sub-issue + a `phase:<next>` status label on the
-parent); increment 2 additionally dispatches the next phase's agent session
-through an `ANTHROPIC_API_KEY`-gated `claude-code-action` step that opens a
-draft PR (no auto-close, no auto-merge — the human approval gate stays). Absent
-the secret, only the increment-1 signal runs. See §5, "Filing a feature".
+parent) and is always on and free. Increment 2 additionally dispatches the next
+phase's agent session through a `claude-code-action` step that commits a draft
+branch and posts a PR link (no auto-close, no auto-merge — the human approval
+gate stays). Because it is token-billed, increment 2 (and the `claude-review`
+workflow) is **OFF by default**: both are gated on the repository variable
+`CLAUDE_API_AUTOMATION` (set it to `true` for the sessions where you want paid
+automation, leave it unset otherwise) in addition to the `ANTHROPIC_API_KEY`
+secret. Absent either gate, only the free increment-1 signal runs. See §5,
+"Filing a feature".
 
 Phase 3 mechanics: project subagents live in `.claude/agents/` (`spec-reviewer`,
 `researcher`); automatic AI review runs in `.github/workflows/claude-review.yml`

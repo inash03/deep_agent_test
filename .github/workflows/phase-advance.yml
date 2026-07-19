@@ -23,14 +23,17 @@ name: Advance the phase pipeline
 #   2. DISPATCH (job `dispatch-next-phase`, increment 2, AI) — starts an agent
 #      session for the next phase so the hand-off advances without a human in
 #      the hot path, WHILE KEEPING the per-phase human approval gate. It is
-#      `ANTHROPIC_API_KEY`-gated (same pattern as `claude-review.yml`): absent
-#      secret ⇒ the job is a clean no-op and only the increment-1 signal
-#      remains. The dispatched agent is told to open a DRAFT PR and to NOT close
-#      the sub-issue or merge — a human still reviews and approves. Dispatch is
-#      tied to the SAME marker as the signal comment, so it fires exactly once
-#      per hand-off (a re-close after reopen re-signals nothing and re-dispatches
-#      nothing). Recommended: install the Claude GitHub App so the draft PR it
-#      opens triggers CI (a PR opened via GITHUB_TOKEN alone does not).
+#      OFF by default and billed per token, so it is triple-gated: a fresh
+#      hand-off, the repository variable `CLAUDE_API_AUTOMATION == 'true'`
+#      (unset ⇒ off; flip on only for sessions you want auto-advanced), and the
+#      `ANTHROPIC_API_KEY` secret. Absent any of these the job is a clean no-op
+#      and only the increment-1 signal remains (no API spend). The agent commits
+#      the artifact to a new branch and the action posts a PR-creation link on
+#      the sub-issue; a human opens and reviews the draft PR. It never closes the
+#      sub-issue or merges. Dispatch is tied to the SAME marker as the signal
+#      comment, so it fires exactly once per hand-off. Recommended: install the
+#      Claude GitHub App so the PR it produces triggers CI (a PR opened via
+#      GITHUB_TOKEN alone does not).
 #
 # Phase order is NOT enforced (a human may close sub-issues out of order; the
 # parent label may then move backwards, which is acceptable). The human gate at
@@ -223,13 +226,26 @@ jobs:
             }
 
   dispatch-next-phase:
-    # Increment 2: start the next phase's agent session. Gated on the signal
-    # job having produced a fresh hand-off AND on the ANTHROPIC_API_KEY secret
-    # (checked in a step, since secrets cannot be used in a job `if:`). When the
-    # secret is absent this job is a clean no-op and only the increment-1 signal
-    # remains, so the pipeline still works (and forks/CI stay green).
+    # Increment 2: start the next phase's agent session. Runs only when ALL of:
+    #   - the signal job produced a fresh hand-off (`dispatch == 'true'`), AND
+    #   - the repository variable CLAUDE_API_AUTOMATION == 'true' — the default
+    #     (variable unset) keeps this paid, token-billed auto-dispatch OFF. Flip
+    #     it on (Settings → Secrets and variables → Actions → Variables) for the
+    #     sessions where you want the loop to advance itself, then off again, AND
+    #   - the ANTHROPIC_API_KEY secret is present (checked in a step, since
+    #     secrets cannot be used in a job `if:`).
+    # Absent any of these the job is a clean no-op and only the increment-1
+    # signal remains (no API spend, CI/forks stay green).
+    #
+    # On an issue trigger the action creates a new branch, commits the artifact,
+    # and posts a pull-request link on the sub-issue; a human opens the draft PR
+    # and reviews it — the per-phase approval gate stays. It never merges or
+    # closes the sub-issue. `use_commit_signing: true` makes the commit go
+    # through the action's built-in GitHub API tool instead of Bash git, so the
+    # repo's `.claude/settings.json` Bash allowlist does not block it (that was
+    # the increment-2.1 permission-denial fix).
     needs: advance-phase
-    if: needs.advance-phase.outputs.dispatch == 'true'
+    if: ${{ needs.advance-phase.outputs.dispatch == 'true' && vars.CLAUDE_API_AUTOMATION == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -260,8 +276,18 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Model routing (ADR-0004): strong model for the design-heavy phases.
-          claude_args: --model claude-opus-4-8
+          # Commit via the action's built-in signed-commit tool, not Bash git,
+          # so the repo's .claude/settings.json Bash allowlist does not block the
+          # branch/commit.
+          use_commit_signing: true
+          # Model routing (ADR-0004): a cheaper model for routine phase drafting
+          # keeps auto-dispatch inexpensive — the human review is the quality
+          # gate. Also allow the file-editing tools the phase skills need; the
+          # repo allowlist only pre-approves a few Bash commands, so file writes
+          # would otherwise be denied in this headless run.
+          claude_args: >-
+            --model claude-sonnet-5
+            --allowedTools "Edit,Write,MultiEdit,Bash(uv run pytest:*),Bash(uv run ruff:*)"
           # Pointer seed only — the skill reads the artifacts itself from the
           # repo at HEAD + the named issues (artifact-first; see §1/§5).
           prompt: |
@@ -283,7 +309,8 @@ jobs:
             files), or — if the previous phase closed with a "no change" verdict —
             the closing comment on that phase's sub-issue.
 
-            Produce this phase's artifact and open a DRAFT pull request for it.
-            Do NOT close the sub-issue and do NOT merge: a human reviews and
-            approves the draft PR — the per-phase approval gate must stay. Keep
-            the change scoped to this phase only.
+            Produce this phase's artifact and commit it to a new branch. The
+            action will surface a pull-request link on the sub-issue for a human
+            to open and review the draft PR. Do NOT merge and do NOT close the
+            sub-issue — the per-phase human approval gate must stay. Keep the
+            change scoped to this phase only.

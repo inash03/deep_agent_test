@@ -4,10 +4,13 @@ name: Claude PR review
 # (docs/ai-driven-development.md, Phase 3). It reviews each PR against the
 # project's SDD artifacts and conventions, then posts inline comments.
 #
-# Gating: the review only runs when the ANTHROPIC_API_KEY secret is configured.
-# The secret cannot be referenced in a job/step `if:` condition, so we map it to
-# an env var and check it in a step; when it is absent the job succeeds (green)
-# and simply skips the review, so CI is never blocked (e.g. on forks).
+# Gating: this paid, token-billed review runs only when BOTH the repository
+# variable CLAUDE_API_AUTOMATION == 'true' (the same OFF-by-default switch as the
+# phase-advance auto-dispatch; unset ⇒ off, so opening a normal PR costs nothing)
+# AND the ANTHROPIC_API_KEY secret is configured. The secret cannot be referenced
+# in a job/step `if:`, so it is mapped to an env var and checked in a step; when
+# it is absent the job succeeds (green) and simply skips the review, so CI is
+# never blocked (e.g. on forks). The variable is checked in the job `if:`.
 #
 # Requires repository secret ANTHROPIC_API_KEY and, recommended, the Claude
 # GitHub App (https://github.com/apps/claude). Docs:
@@ -25,6 +28,8 @@ permissions:
 jobs:
   claude-review:
     runs-on: ubuntu-latest
+    # OFF by default: only runs when CLAUDE_API_AUTOMATION is explicitly 'true'.
+    if: ${{ vars.CLAUDE_API_AUTOMATION == 'true' }}
     steps:
       - name: Check for API key
         id: check
