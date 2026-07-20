@@ -4,16 +4,24 @@ name: Claude PR review
 # (docs/ai-driven-development.md, Phase 3). It reviews each PR against the
 # project's SDD artifacts and conventions, then posts inline comments.
 #
-# Gating: this paid, token-billed review runs only when BOTH the repository
-# variable CLAUDE_API_AUTOMATION == 'true' (the same OFF-by-default switch as the
-# phase-advance auto-dispatch; unset ⇒ off, so opening a normal PR costs nothing)
-# AND the ANTHROPIC_API_KEY secret is configured. The secret cannot be referenced
-# in a job/step `if:`, so it is mapped to an env var and checked in a step; when
-# it is absent the job succeeds (green) and simply skips the review, so CI is
-# never blocked (e.g. on forks). The variable is checked in the job `if:`.
+# Gating: the review mode is chosen by the repository variable PR_REVIEW_MODE,
+# mirroring PHASE_DISPATCH_MODE in phase-advance.yml (docs/ai-driven-development.md
+# §5). Three values:
+#   - `off` (default; also the value when the variable is unset) — no review runs
+#     in CI, so opening a normal PR costs nothing. Run the `spec-reviewer`
+#     subagent in-session instead.
+#   - `oauth` — review on a Claude Pro/Max **subscription** OAuth token (secret
+#     CLAUDE_CODE_OAUTH_TOKEN, minted with `claude setup-token`). No per-token
+#     charge; draws on the subscription usage window.
+#   - `api` — review on a pay-as-you-go **API** key (secret ANTHROPIC_API_KEY),
+#     billed per token.
+# The variable is checked in the job `if:`; the selected mode's secret cannot be
+# referenced there, so it is mapped to an env var and checked in a step. When the
+# secret is absent the job succeeds (green) and simply skips the review, so CI is
+# never blocked (e.g. on forks).
 #
-# Requires repository secret ANTHROPIC_API_KEY and, recommended, the Claude
-# GitHub App (https://github.com/apps/claude). Docs:
+# Requires the matching secret (CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY) and,
+# recommended, the Claude GitHub App (https://github.com/apps/claude). Docs:
 # https://code.claude.com/docs/en/github-actions
 
 on:
@@ -28,19 +36,33 @@ permissions:
 jobs:
   claude-review:
     runs-on: ubuntu-latest
-    # OFF by default: only runs when CLAUDE_API_AUTOMATION is explicitly 'true'.
-    if: ${{ vars.CLAUDE_API_AUTOMATION == 'true' }}
+    # OFF by default: only runs when PR_REVIEW_MODE selects an automated mode.
+    if: ${{ vars.PR_REVIEW_MODE == 'oauth' || vars.PR_REVIEW_MODE == 'api' }}
     steps:
-      - name: Check for API key
+      - name: Resolve credential for the selected mode
         id: check
         env:
-          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MODE: ${{ vars.PR_REVIEW_MODE }}
+          OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          if [ -n "$KEY" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          if [ "$MODE" = "oauth" ]; then
+            if [ -n "$OAUTH_TOKEN" ]; then
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "enabled=false" >> "$GITHUB_OUTPUT"
+              echo "PR_REVIEW_MODE=oauth but CLAUDE_CODE_OAUTH_TOKEN is not set; skipping review (CI stays green)."
+            fi
+          elif [ "$MODE" = "api" ]; then
+            if [ -n "$API_KEY" ]; then
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "enabled=false" >> "$GITHUB_OUTPUT"
+              echo "PR_REVIEW_MODE=api but ANTHROPIC_API_KEY is not set; skipping review (CI stays green)."
+            fi
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "ANTHROPIC_API_KEY not set; skipping Claude review (CI stays green)."
+            echo "PR_REVIEW_MODE=$MODE is not an automated mode; skipping review."
           fi
 
       - name: Checkout
@@ -53,7 +75,9 @@ jobs:
         if: steps.check.outputs.enabled == 'true'
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Exactly one credential is non-empty, selected by PR_REVIEW_MODE.
+          claude_code_oauth_token: ${{ vars.PR_REVIEW_MODE == 'oauth' && secrets.CLAUDE_CODE_OAUTH_TOKEN || '' }}
+          anthropic_api_key: ${{ vars.PR_REVIEW_MODE == 'api' && secrets.ANTHROPIC_API_KEY || '' }}
           # Strong model for review judgement (model routing, see ADR-0004).
           claude_args: --model claude-opus-4-8
           prompt: |

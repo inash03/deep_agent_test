@@ -10,10 +10,11 @@ process and the review gates. Agents use it to know which artifact to read,
 which artifact to produce, and what they must not do in each phase.
 
 > **Triggering and cost:** who starts each phase (you or the pipeline) and which
-> Claude runs it (flat-rate interactive vs per-token API) — and the paid
-> automation that is **off by default** — are summarized in
+> credential the agent runs on (flat-rate subscription — interactive *or* an
+> OAuth token — vs per-token API) are selected by the `PHASE_DISPATCH_MODE` /
+> `PR_REVIEW_MODE` variables and summarized in
 > [§5, "Operating modes and billing"](#operating-modes-and-billing-convenience-vs-cost).
-> Read it before enabling any automation.
+> Auto-dispatch is **off by default**. Read it before enabling any automation.
 
 ## 1. Why artifacts, not conversations
 
@@ -217,16 +218,22 @@ strong:
   double-posts; the parent label is inherently idempotent. Phase order is not
   enforced (an out-of-order close may move the parent label backwards, which is
   acceptable).
-- **Auto-dispatching the next phase — automation, gated (`phase-advance`,
+- **Auto-dispatching the next phase — automation, mode-selected (`phase-advance`,
   increment 2).** The same workflow has a second job that, on a fresh hand-off,
   starts an agent session for the next phase so the loop advances without a
-  human noticing the signal. Because it is billed per token, it is **OFF by
-  default** and triple-gated: a fresh hand-off, the repository variable
-  `CLAUDE_API_AUTOMATION == 'true'` (unset ⇒ off — flip it on only for sessions
-  you want auto-advanced, then off again), and the `ANTHROPIC_API_KEY` secret
-  (same secret-check pattern as `claude-review.yml`, which is gated on the same
-  variable). Absent any gate ⇒ clean no-op and only the signal above remains
-  (no API spend). The dispatched agent gets a **pointer seed** (parent issue #,
+  human noticing the signal. **How** it authenticates — and whether it runs at
+  all — is chosen by the repository variable `PHASE_DISPATCH_MODE`, which has
+  three values: `manual` (the default, and the value when the variable is
+  unset), `oauth`, and `api`. See
+  [§5, "Operating modes and billing"](#operating-modes-and-billing-convenience-vs-cost)
+  for the full comparison. In short: `manual` skips the job entirely (only the
+  free signal runs; a human triggers the next phase), `oauth` runs it on a
+  Claude Pro/Max **subscription** OAuth token (no per-token charge), and `api`
+  runs it on a pay-as-you-go **API** key. Both automated modes are additionally
+  gated on a fresh hand-off and on the selected mode's secret
+  (`CLAUDE_CODE_OAUTH_TOKEN` for `oauth`, `ANTHROPIC_API_KEY` for `api`) being
+  present; absent it the job is a clean no-op and only the signal remains (no
+  spend). The dispatched agent gets a **pointer seed** (parent issue #,
   next sub-issue #, which skill) and reads the approved artifacts itself from
   the repo at HEAD (artifacts are the interface — §1); it commits the phase
   artifact to a new branch and the action posts a **PR-creation link** on the
@@ -254,10 +261,13 @@ strong:
 ### Operating modes and billing (convenience vs cost)
 
 Two things vary independently across the pipeline: **who triggers a phase**
-(convenience) and **which Claude executes it** (cost). They trade off — the more
-the pipeline does for you, the more the work moves from a flat-rate interactive
-session onto per-token API billing. Read this before enabling any paid
-automation.
+(convenience) and **which credential the agent runs on** (cost). They trade off
+— the more the pipeline does for you, the more the work moves onto an automated
+credential. The key point, and the reason this is worth configuring: automated
+execution does **not** have to mean per-token API billing. `claude-code-action`
+authenticates with either a pay-as-you-go **API key** *or* a Claude Pro/Max
+**subscription** OAuth token, so you can have the loop advance itself hands-off
+and still stay inside a flat-rate plan.
 
 There are three execution layers:
 
@@ -265,27 +275,69 @@ There are three execution layers:
 | --- | --- | --- |
 | Deterministic automation | GitHub Actions with no Claude (`create-phase-subissues`, `phase-advance` signal) | Free — no tokens |
 | Interactive execution | You run a phase skill in a Claude Code session | Flat-rate subscription — no per-token charge |
-| CI automation | `claude-code-action` (`phase-advance` dispatch, `claude-review`) | Per-token **API**, billed to the workspace key |
+| CI automation | `claude-code-action` (`phase-advance` dispatch, `claude-review`) | **Subscription** (OAuth token) *or* per-token **API**, mode-selected |
 
-A phase's artifact is produced by a Claude agent either way; the levers are *who
-starts it* and *which billing it lands on*. That gives three operating modes (the
-same for DDD/BDD/SDD/TDD):
+#### The phase trigger: `PHASE_DISPATCH_MODE`
 
-| Mode | Phase trigger (convenience) | Executor (billing) | `claude-review` | Setting | Convenience / cost |
-| --- | --- | --- | --- | --- | --- |
-| **Manual** | You notice and run the skill | Claude Code (subscription) | off | `CLAUDE_API_AUTOMATION` unset | low / free |
-| **Signal-assisted** (default) | The pipeline comments "next phase ready + which skill" on the sub-issue; you run it | Claude Code (subscription) | off | `CLAUDE_API_AUTOMATION` unset | medium / free |
-| **Auto-dispatch** | The pipeline starts the agent on sub-issue close | CI `claude-code-action` (API, cheaper model) | per PR (API, stronger model) | `CLAUDE_API_AUTOMATION=true` + `ANTHROPIC_API_KEY` | high / metered |
+The always-on, token-free **signal** (a comment on the next sub-issue + the
+`phase:<next>` label on the parent) runs in every mode. What the repository
+variable `PHASE_DISPATCH_MODE` selects is only whether — and on which credential
+— the pipeline **also auto-dispatches** the next phase's agent. Its three values
+are exactly the three modes to choose between:
 
-- **Signal-assisted is the everyday sweet spot** and is the default: the free
-  deterministic layer still files sub-issues and signals the next phase, and you
-  execute on the flat-rate subscription — you simply never have to *notice* the
-  hand-off. Nothing is billed per token.
-- **Auto-dispatch trades money for hands-off advancement**: each hand-off spends
-  API tokens (dispatch) and each resulting PR spends more (review). Turn the
-  variable on for a session, then unset it. The **per-phase human approval gate
-  (review the draft PR) stays in every mode** — no mode auto-merges or
-  auto-closes.
+| `PHASE_DISPATCH_MODE` | Who triggers the next phase | Runs on | Secret needed | Cost |
+| --- | --- | --- | --- | --- |
+| `manual` (default / unset) | **A human.** The signal tells you the phase is ready + which skill to run; you run it in a Claude Code session (or open a Claude Code on the Web session on the sub-issue). | Flat-rate subscription (your interactive session) | none | free |
+| `oauth` | **The pipeline**, on sub-issue close, automatically. | CI `claude-code-action` on a **subscription** OAuth token | `CLAUDE_CODE_OAUTH_TOKEN` | no per-token charge — draws on the subscription usage window |
+| `api` | **The pipeline**, on sub-issue close, automatically. | CI `claude-code-action` on a pay-as-you-go **API** key | `ANTHROPIC_API_KEY` | metered per token |
+
+- **`manual` is the default and the everyday sweet spot for solo/hobby use.**
+  The free deterministic layer still files the sub-issues and signals the next
+  phase, so you never have to *notice* the hand-off — you just run the named
+  skill on the flat-rate subscription. Nothing is billed per token, and no
+  long-lived credential sits in the repo.
+- **`oauth` gives hands-off advancement without leaving the subscription.** This
+  is the mode to pick when you want the loop to advance itself but want to keep
+  cost at "the plan I already pay for." It consumes the *same* Pro/Max usage
+  window as your interactive sessions (the 5-hour rolling limit), so at a hobby
+  cadence — a handful of hand-offs a day — it is effectively free, but heavy
+  automation can eat into the quota you also use interactively. Mint the token
+  locally and store it as a secret (setup below).
+- **`api` trades money for isolation.** Billing is per token on the workspace API
+  key, fully separate from your subscription quota. Choose it when you do not
+  want automation competing with your interactive usage window, or when no
+  subscription is available for the CI credential.
+- The **per-phase human approval gate (review and merge the draft PR) stays in
+  every mode** — no mode auto-merges or auto-closes. `oauth`/`api` change only
+  *who opens the draft*, never who approves it.
+
+Per-phase mixing is still fine: leave `PHASE_DISPATCH_MODE=manual` and run the
+design-heavy DDD/SDD interactively (strongest model, on the subscription), and
+temporarily switch to `oauth`/`api` only for the routine BDD/TDD drafting.
+
+#### The PR review: `PR_REVIEW_MODE`
+
+`claude-review.yml` (independent AI review on each PR) is controlled by a second,
+independent variable with the same three-value shape: `off` (default / unset —
+no review runs in CI; use the in-session `spec-reviewer` subagent instead),
+`oauth` (subscription OAuth token), and `api` (API key). It is independent of the
+dispatch mode: you can auto-dispatch on `oauth` while leaving review `off`, or
+run review on `api` while dispatching `manual`, etc.
+
+#### Setting up the subscription (`oauth`) credential
+
+1. Locally, run `claude setup-token` (requires a Claude Pro or Max plan). It
+   mints a long-lived OAuth token.
+2. In the repo: **Settings → Secrets and variables → Actions → Secrets → New
+   repository secret** named `CLAUDE_CODE_OAUTH_TOKEN`, paste the token.
+3. Set the variable: **Settings → Secrets and variables → Actions → Variables**,
+   `PHASE_DISPATCH_MODE = oauth` (and/or `PR_REVIEW_MODE = oauth`).
+4. Recommended: install the Claude GitHub App (https://github.com/apps/claude)
+   so the draft PR the dispatch opens triggers CI.
+
+The OAuth token carries your account's Claude access; treat it like any secret
+and rotate it periodically. For `api`, do the same with an `ANTHROPIC_API_KEY`
+secret and set the mode variable to `api`.
 
 Which component fires when, and what it costs:
 
@@ -293,16 +345,14 @@ Which component fires when, and what it costs:
 | --- | --- | --- | --- | --- |
 | `create-phase-subissues` | parent `feature` issue opened | GitHub Action (no Claude) | yes — free | parent carries `feature` |
 | `phase-advance` — signal | phase sub-issue closed | GitHub Action (no Claude) | yes — free | closed issue carries `phase-subissue` |
-| `phase-advance` — dispatch | phase sub-issue closed | `claude-code-action` (API) | **off by default** | `CLAUDE_API_AUTOMATION=true` + `ANTHROPIC_API_KEY` |
-| `claude-review` | PR opened / updated | `claude-code-action` (API) | **off by default** | same variable + secret |
+| `phase-advance` — dispatch | phase sub-issue closed | `claude-code-action` (OAuth or API) | **off unless mode set** | `PHASE_DISPATCH_MODE` ∈ {`oauth`,`api`} + the matching secret |
+| `claude-review` | PR opened / updated | `claude-code-action` (OAuth or API) | **off unless mode set** | `PR_REVIEW_MODE` ∈ {`oauth`,`api`} + the matching secret |
 | Phase skills (`/ddd-update`, …) | you run them | Claude Code (subscription) | on demand | human action |
 
-Rule of thumb: keep `CLAUDE_API_AUTOMATION` **unset for everyday work**
-(signal-assisted — free and still convenient); flip it on only to let a feature
-advance itself hands-off (auto-dispatch), then unset it. Per-phase mixing is
-fine — run the design-heavy DDD/SDD interactively (strong model on the
-subscription) and let only the routine BDD/TDD drafting auto-dispatch on the
-cheaper model.
+Rule of thumb: keep `PHASE_DISPATCH_MODE=manual` for everyday solo work (free,
+and the signal still removes the "did I miss the hand-off?" problem). When you
+want the loop to advance itself, prefer `oauth` over `api` unless you have a
+reason to keep automation off your subscription quota.
 
 ## 6. Agent control files
 
@@ -419,18 +469,21 @@ phase (a comment on the next sub-issue + a `phase:<next>` status label on the
 parent) and is always on and free. Increment 2 additionally dispatches the next
 phase's agent session through a `claude-code-action` step that commits a draft
 branch and posts a PR link (no auto-close, no auto-merge — the human approval
-gate stays). Because it is token-billed, increment 2 (and the `claude-review`
-workflow) is **OFF by default**: both are gated on the repository variable
-`CLAUDE_API_AUTOMATION` (set it to `true` for the sessions where you want paid
-automation, leave it unset otherwise) in addition to the `ANTHROPIC_API_KEY`
-secret. Absent either gate, only the free increment-1 signal runs. See §5,
-"Filing a feature".
+gate stays). Increment 2's trigger mode is selected by the repository variable
+`PHASE_DISPATCH_MODE` — `manual` (default: dispatch off, a human runs the
+signalled skill), `oauth` (auto-dispatch on a Claude **subscription** OAuth
+token, `CLAUDE_CODE_OAUTH_TOKEN`), or `api` (auto-dispatch on a pay-as-you-go
+**API** key, `ANTHROPIC_API_KEY`). The `claude-review` workflow has an
+independent `PR_REVIEW_MODE` variable with the same `off`/`oauth`/`api` shape.
+An automated mode also needs its matching secret present; absent it, only the
+free increment-1 signal runs. See §5, "Operating modes and billing".
 
 Phase 3 mechanics: project subagents live in `.claude/agents/` (`spec-reviewer`,
 `researcher`); automatic AI review runs in `.github/workflows/claude-review.yml`
-(gated on the `ANTHROPIC_API_KEY` secret so CI stays green without it); model
-routing and managed-settings policy are recorded in ADR-0004; the shared
-convenience permission allowlist is `.claude/settings.json`.
+(off unless `PR_REVIEW_MODE` selects `oauth`/`api` and its secret is present, so
+CI stays green without it); model routing and managed-settings policy are
+recorded in ADR-0004; the shared convenience permission allowlist is
+`.claude/settings.json`.
 
 Phase 2 mechanics (see ADR-0003): the API contract is committed and verified by
 `tests/unit/test_openapi_contract.py`, which fails on any drift from the live

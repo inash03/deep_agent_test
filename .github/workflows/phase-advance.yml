@@ -22,14 +22,25 @@ name: Advance the phase pipeline
 #
 #   2. DISPATCH (job `dispatch-next-phase`, increment 2, AI) — starts an agent
 #      session for the next phase so the hand-off advances without a human in
-#      the hot path, WHILE KEEPING the per-phase human approval gate. It is
-#      OFF by default and billed per token, so it is triple-gated: a fresh
-#      hand-off, the repository variable `CLAUDE_API_AUTOMATION == 'true'`
-#      (unset ⇒ off; flip on only for sessions you want auto-advanced), and the
-#      `ANTHROPIC_API_KEY` secret. Absent any of these the job is a clean no-op
-#      and only the increment-1 signal remains (no API spend). The agent commits
-#      the artifact to a new branch and the action posts a PR-creation link on
-#      the sub-issue; a human opens and reviews the draft PR. It never closes the
+#      the hot path, WHILE KEEPING the per-phase human approval gate. Which
+#      credential it runs on (and whether it runs at all) is chosen by the
+#      repository variable `PHASE_DISPATCH_MODE` (docs/ai-driven-development.md
+#      §5). Three modes:
+#        - `manual` (default; also the value when the variable is unset) — this
+#          job is skipped entirely. Only the always-on, token-free signal above
+#          runs, and a human runs the phase skill. Zero cost. This is mode 3.
+#        - `oauth` — run `claude-code-action` authenticated with a Claude
+#          Pro/Max **subscription** OAuth token (secret `CLAUDE_CODE_OAUTH_TOKEN`,
+#          minted locally with `claude setup-token`). No per-token API charge;
+#          it draws on the subscription's usage window. This is mode 1.
+#        - `api` — run `claude-code-action` authenticated with a pay-as-you-go
+#          **API** key (secret `ANTHROPIC_API_KEY`). Billed per token to the
+#          workspace key. This is mode 2.
+#      In both automated modes the job is still gated on a fresh hand-off and on
+#      the selected mode's secret being present; absent the secret it is a clean
+#      no-op and only the signal remains (no spend). The agent commits the
+#      artifact to a new branch and the action posts a PR-creation link on the
+#      sub-issue; a human opens and reviews the draft PR. It never closes the
 #      sub-issue or merges. Dispatch is tied to the SAME marker as the signal
 #      comment, so it fires exactly once per hand-off. Recommended: install the
 #      Claude GitHub App so the PR it produces triggers CI (a PR opened via
@@ -228,14 +239,17 @@ jobs:
   dispatch-next-phase:
     # Increment 2: start the next phase's agent session. Runs only when ALL of:
     #   - the signal job produced a fresh hand-off (`dispatch == 'true'`), AND
-    #   - the repository variable CLAUDE_API_AUTOMATION == 'true' — the default
-    #     (variable unset) keeps this paid, token-billed auto-dispatch OFF. Flip
-    #     it on (Settings → Secrets and variables → Actions → Variables) for the
-    #     sessions where you want the loop to advance itself, then off again, AND
-    #   - the ANTHROPIC_API_KEY secret is present (checked in a step, since
-    #     secrets cannot be used in a job `if:`).
+    #   - the repository variable PHASE_DISPATCH_MODE selects an automated mode
+    #     — `oauth` (subscription) or `api` (pay-as-you-go). Any other value,
+    #     including the default `manual` and the unset variable, keeps automated
+    #     dispatch OFF: only the token-free signal runs and a human triggers the
+    #     next phase. Set it in Settings → Secrets and variables → Actions →
+    #     Variables. AND
+    #   - the secret for the selected mode is present (CLAUDE_CODE_OAUTH_TOKEN
+    #     for `oauth`, ANTHROPIC_API_KEY for `api`), checked in a step since
+    #     secrets cannot be used in a job `if:`.
     # Absent any of these the job is a clean no-op and only the increment-1
-    # signal remains (no API spend, CI/forks stay green).
+    # signal remains (no spend, CI/forks stay green).
     #
     # On an issue trigger the action creates a new branch, commits the artifact,
     # and posts a pull-request link on the sub-issue; a human opens the draft PR
@@ -245,7 +259,7 @@ jobs:
     # repo's `.claude/settings.json` Bash allowlist does not block it (that was
     # the increment-2.1 permission-denial fix).
     needs: advance-phase
-    if: ${{ needs.advance-phase.outputs.dispatch == 'true' && vars.CLAUDE_API_AUTOMATION == 'true' }}
+    if: ${{ needs.advance-phase.outputs.dispatch == 'true' && (vars.PHASE_DISPATCH_MODE == 'oauth' || vars.PHASE_DISPATCH_MODE == 'api') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -253,16 +267,30 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
-      - name: Check for API key
+      - name: Resolve credential for the selected mode
         id: check
         env:
-          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MODE: ${{ vars.PHASE_DISPATCH_MODE }}
+          OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          if [ -n "$KEY" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          if [ "$MODE" = "oauth" ]; then
+            if [ -n "$OAUTH_TOKEN" ]; then
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "enabled=false" >> "$GITHUB_OUTPUT"
+              echo "PHASE_DISPATCH_MODE=oauth but CLAUDE_CODE_OAUTH_TOKEN is not set; skipping dispatch (signal-only)."
+            fi
+          elif [ "$MODE" = "api" ]; then
+            if [ -n "$API_KEY" ]; then
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "enabled=false" >> "$GITHUB_OUTPUT"
+              echo "PHASE_DISPATCH_MODE=api but ANTHROPIC_API_KEY is not set; skipping dispatch (signal-only)."
+            fi
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "ANTHROPIC_API_KEY not set; skipping auto-dispatch (signal-only, increment 1)."
+            echo "PHASE_DISPATCH_MODE=$MODE is not an automated mode; skipping dispatch (signal-only)."
           fi
 
       - name: Checkout
@@ -275,7 +303,12 @@ jobs:
         if: steps.check.outputs.enabled == 'true'
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Exactly one credential is non-empty, selected by PHASE_DISPATCH_MODE:
+          # the subscription OAuth token in `oauth` mode, the API key in `api`
+          # mode. The action uses whichever is provided; the empty one is
+          # ignored. The step above already guarantees the chosen secret exists.
+          claude_code_oauth_token: ${{ vars.PHASE_DISPATCH_MODE == 'oauth' && secrets.CLAUDE_CODE_OAUTH_TOKEN || '' }}
+          anthropic_api_key: ${{ vars.PHASE_DISPATCH_MODE == 'api' && secrets.ANTHROPIC_API_KEY || '' }}
           # Commit via the action's built-in signed-commit tool, not Bash git,
           # so the repo's .claude/settings.json Bash allowlist does not block the
           # branch/commit.
