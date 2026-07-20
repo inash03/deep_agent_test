@@ -71,12 +71,14 @@ skills under `.claude/skills/` drive each phase: `/ddd-update`, `/bdd-feature`,
 (`spec-reviewer`, `researcher`). Significant decisions are recorded as ADRs in
 `docs/adr/`; model routing and managed-settings policy are in ADR-0004.
 
-Closing a phase sub-issue signals the next phase, and — only when the
-`CLAUDE_API_AUTOMATION` variable is set — auto-dispatches it. **This paid,
-per-token API automation is off by default**; who triggers each phase
-(you or the pipeline) and which Claude runs it (flat-rate interactive vs API)
-is in `docs/ai-driven-development.md` §5, "Operating modes and billing" — read
-it before enabling automation.
+Closing a phase sub-issue always signals the next phase (free), and the
+repository variable `PHASE_DISPATCH_MODE` selects how the next phase is
+triggered: `manual` (default — a human runs the signalled skill), `oauth`
+(auto-dispatch on a Claude subscription OAuth token), or `api` (auto-dispatch on
+a pay-as-you-go API key). PR review (`claude-review`) has an independent
+`PR_REVIEW_MODE` (`off`/`oauth`/`api`). **Automated dispatch is off by default**;
+the three modes, their secrets, and setup are in `docs/ai-driven-development.md`
+§5, "Operating modes and billing" — read it before enabling automation.
 
 ## Documentation Language
 
