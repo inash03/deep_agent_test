@@ -1,4 +1,4 @@
-"""Step definitions for features/specs/fo_value_date.spec.feature.
+"""Step definitions for features/sdd/fo_value_date.spec.feature.
 
 These bind the SDD detailed-scenario specification to the real Front Office
 value-date rules in ``src.domain.check_rules``. The rules are pure functions,
@@ -15,7 +15,7 @@ from src.domain.check_rules import (
     _value_date_settlement_cycle,
 )
 
-scenarios("../../features/specs/fo_value_date.spec.feature")
+scenarios("../../features/sdd/fo_value_date.spec.feature")
 
 
 @given(parsers.parse('a trade with trade date "{trade_date}"'), target_fixture="trade")

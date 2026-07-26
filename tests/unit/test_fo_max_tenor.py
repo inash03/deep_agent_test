@@ -1,7 +1,7 @@
 """Requirement-driven unit tests for the FO maximum-settlement-tenor rule.
 
 Pure function: only SimpleNamespace mocks are needed. No DB, LLM, or network.
-Spec: docs/specs/fo-value-date.md and features/specs/fo_max_tenor.spec.feature.
+Spec: docs/specs/fo-value-date.md and features/sdd/fo_max_tenor.spec.feature.
 """
 
 from __future__ import annotations

@@ -2,8 +2,8 @@
 
 Specification for starting BO triage and resuming a run that paused for operator
 approval. Vocabulary: `docs/domain/glossary.md` (Triage, HITL, Triage Resume).
-Behavior: `features/bo_triage_hitl.feature` (business) and
-`features/specs/bo_triage_hitl.spec.feature` (detailed). Architecture decision:
+Behavior: `features/bdd/bo_triage_hitl.feature` (business) and
+`features/sdd/bo_triage_hitl.spec.feature` (detailed). Architecture decision:
 ADR-0006 (HITL via `interrupt_before` + persistent checkpointer).
 
 This spec documents already-built behavior captured during the brownfield

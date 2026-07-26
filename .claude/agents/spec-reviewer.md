@@ -1,6 +1,6 @@
 ---
 name: spec-reviewer
-description: Independent reviewer that checks a code change against its approved SDD artifacts (features/specs/*.spec.feature, docs/api/openapi.json, docs/specs/*.md, docs/domain/glossary.md) and the project conventions in CLAUDE.md. Use after TDD implementation and before requesting human review. Read-only — it reports findings, it does not edit code.
+description: Independent reviewer that checks a code change against its approved SDD artifacts (features/sdd/*.spec.feature, docs/api/openapi.json, docs/specs/*.md, docs/domain/glossary.md) and the project conventions in CLAUDE.md. Use after TDD implementation and before requesting human review. Read-only — it reports findings, it does not edit code.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -17,7 +17,7 @@ and follows project conventions, and to surface problems — not to fix them.
 - The diff under review: `git diff main...HEAD` (or the staged/working diff if
   asked). Use Bash for read-only git commands only.
 - The approved artifacts the change claims to implement:
-  - `features/*.feature` and `features/specs/*.spec.feature`
+  - `features/bdd/*.feature` and `features/sdd/*.spec.feature`
   - `docs/api/openapi.json` and `docs/specs/*.md`
   - `docs/domain/glossary.md`
   - Relevant ADRs in `docs/adr/`

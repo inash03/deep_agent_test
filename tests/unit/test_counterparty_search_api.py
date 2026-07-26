@@ -2,7 +2,7 @@
 
 These lock the SDD contract for the search modal at the HTTP boundary:
 ``docs/specs/counterparty-search.md`` (matching semantics + error mapping) and
-``features/specs/counterparty_search.spec.feature``. The repository-level
+``features/sdd/counterparty_search.spec.feature``. The repository-level
 substring/case-insensitive behavior is already exercised in
 ``tests/bdd/test_counterparty_search_spec.py``; here we prove the public
 ``GET /api/v1/counterparties`` endpoint wires the ``name``/``lei`` query params
@@ -29,7 +29,7 @@ from src.infrastructure.db.models import CounterpartyModel
 from src.infrastructure.db.session import get_db
 from src.presentation.routers.counterparties import router as counterparties_router
 
-# Master mirrors features/specs/counterparty_search.spec.feature Background.
+# Master mirrors features/sdd/counterparty_search.spec.feature Background.
 _MASTER = [
     ("213800QILIUD4ROSUO03", "Acme Bank Ltd"),
     ("5493001KJTIIGC8Y1R12", "Global Securities Inc"),

@@ -1,4 +1,4 @@
-"""Step definitions for features/fo_value_date_weekend.feature.
+"""Step definitions for features/bdd/fo_value_date_weekend.feature.
 
 Binds the BDD scenarios to the real Front Office value-date weekend rule in
 ``src.domain.check_rules``. Per docs/testing.md the rule is a pure function, so
@@ -12,7 +12,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 from src.domain.check_rules import _value_date_not_weekend
 
-scenarios("../../features/fo_value_date_weekend.feature")
+scenarios("../../features/bdd/fo_value_date_weekend.feature")
 
 
 @given(parsers.parse('a trade with trade date "{trade_date}"'), target_fixture="trade")

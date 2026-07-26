@@ -44,8 +44,8 @@ body:
       description: The pipeline artifacts this feature must produce. Each is gated by its owner.
       value: |
         - [ ] **DDD** — glossary/model diff in `docs/domain/` (or state "no change"). Owner: architect.
-        - [ ] **BDD** — `features/*.feature` + step definitions in `tests/bdd/`. Owner: PM.
-        - [ ] **SDD** — OpenAPI contract diff (`docs/api/openapi.json`), data-model spec (`docs/specs/*.md`), and `features/specs/*.spec.feature`. Owner: architect + engineer.
+        - [ ] **BDD** — `features/bdd/*.feature` + step definitions in `tests/bdd/`. Owner: PM.
+        - [ ] **SDD** — OpenAPI contract diff (`docs/api/openapi.json`), data-model spec (`docs/specs/*.md`), and `features/sdd/*.spec.feature`. Owner: architect + engineer.
         - [ ] **TDD** — failing test first, then implementation; full suite green. Owner: engineers + CI.
     validations:
       required: true

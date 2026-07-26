@@ -38,8 +38,8 @@ blocked until the required checks pass **and** the CODEOWNER approves.
 | Phase | Artifact (PR scope) | CODEOWNER (from `.github/CODEOWNERS`) | Automated checks that gate it |
 | --- | --- | --- | --- |
 | DDD | `docs/domain/*` | architect | (planned) glossary-term lint |
-| BDD | `features/*.feature` + `tests/bdd/` | PM | pytest-bdd executes; no orphan steps |
-| SDD | `docs/api/`, `docs/specs/`, `features/specs/*` | architect + engineer | OpenAPI drift test |
+| BDD | `features/bdd/*.feature` + `tests/bdd/` | PM | pytest-bdd executes; no orphan steps |
+| SDD | `docs/api/`, `docs/specs/`, `features/sdd/*` | architect + engineer | OpenAPI drift test |
 | TDD | `src/**`, `tests/**` | engineer + CI | full suite, architecture fitness, dashboard-sync, AI review |
 
 Running everything in one branch/agent (as in the pipeline demo) is fine for a

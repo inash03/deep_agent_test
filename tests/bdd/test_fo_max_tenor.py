@@ -1,4 +1,4 @@
-"""Step definitions for features/fo_max_tenor.feature.
+"""Step definitions for features/bdd/fo_max_tenor.feature.
 
 Binds the business scenarios to the real Front Office maximum-settlement-tenor
 rule in ``src.domain.check_rules``. The rule is a pure function, so the
@@ -16,7 +16,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 from src.domain import check_rules
 
-scenarios("../../features/fo_max_tenor.feature")
+scenarios("../../features/bdd/fo_max_tenor.feature")
 
 
 @given(parsers.parse('a trade with trade date "{trade_date}"'), target_fixture="trade")

@@ -26,8 +26,8 @@ Closes #
 <!-- Link the artifacts touched. Use "n/a" where a phase does not apply. -->
 
 - Domain diff: <!-- docs/domain/*.md or n/a -->
-- Feature file(s): <!-- features/*.feature or n/a -->
-- Spec: <!-- docs/api/openapi.json, docs/specs/*.md, features/specs/*.spec.feature or n/a -->
+- Feature file(s): <!-- features/bdd/*.feature or n/a -->
+- Spec: <!-- docs/api/openapi.json, docs/specs/*.md, features/sdd/*.spec.feature or n/a -->
 - ADR: <!-- docs/adr/NNNN-*.md or n/a -->
 
 ## Verification

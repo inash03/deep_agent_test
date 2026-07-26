@@ -50,7 +50,7 @@ body:
       label: Artifact to produce
       description: What this phase must output, and where it lives.
       placeholder: |
-        features/counterparty_search.feature + tests/bdd/test_counterparty_search.py
+        features/bdd/counterparty_search.feature + tests/bdd/test_counterparty_search.py
     validations:
       required: true
   - type: input

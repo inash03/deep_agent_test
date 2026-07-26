@@ -1,8 +1,8 @@
 # Spec: FO value date validation
 
 Data-model and rule specification for the Front Office value-date checks.
-Vocabulary: `docs/domain/glossary.md`. Behavior: `features/fo_value_date_validation.feature`
-(business) and `features/specs/fo_value_date.spec.feature` (detailed).
+Vocabulary: `docs/domain/glossary.md`. Behavior: `features/bdd/fo_value_date_validation.feature`
+(business) and `features/sdd/fo_value_date.spec.feature` (detailed).
 
 ## Surface
 
@@ -48,7 +48,7 @@ Notes:
 
 ## Boundary specification
 
-The executable boundaries are in `features/specs/fo_value_date.spec.feature`:
+The executable boundaries are in `features/sdd/fo_value_date.spec.feature`:
 
 | Rule | Input (trade date 2026-06-01) | Outcome |
 | --- | --- | --- |
@@ -64,7 +64,7 @@ The executable boundaries are in `features/specs/fo_value_date.spec.feature`:
 | max-tenor | value date = trade date + 4000 days | fail |
 
 Detailed max-tenor boundaries are executed in
-`features/specs/fo_max_tenor.spec.feature`.
+`features/sdd/fo_max_tenor.spec.feature`.
 
 ## Change protocol
 

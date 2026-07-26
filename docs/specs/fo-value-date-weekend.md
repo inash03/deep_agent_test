@@ -2,8 +2,8 @@
 
 Data-model and rule specification for the Front Office value-date **weekend**
 check. Vocabulary: `docs/domain/glossary.md`. Behavior:
-`features/fo_value_date_weekend.feature` (business) and
-`features/specs/fo_value_date_weekend.spec.feature` (detailed).
+`features/bdd/fo_value_date_weekend.feature` (business) and
+`features/sdd/fo_value_date_weekend.spec.feature` (detailed).
 
 Sister rule to `_trade_date_not_weekend`; complements the value-date rules in
 `docs/specs/fo-value-date.md`.
@@ -49,7 +49,7 @@ Notes:
 
 ## Boundary specification
 
-Executable boundaries in `features/specs/fo_value_date_weekend.spec.feature`
+Executable boundaries in `features/sdd/fo_value_date_weekend.spec.feature`
 (trade date 2026-06-01, a Monday):
 
 | Input value date | Weekday | Outcome |

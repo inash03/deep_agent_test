@@ -1,4 +1,4 @@
-"""Step definitions for features/counterparty_search.feature.
+"""Step definitions for features/bdd/counterparty_search.feature.
 
 Binds the business scenarios to the real counterparty filtering used by
 ``GET /api/v1/counterparties`` — ``CounterpartyRepository.list`` — so the search
@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 from src.infrastructure.db.counterparty_repository import CounterpartyRepository
 from src.infrastructure.db.models import CounterpartyModel
 
-scenarios("../../features/counterparty_search.feature")
+scenarios("../../features/bdd/counterparty_search.feature")
 
 
 @pytest.fixture
