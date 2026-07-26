@@ -107,8 +107,8 @@ the ADR log prevents this. See `docs/adr/README.md`.
   for BDD. Bind step definitions (`pytest-bdd` on the backend, Playwright-BDD
   for E2E) and **run the feature files in CI**. A non-executable feature is just
   Markdown and stops being trusted the moment it diverges from code.
-- User stories live in the GitHub Issue body; feature files live in `features/`
-  and are reviewed by the PM in the PR. Gherkin is the last artifact a
+- User stories live in the GitHub Issue body; BDD feature files live in
+  `features/bdd/` and are reviewed by the PM in the PR. Gherkin is the last artifact a
   non-engineer can review, so this is the PM's main gate.
 
 | Artifact | Format | Represents | Read by |
@@ -164,9 +164,9 @@ trail, and cannot be the source of truth for parallel agent sessions.
   ```markdown
   ## Artifact checklist
   - [ ] Glossary diff (or state "no change")
-  - [ ] features/xxx.feature (PM approved)
+  - [ ] features/bdd/xxx.feature (PM approved)
   - [ ] OpenAPI diff / data-model diff (architect approved)
-  - [ ] spec.feature
+  - [ ] features/sdd/xxx.spec.feature
   - [ ] Tests green / CI green
   ```
 
@@ -452,7 +452,7 @@ out in three phases. Status of each phase is tracked in GitHub Issues / Projects
 | Phase | Adds | Status |
 | --- | --- | --- |
 | Phase 1 | Executable Gherkin (BDD), ADRs, domain docs (glossary/model/context map), the phase skills, Issue/PR templates + CODEOWNERS, and a CI suite | Done |
-| Phase 2 | SDD: committed OpenAPI contract (`docs/api/openapi.json`) with a drift test, data-model specs in `docs/specs/`, and `features/specs/*.spec.feature` executed in CI | In progress |
+| Phase 2 | SDD: committed OpenAPI contract (`docs/api/openapi.json`) with a drift test, data-model specs in `docs/specs/`, and `features/sdd/*.spec.feature` executed in CI | In progress |
 | Phase 3 | Per-phase subagents, AI code review wired into CI, model routing, managed settings; optional Spectral lint and schemathesis contract fuzzing | In progress |
 
 Phase 1 addendum: issue filing is now a hybrid — the `/feature-issue` skill
@@ -500,6 +500,6 @@ CODEOWNERS. Adding unverified documents is worse than skipping the phase.
 | --- | --- | --- | --- | --- |
 | File a feature | `/feature-issue` | user story, `feature.yml` | parent Issue (the Action then files 4 linked sub-issues) | file the sub-issues by hand, or file without operator approval |
 | Capture domain concepts | `/ddd-update` | glossary, model, context map, parent Issue + DDD sub-issue | diff PR to `docs/domain/*` | write code or tests |
-| Write usage scenarios | `/bdd-feature` | glossary, parent Issue + BDD sub-issue, approved DDD artifact | `features/*.feature` | invent API or data shapes |
-| Specify the contract | `/sdd-spec` | feature file, glossary, parent Issue + SDD sub-issue | OpenAPI diff, data-model spec, `features/specs/*.spec.feature` | write implementation code |
+| Write usage scenarios | `/bdd-feature` | glossary, parent Issue + BDD sub-issue, approved DDD artifact | `features/bdd/*.feature` | invent API or data shapes |
+| Specify the contract | `/sdd-spec` | feature file, glossary, parent Issue + SDD sub-issue | OpenAPI diff, data-model spec, `features/sdd/*.spec.feature` | write implementation code |
 | Implement | `/tdd-implement` | `spec.feature`, OpenAPI, parent Issue + TDD sub-issue | failing test → code → green | skip the failing-test step |

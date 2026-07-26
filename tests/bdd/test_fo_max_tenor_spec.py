@@ -1,4 +1,4 @@
-"""Step definitions for features/specs/fo_max_tenor.spec.feature.
+"""Step definitions for features/sdd/fo_max_tenor.spec.feature.
 
 Binds the SDD detailed boundary scenarios to the real maximum-settlement-tenor
 rule in ``src.domain.check_rules``. Pure function, so deterministic.
@@ -14,7 +14,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 from src.domain import check_rules
 
-scenarios("../../features/specs/fo_max_tenor.spec.feature")
+scenarios("../../features/sdd/fo_max_tenor.spec.feature")
 
 
 @given(parsers.parse('a trade with trade date "{trade_date}"'), target_fixture="trade")

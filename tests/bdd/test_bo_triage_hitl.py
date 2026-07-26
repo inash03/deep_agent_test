@@ -1,8 +1,8 @@
 """Step definitions for the BO triage HITL resume features.
 
 Covers:
-  - features/bo_triage_hitl.feature          (business behavior)
-  - features/specs/bo_triage_hitl.spec.feature (detailed AG01 boundary)
+  - features/bdd/bo_triage_hitl.feature          (business behavior)
+  - features/sdd/bo_triage_hitl.spec.feature (detailed AG01 boundary)
 
 These are CHARACTERIZATION tests for already-built behavior (FR-06 retrofit):
 they document and lock the existing resume (approve/reject) path, which had no
@@ -26,8 +26,8 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 from src.domain.entities import TriageStatus
 
-scenarios("../../features/bo_triage_hitl.feature")
-scenarios("../../features/specs/bo_triage_hitl.spec.feature")
+scenarios("../../features/bdd/bo_triage_hitl.feature")
+scenarios("../../features/sdd/bo_triage_hitl.spec.feature")
 
 _AG01_ERROR = "MT103 rejected by SWIFT. Reason code: AG01."
 

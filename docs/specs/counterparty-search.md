@@ -3,8 +3,8 @@
 Data-model and contract specification for the counterparty master search that
 backs the trade-creation search modal (Issue #61). Vocabulary:
 `docs/domain/glossary.md` (Counterparty, LEI). Behavior:
-`features/counterparty_search.feature` (business) and
-`features/specs/counterparty_search.spec.feature` (detailed).
+`features/bdd/counterparty_search.feature` (business) and
+`features/sdd/counterparty_search.spec.feature` (detailed).
 
 ## Surface
 
@@ -50,7 +50,7 @@ field is added, so `tests/unit/test_openapi_contract.py` stays green.
 `CounterpartyListResponse` = `{ items: CounterpartyOut[], total: int }`, where
 `CounterpartyOut` = `{ lei, name, bic, is_active }`. The modal identifies a
 selected counterparty by its `lei` + `name` and writes that back to the trade
-form (see `features/counterparty_search.feature`).
+form (see `features/bdd/counterparty_search.feature`).
 
 ## Error mapping
 
@@ -82,7 +82,7 @@ no new state:
 ## Change protocol
 
 Changing the matching semantics, query params, or response shape requires:
-update this spec and `features/specs/counterparty_search.spec.feature`,
+update this spec and `features/sdd/counterparty_search.spec.feature`,
 regenerate `docs/api/openapi.json` if the contract shape changes
 (`uv run python scripts/export_openapi.py`), then implement under TDD. The
 substring + case-insensitive behavior on both fields must remain covered.

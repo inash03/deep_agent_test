@@ -1,4 +1,4 @@
-"""Step definitions for features/fo_value_date_validation.feature.
+"""Step definitions for features/bdd/fo_value_date_validation.feature.
 
 These bind the BDD scenarios to the real Front Office value-date rules in
 ``src.domain.check_rules``. Following the harness rules in docs/testing.md, the
@@ -15,7 +15,7 @@ from src.domain.check_rules import (
     _value_date_settlement_cycle,
 )
 
-scenarios("../../features/fo_value_date_validation.feature")
+scenarios("../../features/bdd/fo_value_date_validation.feature")
 
 
 @given(parsers.parse('a trade with trade date "{trade_date}"'), target_fixture="trade")

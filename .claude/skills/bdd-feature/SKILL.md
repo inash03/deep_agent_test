@@ -1,6 +1,6 @@
 ---
 name: bdd-feature
-description: BDD phase. Turn a user story into an executable Gherkin feature in features/ plus pytest-bdd step definitions in tests/bdd/. Use after the domain terms are approved and before specifying the API/contract.
+description: BDD phase. Turn a user story into an executable Gherkin feature in features/bdd/ plus pytest-bdd step definitions in tests/bdd/. Use after the domain terms are approved and before specifying the API/contract.
 ---
 
 # BDD — Behavior specification (executable Gherkin)
@@ -21,7 +21,7 @@ user-facing scenarios that a PM can read and that CI can execute.
 
 ## What to produce
 
-1. `features/<name>.feature` — `Feature:` with a short business intent, then
+1. `features/bdd/<name>.feature` — `Feature:` with a short business intent, then
    `Scenario:`s in Given/When/Then. Cover the primary happy path and the most
    important alternative outcomes. Keep it at the **user/business** level, not
    the API level.

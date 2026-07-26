@@ -1,6 +1,6 @@
 ---
 name: sdd-spec
-description: SDD phase. Derive the implementable contract from an approved feature - OpenAPI diff, data-model spec, and a detailed features/specs/*.spec.feature - without writing implementation code. Use after the PM approves the BDD feature.
+description: SDD phase. Derive the implementable contract from an approved feature - OpenAPI diff, data-model spec, and a detailed features/sdd/*.spec.feature - without writing implementation code. Use after the PM approves the BDD feature.
 ---
 
 # SDD — Specification (the implementable contract)
@@ -12,7 +12,7 @@ highest-leverage phase for non-frontier models: thicker specs mean less rework.
 ## Inputs to read first
 
 - The parent feature Issue and, if the feature has phase sub-issues, this
-  feature's SDD sub-issue, plus the **approved `features/<name>.feature`** (the
+  feature's SDD sub-issue, plus the **approved `features/bdd/<name>.feature`** (the
   BDD hand-off). If the feature is tracked as a single Issue with no
   sub-issues, that Issue serves as both.
 - `docs/domain/glossary.md` and `docs/domain/model.md`.
@@ -28,7 +28,7 @@ highest-leverage phase for non-frontier models: thicker specs mean less rework.
 2. **Data-model spec** — `docs/specs/<name>.md`: tables/columns/constraints and
    error mapping, paired with the intended Alembic migration outline. Follow the
    pattern in `docs/specs/fo-value-date.md`.
-3. **`features/specs/<name>.spec.feature`** — the BDD feature taken down to an
+3. **`features/sdd/<name>.spec.feature`** — the BDD feature taken down to an
    implementable granularity: edge cases, error cases, validation failures,
    auth failures, and NFR/observability acceptance criteria. Bind step
    definitions in `tests/bdd/` (see `tests/bdd/test_fo_value_date_spec.py`).

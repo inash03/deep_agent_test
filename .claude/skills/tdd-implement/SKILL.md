@@ -11,7 +11,7 @@ working, tested code using the project's existing red-green-refactor loop.
 ## Inputs to read first
 
 - The parent feature Issue and, if the feature has phase sub-issues, this
-  feature's TDD sub-issue, plus the **approved `features/specs/<name>.spec.feature`**
+  feature's TDD sub-issue, plus the **approved `features/sdd/<name>.spec.feature`**
   and the API/data-model spec (the SDD hand-off). If the feature is tracked as
   a single Issue with no sub-issues, that Issue serves as both.
 - `docs/testing.md` (test pyramid, harness rules, completion criteria).

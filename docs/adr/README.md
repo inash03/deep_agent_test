@@ -37,3 +37,4 @@ superseding ADR rather than reverting silently.
 | [0007](0007-bo-hybrid-deterministic-react.md) | BO hybrid deterministic + ReAct architecture | Accepted (retrospective) |
 | [0008](0008-tasks-as-scratchpad-retire-progress-logs.md) | tasks.md is a pure scratchpad; retire progress.md and tasks_done.md | Accepted |
 | [0009](0009-automated-gates-architecture-fitness-functions.md) | Convert pipeline gates into enforced fitness functions; adopt architecture checks | Accepted |
+| [0010](0010-phase-explicit-gherkin-layout.md) | Phase-explicit layout for Gherkin artifacts (features/bdd, features/sdd) | Accepted |

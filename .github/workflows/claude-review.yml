@@ -87,7 +87,7 @@ jobs:
             just generic code quality:
 
             1. Spec conformance — does the implementation match the boundaries
-               in the relevant features/specs/*.spec.feature and docs/specs/*.md?
+               in the relevant features/sdd/*.spec.feature and docs/specs/*.md?
                Flag behavior in code that is absent from the spec, and spec
                scenarios with no covering test.
             2. Executable Gherkin — every new/changed .feature and .spec.feature
